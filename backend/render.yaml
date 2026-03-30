@@ -2,27 +2,30 @@ services:
   - type: web
     name: taskbridge-api
     env: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        sync: false
+        value: mongodb+srv://glorifytk:gladiatorman40@cluster0.7erbu.mongodb.net/taskbridge?retryWrites=true&w=majority
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
         value: https://glorifyttc.github.io
       - key: SMTP_HOST
-        sync: false
+        value: smtp.gmail.com
       - key: SMTP_PORT
-        sync: false
+        value: 587
+      - key: SMTP_SECURE
+        value: false
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
         sync: false
       - key: SMTP_FROM_EMAIL
         value: noreply@taskbridge.com
+      - key: ENABLE_EMAIL_NOTIFICATIONS
+        value: false
