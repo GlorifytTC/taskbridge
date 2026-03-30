@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+cmds = ["cd backend && npm install"]
+
+[start]
+cmd = "cd backend && node server.js"
+
+[environment]
+NODE_ENV = "production"
+PORT = "5000"

@@ -1,0 +1,14 @@
+{
+  "name": "taskbridge",
+  "version": "1.0.0",
+  "description": "TaskBridge SaaS Platform",
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "build": "cd backend && npm install",
+    "postinstall": "cd backend && npm install"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
+  }
+}
