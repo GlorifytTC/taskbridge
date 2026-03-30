@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/taskbridge/static/css/main.ae008524.css",
+    "main.js": "/taskbridge/static/js/main.dc9ed871.js",
+    "index.html": "/taskbridge/index.html",
+    "main.ae008524.css.map": "/taskbridge/static/css/main.ae008524.css.map",
+    "main.dc9ed871.js.map": "/taskbridge/static/js/main.dc9ed871.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ae008524.css",
+    "static/js/main.dc9ed871.js"
+  ]
+}
