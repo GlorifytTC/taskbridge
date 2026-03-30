@@ -33,9 +33,11 @@ const allowedOrigins = [
   'https://glorifyttc.github.io',
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:5000',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
+// Simple CORS configuration - remove the problematic app.options line
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, etc)
@@ -45,7 +47,12 @@ app.use(cors({
       callback(null, true);
     } else {
       console.log('Origin not allowed:', origin);
-      callback(null, true); // Still allow for now, but log it
+      // Still allow for development
+      if (process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
     }
   },
   credentials: true,
@@ -53,9 +60,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Requested-With']
 }));
-
-// Handle preflight requests
-app.options('*', cors());
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -75,13 +79,28 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'TaskBridge API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api'
+    }
   });
 });
 
 // 404 handler for undefined routes
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ 
+    success: false,
     message: `Cannot ${req.method} ${req.originalUrl}`,
     path: req.originalUrl
   });
@@ -91,8 +110,9 @@ app.use('*', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(err.status || 500).json({
+    success: false,
     message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
@@ -104,11 +124,15 @@ const startServer = async () => {
     await connectDB();
     console.log('✅ MongoDB Connected');
     
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    const server = app.listen(PORT, () => {
+      console.log(`\n🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 CORS enabled for origins:`, allowedOrigins);
+      console.log(`\n📡 API URL: http://localhost:${PORT}`);
+      console.log(`❤️  Health check: http://localhost:${PORT}/health\n`);
     });
+    
+    return server;
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
@@ -118,6 +142,12 @@ const startServer = async () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
   process.exit(1);
 });
 
