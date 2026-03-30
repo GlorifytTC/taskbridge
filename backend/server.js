@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -28,27 +27,16 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enhanced CORS configuration
-const allowedOrigins = [
-  'https://glorifyttc.github.io',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5000',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
-// Simple CORS configuration - remove the problematic app.options line
-// Simplified CORS configuration - Allow all for testing
+// CORS configuration - Allow all origins for testing
 app.use(cors({
-  origin: '*', // Allow all origins temporarily for testing
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Requested-With']
 }));
 
-// Handle preflight requests explicitly
-app.options('*', cors());
+// REMOVED: app.options('*', cors()); - This line was causing the error
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -116,7 +104,7 @@ const startServer = async () => {
     const server = app.listen(PORT, () => {
       console.log(`\n🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 CORS enabled for origins:`, allowedOrigins);
+      console.log(`🔗 CORS enabled for all origins (testing mode)`);
       console.log(`\n📡 API URL: http://localhost:${PORT}`);
       console.log(`❤️  Health check: http://localhost:${PORT}/health\n`);
     });
