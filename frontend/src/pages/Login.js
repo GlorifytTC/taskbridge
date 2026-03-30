@@ -29,7 +29,8 @@ const Login = () => {
     const result = await login(email, password);
     
     if (result.success) {
-      navigate('/dashboard');
+      // Navigate to dashboard with correct base path
+      navigate('/dashboard', { replace: true });
     } else {
       setError(result.message);
     }

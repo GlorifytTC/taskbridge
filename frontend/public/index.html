@@ -8,8 +8,10 @@
     <meta name="description" content="TaskBridge - Smart Staff & Shift Management Platform" />
     <title>TaskBridge</title>
     <script>
-      // Set the base URL for GitHub Pages
-      window.__BASE_URL__ = '/taskbridge';
+      // Ensure we're on the correct path
+      if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+        window.location.replace('/taskbridge/');
+      }
     </script>
   </head>
   <body>

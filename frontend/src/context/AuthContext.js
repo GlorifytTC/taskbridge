@@ -47,24 +47,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
-      
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Login failed. Please check your credentials.'
-      };
-    }
-  };
+  // In the login function, remove any window.location redirects
+const login = async (email, password) => {
+  try {
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user } = response.data;
+    
+    localStorage.setItem('token', token);
+    setToken(token);
+    setUser(user);
+    
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Login failed'
+    };
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('token');
