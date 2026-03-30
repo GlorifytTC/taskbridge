@@ -6,10 +6,19 @@ const PrivateRoute = () => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
-    return <div className="loading-spinner" style={{ margin: 'auto', marginTop: '50px' }} />;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <div className="loading-spinner" />
+      </div>
+    );
   }
   
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default PrivateRoute;

@@ -1,16 +1,13 @@
 import axios from 'axios';
 
 // Get the API URL based on environment
-const getApiUrl = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL || 'https://taskbridge-api.onrender.com';
-  }
-  return process.env.REACT_APP_API_URL || 'http://localhost:5000';
-};
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+console.log('🔧 API URL:', API_URL);
 
 const api = axios.create({
-  baseURL: getApiUrl(),
-  timeout: 30000, // 30 second timeout
+  baseURL: API_URL,  // Use API_URL directly, not getApiUrl()
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -56,7 +53,7 @@ api.interceptors.response.use(
       
       if (error.response.status === 401) {
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        window.location.href = '/#/login';
       }
     } else if (error.request) {
       // Request was made but no response

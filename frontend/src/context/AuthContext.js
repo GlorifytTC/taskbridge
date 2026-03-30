@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
-import jwtDecode from 'jwt-decode';
-
+import  jwtDecode  from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -39,13 +38,9 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const response = await api.get('/auth/me');
-      if (response.data && response.data.user) {
-        setUser(response.data.user);
-      } else {
-        logout();
-      }
+      setUser(response.data.user);
     } catch (error) {
-      console.error('Failed to fetch user:', error.message);
+      console.error('Failed to fetch user:', error);
       logout();
     } finally {
       setLoading(false);
@@ -56,9 +51,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
+      
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
+      
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -73,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setLoading(false);
   };
 
   const register = async (userData) => {
