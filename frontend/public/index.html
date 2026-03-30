@@ -7,19 +7,13 @@
     <meta name="theme-color" content="#4F46E5" />
     <meta name="description" content="TaskBridge - Smart Staff & Shift Management Platform" />
     <title>TaskBridge</title>
+    <script>
+      // Set the base URL for GitHub Pages
+      window.__BASE_URL__ = '/taskbridge';
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <script>
-      // Handle GitHub Pages routing
-      (function() {
-        var redirect = sessionStorage.redirect;
-        delete sessionStorage.redirect;
-        if (redirect && redirect !== location.href) {
-          history.replaceState(null, null, redirect);
-        }
-      })();
-    </script>
   </body>
 </html>

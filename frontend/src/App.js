@@ -54,21 +54,17 @@ const theme = createTheme({
 
 function App() {
   return (
-    <HashRouter>
+    <HashRouter basename="/taskbridge">
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
           <NotificationProvider>
             <Routes>
-              {/* Public routes - accessible without login */}
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
-              
-              {/* Root path - redirect to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
               
-              {/* Protected routes - require authentication */}
               <Route element={<PrivateRoute />}>
                 <Route element={<Layout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -76,7 +72,6 @@ function App() {
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/applications" element={<Applications />} />
                   
-                  {/* Admin only routes */}
                   <Route element={<RoleBasedRoute allowedRoles={['admin', 'superadmin', 'master']} />}>
                     <Route path="/employees" element={<Employees />} />
                     <Route path="/branches" element={<Branches />} />
@@ -85,17 +80,14 @@ function App() {
                     <Route path="/settings" element={<Settings />} />
                   </Route>
                   
-                  {/* Super Admin only routes */}
                   <Route element={<RoleBasedRoute allowedRoles={['superadmin', 'master']} />}>
                     <Route path="/billing" element={<Billing />} />
                   </Route>
                   
-                  {/* Profile route - accessible to all authenticated users */}
                   <Route path="/profile" element={<Profile />} />
                 </Route>
               </Route>
               
-              {/* Catch all - redirect to login */}
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             <ToastContainer
