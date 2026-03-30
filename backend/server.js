@@ -38,38 +38,57 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Login attempt:', email);
+    console.log('========================================');
+    console.log('🔐 Login attempt for:', email);
+    console.log('Password received:', password ? 'Yes (length: ' + password.length + ')' : 'No');
     
     // Find user
     const user = await User.findOne({ email }).populate('organization');
     
     if (!user) {
-      console.log('User not found:', email);
-      return res.status(401).json({ 
+      console.log('❌ User not found:', email);
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+    
+    console.log('✅ User found:', user.email);
+    console.log('User password hash exists:', user.password ? 'Yes' : 'No');
+    console.log('Password hash type:', typeof user.password);
+    console.log('Password hash length:', user.password ? user.password.length : 0);
+    console.log('First few chars of hash:', user.password ? user.password.substring(0, 20) : 'N/A');
+    
+    // Check password
+    let isMatch = false;
+    try {
+      console.log('Attempting bcrypt.compare...');
+      console.log('Password arg type:', typeof password);
+      console.log('Hash arg type:', typeof user.password);
+      
+      isMatch = await bcrypt.compare(password, user.password);
+      console.log('bcrypt.compare result:', isMatch);
+      
+    } catch (compareError) {
+      console.error('❌ bcrypt.compare error:', compareError);
+      console.error('Error stack:', compareError.stack);
+      return res.status(500).json({ 
         success: false, 
-        message: 'Invalid credentials' 
+        message: 'Password verification error: ' + compareError.message 
       });
     }
     
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    
     if (!isMatch) {
-      console.log('Invalid password for:', email);
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid credentials' 
-      });
+      console.log('❌ Invalid password for:', email);
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
     // Generate token
     const token = jwt.sign(
-      { id: user._id }, 
-      process.env.JWT_SECRET || 'your-secret-key',
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
     
-    console.log('Login successful:', email);
+    console.log('✅ Login successful for:', email);
+    console.log('========================================');
     
     res.json({
       success: true,
@@ -84,7 +103,9 @@ app.post('/api/auth/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
+    console.error('Error stack:', error.stack);
+    console.log('========================================');
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
