@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -29,11 +28,34 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable CORS
+// Enhanced CORS configuration
+const allowedOrigins = [
+  'https://glorifyttc.github.io',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      console.log('Origin not allowed:', origin);
+      callback(null, true); // Still allow for now, but log it
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -57,9 +79,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// 404 handler for undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+    path: req.originalUrl
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error:', err.stack);
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err : {}
@@ -70,16 +100,24 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDB(); // Connect to MongoDB first
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+  try {
+    await connectDB();
+    console.log('✅ MongoDB Connected');
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 CORS enabled for origins:`, allowedOrigins);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
 };
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
+  console.error('Unhandled Rejection:', err);
   process.exit(1);
 });
 

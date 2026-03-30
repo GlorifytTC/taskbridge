@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -19,11 +19,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      const decoded = jwtDecode(token);
-      if (decoded.exp * 1000 < Date.now()) {
+      try {
+        const decoded = jwtDecode(token);
+        if (decoded.exp * 1000 < Date.now()) {
+          logout();
+        } else {
+          fetchUser();
+        }
+      } catch (error) {
+        console.error('Invalid token:', error);
         logout();
-      } else {
-        fetchUser();
       }
     } else {
       setLoading(false);
@@ -33,9 +38,13 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const response = await api.get('/auth/me');
-      setUser(response.data.user);
+      if (response.data && response.data.user) {
+        setUser(response.data.user);
+      } else {
+        logout();
+      }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      console.error('Failed to fetch user:', error.message);
       logout();
     } finally {
       setLoading(false);
@@ -51,9 +60,10 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
+      console.error('Login error:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed'
+        message: error.response?.data?.message || 'Login failed. Please check your credentials.'
       };
     }
   };

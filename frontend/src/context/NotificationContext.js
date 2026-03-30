@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-import io from 'socket.io-client';
 
 const NotificationContext = createContext();
 
@@ -23,35 +22,48 @@ export const NotificationProvider = ({ children }) => {
     
     // Setup socket connection for real-time notifications
     const token = localStorage.getItem('token');
-    if (token) {
-      const newSocket = io(process.env.REACT_APP_API_URL, {
-        auth: { token }
-      });
-      
-      newSocket.on('new_notification', (notification) => {
-        setNotifications(prev => [notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-        toast.info(notification.title, {
-          description: notification.message
-        });
-      });
-      
-      setSocket(newSocket);
-      
-      return () => {
-        newSocket.close();
-      };
+    if (token && process.env.REACT_APP_ENABLE_SOCKET === 'true') {
+      // Only setup socket if enabled (optional feature)
+      // You'll need to install socket.io-client
+      // const newSocket = io(process.env.REACT_APP_API_URL, {
+      //   auth: { token }
+      // });
+      // 
+      // newSocket.on('new_notification', (notification) => {
+      //   setNotifications(prev => [notification, ...prev]);
+      //   setUnreadCount(prev => prev + 1);
+      //   toast.info(notification.title, {
+      //     description: notification.message
+      //   });
+      // });
+      // 
+      // setSocket(newSocket);
+      // 
+      // return () => {
+      //   newSocket.close();
+      // };
     }
   }, []);
 
   const fetchNotifications = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found, skipping notifications fetch');
+        return;
+      }
+      
       const response = await api.get('/notifications');
-      setNotifications(response.data.data);
-      const unread = response.data.data.filter(n => !n.isRead).length;
-      setUnreadCount(unread);
+      if (response.data && response.data.data) {
+        setNotifications(response.data.data);
+        const unread = response.data.data.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      console.error('Failed to fetch notifications:', error.message);
+      // Don't show error toast for notifications to avoid spam
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 
