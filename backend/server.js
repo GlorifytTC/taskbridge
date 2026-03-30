@@ -34,49 +34,28 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Direct login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('========================================');
-    console.log('🔐 Login attempt for:', email);
-    console.log('Password received:', password ? 'Yes (length: ' + password.length + ')' : 'No');
+    console.log('🔐 Login attempt:', email);
     
-    // Find user
-    const user = await User.findOne({ email }).populate('organization');
+    // IMPORTANT: Use .select('+password') to include the password field
+    const user = await User.findOne({ email })
+      .select('+password')
+      .populate('organization');
     
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('❌ User not found');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    console.log('✅ User found:', user.email);
-    console.log('User password hash exists:', user.password ? 'Yes' : 'No');
-    console.log('Password hash type:', typeof user.password);
-    console.log('Password hash length:', user.password ? user.password.length : 0);
-    console.log('First few chars of hash:', user.password ? user.password.substring(0, 20) : 'N/A');
+    console.log('✅ User found, password hash exists:', user.password ? 'Yes' : 'No');
     
     // Check password
-    let isMatch = false;
-    try {
-      console.log('Attempting bcrypt.compare...');
-      console.log('Password arg type:', typeof password);
-      console.log('Hash arg type:', typeof user.password);
-      
-      isMatch = await bcrypt.compare(password, user.password);
-      console.log('bcrypt.compare result:', isMatch);
-      
-    } catch (compareError) {
-      console.error('❌ bcrypt.compare error:', compareError);
-      console.error('Error stack:', compareError.stack);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Password verification error: ' + compareError.message 
-      });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {
-      console.log('❌ Invalid password for:', email);
+      console.log('❌ Invalid password');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
@@ -87,8 +66,7 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '30d' }
     );
     
-    console.log('✅ Login successful for:', email);
-    console.log('========================================');
+    console.log('✅ Login successful!');
     
     res.json({
       success: true,
@@ -104,8 +82,6 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Login error:', error);
-    console.error('Error stack:', error.stack);
-    console.log('========================================');
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
