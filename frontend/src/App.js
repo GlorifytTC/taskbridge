@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import MasterDashboard from './pages/MasterDashboard';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -71,6 +72,9 @@ function App() {
   }
 
   return <Landing onLoginClick={goToLogin} />;
+  if (user.role === 'master') {
+  return <MasterDashboard user={user} onLogout={handleLogout} />;
+}
 }
 
 export default App;
