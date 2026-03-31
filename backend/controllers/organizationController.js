@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Branch = require('../models/Branch');
 const Subscription = require('../models/Subscription');
 const AuditLog = require('../models/AuditLog');
+const Task = require('../models/Task');
+
 
 // @desc    Create organization (Master only)
 // @route   POST /api/organizations
@@ -78,18 +80,37 @@ exports.createOrganization = async (req, res) => {
 // @access  Private/Master
 exports.getOrganizations = async (req, res) => {
   try {
+    console.log('Fetching organizations for user:', req.user.id);
+    
     const organizations = await Organization.find()
-      .populate('createdBy', 'name email')
+      .select('-__v')
       .sort({ createdAt: -1 });
+    
+    // Add counts for each organization
+    const orgsWithCounts = await Promise.all(organizations.map(async (org) => {
+      const userCount = await User.countDocuments({ organization: org._id, role: 'employee' });
+      const taskCount = await Task.countDocuments({ organization: org._id });
+      
+      return {
+        ...org.toObject(),
+        userCount,
+        taskCount
+      };
+    }));
+    
+    console.log(`Found ${orgsWithCounts.length} organizations`);
     
     res.json({
       success: true,
-      count: organizations.length,
-      data: organizations
+      count: orgsWithCounts.length,
+      data: orgsWithCounts
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in getOrganizations:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
