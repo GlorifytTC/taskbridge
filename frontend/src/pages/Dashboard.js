@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onLogout, onNavigate }) => {
   const [stats, setStats] = useState({
     totalTasks: 0,
     pendingApplications: 0,
@@ -76,16 +76,28 @@ const Dashboard = ({ user, onLogout }) => {
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Quick Actions</h2>
         <div style={styles.actionsGrid}>
-          <button style={styles.actionButton}>
-            <i className="fas fa-plus-circle"></i> Create Task
+          <button 
+            onClick={() => onNavigate('tasks')} 
+            style={styles.actionButton}
+          >
+            <i className="fas fa-plus-circle"></i> Manage Tasks
           </button>
-          <button style={styles.actionButton}>
-            <i className="fas fa-user-plus"></i> Add Employee
+          <button 
+            onClick={() => onNavigate('employees')} 
+            style={styles.actionButton}
+          >
+            <i className="fas fa-user-plus"></i> Manage Employees
           </button>
-          <button style={styles.actionButton}>
+          <button 
+            onClick={() => onNavigate('calendar')} 
+            style={styles.actionButton}
+          >
             <i className="fas fa-calendar-alt"></i> View Calendar
           </button>
-          <button style={styles.actionButton}>
+          <button 
+            onClick={() => onNavigate('reports')} 
+            style={styles.actionButton}
+          >
             <i className="fas fa-chart-line"></i> Generate Report
           </button>
         </div>

@@ -3,6 +3,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MasterDashboard from './pages/MasterDashboard';
+import Tasks from './pages/Tasks';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -47,6 +48,11 @@ function App() {
     setCurrentPage('landing');
   };
 
+  const handleNavigate = (page) => {
+    console.log('Navigating to:', page);
+    setCurrentPage(page);
+  };
+
   const handleLogin = (userData) => {
     console.log('User logged in:', userData);
     setUser(userData);
@@ -73,11 +79,15 @@ function App() {
   }
 
   if (currentPage === 'master' && user) {
-    return <MasterDashboard user={user} onLogout={handleLogout} />;
+    return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
   if (currentPage === 'dashboard' && user) {
-    return <Dashboard user={user} onLogout={handleLogout} />;
+    return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'tasks' && user) {
+    return <Tasks user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
   return <Landing onLoginClick={goToLogin} />;
