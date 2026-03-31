@@ -9,7 +9,8 @@ const {
   deleteOrganization,
   pauseOrganization,
   resumeOrganization,
-  extendSubscription  // Add this
+  extendSubscription,
+  changePlan  // Add this
 } = require('../controllers/organizationController');
 
 // All routes require authentication and master role
@@ -27,6 +28,7 @@ router.route('/:id')
 
 router.put('/:id/pause', pauseOrganization);
 router.put('/:id/resume', resumeOrganization);
-router.put('/:id/extend', extendSubscription);  // Add this line
+router.put('/:id/extend', extendSubscription);
+router.put('/:id/plan', changePlan);  // Add this line
 
 module.exports = router;

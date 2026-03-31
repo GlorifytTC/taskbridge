@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const MasterDashboard = ({ onLogout }) => {
   const [organizations, setOrganizations] = useState([]);
@@ -19,6 +19,9 @@ const MasterDashboard = ({ onLogout }) => {
   const [extendDays, setExtendDays] = useState(30);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('basic');
+  const [selectedDuration, setSelectedDuration] = useState(1);
 
   useEffect(() => {
     fetchDashboardData();
@@ -28,8 +31,6 @@ const MasterDashboard = ({ onLogout }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      
-      // Fetch organizations
       const orgRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/organizations', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -39,7 +40,6 @@ const MasterDashboard = ({ onLogout }) => {
         const orgs = orgData.data;
         setOrganizations(orgs);
         
-        // Calculate stats
         const activeSubs = orgs.filter(o => o.subscription?.status === 'active').length;
         const trialExpiring = orgs.filter(o => {
           if (o.subscription?.status === 'trial' && o.subscription?.endDate) {
@@ -94,6 +94,32 @@ const MasterDashboard = ({ onLogout }) => {
       }
     } catch (error) {
       console.error('Error creating organization:', error);
+    }
+  };
+
+  const handleChangePlan = async () => {
+    if (!selectedOrg) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/plan`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          plan: selectedPlan, 
+          duration: selectedDuration 
+        })
+      });
+      
+      if (response.ok) {
+        setShowPlanModal(false);
+        setSelectedOrg(null);
+        fetchDashboardData();
+      }
+    } catch (error) {
+      console.error('Error changing plan:', error);
     }
   };
 
@@ -166,6 +192,15 @@ const MasterDashboard = ({ onLogout }) => {
     return `${days} days`;
   };
 
+  const getTotalPrice = (plan, months) => {
+    const prices = { basic: 49, professional: 99, enterprise: 299 };
+    let total = prices[plan] * months;
+    if (months >= 3) total = total * 0.95;
+    if (months >= 6) total = total * 0.9;
+    if (months >= 12) total = total * 0.85;
+    return Math.round(total);
+  };
+
   const filteredOrgs = organizations.filter(org => {
     const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           org.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -186,7 +221,6 @@ const MasterDashboard = ({ onLogout }) => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Master Dashboard</h1>
@@ -197,7 +231,6 @@ const MasterDashboard = ({ onLogout }) => {
         </button>
       </div>
 
-      {/* Stats Grid */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
           <div style={styles.statIcon}><i className="fas fa-building"></i></div>
@@ -231,7 +264,6 @@ const MasterDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* Actions Bar */}
       <div style={styles.actionsBar}>
         <button onClick={() => setShowOrgModal(true)} style={styles.addButton}>
           <i className="fas fa-plus"></i> New Organization
@@ -257,35 +289,32 @@ const MasterDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* Organizations Table */}
       <div style={styles.tableContainer}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.tableHeader}>
-              <th>Organization</th>
-              <th>Contact</th>
-              <th>Plan</th>
-              <th>Status</th>
-              <th>Users</th>
-              <th>Tasks</th>
-              <th>Subscription</th>
-              <th>Actions</th>
+              <th style={styles.th}>Organization</th>
+              <th style={styles.th}>Contact</th>
+              <th style={styles.th}>Plan</th>
+              <th style={styles.th}>Status</th>
+              <th style={styles.th}>Users</th>
+              <th style={styles.th}>Tasks</th>
+              <th style={styles.th}>Subscription</th>
+              <th style={styles.th}>Actions</th>
              </tr>
           </thead>
           <tbody>
             {filteredOrgs.map((org) => (
               <tr key={org._id} style={styles.tableRow}>
-                <td>
+                <td style={styles.td}>
                   <strong>{org.name}</strong>
-                  <div style={styles.orgDetails}>
-                    {org.address?.city && `${org.address.city}`}
-                  </div>
+                  <div style={styles.orgDetails}>{org.address?.city && `${org.address.city}`}</div>
                 </td>
-                <td>
+                <td style={styles.td}>
                   <div>{org.email}</div>
                   <div style={styles.orgDetails}>{org.phone}</div>
                 </td>
-                <td>
+                <td style={styles.td}>
                   <span style={{
                     ...styles.planBadge,
                     background: org.subscription?.plan === 'enterprise' ? '#8b5cf6' : 
@@ -294,7 +323,7 @@ const MasterDashboard = ({ onLogout }) => {
                     {org.subscription?.plan || 'trial'}
                   </span>
                 </td>
-                <td>
+                <td style={styles.td}>
                   <span style={{
                     ...styles.statusBadge,
                     background: org.isActive ? '#10b981' : '#ef4444'
@@ -303,41 +332,26 @@ const MasterDashboard = ({ onLogout }) => {
                     {org.subscription?.status === 'trial' && <span style={styles.trialBadge}>Trial</span>}
                   </span>
                 </td>
-                <td>{org.userCount || 0}</td>
-                <td>{org.taskCount || 0}</td>
-                <td>
+                <td style={styles.td}>{org.userCount || 0}</td>
+                <td style={styles.td}>{org.taskCount || 0}</td>
+                <td style={styles.td}>
                   <div>{getDaysLeft(org.subscription?.endDate)} left</div>
                   <div style={styles.orgDetails}>
                     {org.subscription?.endDate && new Date(org.subscription.endDate).toLocaleDateString()}
                   </div>
                 </td>
-                <td>
+                <td style={styles.td}>
                   <div style={styles.actionButtons}>
-                    <button 
-                      onClick={() => {
-                        setSelectedOrg(org);
-                        setShowExtendModal(true);
-                      }}
-                      style={styles.extendButton}
-                      title="Extend Subscription"
-                    >
+                    <button onClick={() => { setSelectedOrg(org); setShowExtendModal(true); }} style={styles.extendButton} title="Extend Subscription">
                       <i className="fas fa-calendar-plus"></i>
                     </button>
-                    <button 
-                      onClick={() => org.isActive ? handlePauseOrg(org._id) : handleResumeOrg(org._id)}
-                      style={org.isActive ? styles.pauseButton : styles.resumeButton}
-                      title={org.isActive ? 'Pause' : 'Resume'}
-                    >
+                    <button onClick={() => org.isActive ? handlePauseOrg(org._id) : handleResumeOrg(org._id)} style={org.isActive ? styles.pauseButton : styles.resumeButton} title={org.isActive ? 'Pause' : 'Resume'}>
                       <i className={`fas fa-${org.isActive ? 'pause' : 'play'}`}></i>
                     </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedOrg(org);
-                        setShowDeleteConfirm(true);
-                      }}
-                      style={styles.deleteButton}
-                      title="Delete"
-                    >
+                    <button onClick={() => { setSelectedOrg(org); setSelectedPlan(org.subscription?.plan || 'basic'); setSelectedDuration(1); setShowPlanModal(true); }} style={styles.planButton} title="Change Plan">
+                      <i className="fas fa-tag"></i>
+                    </button>
+                    <button onClick={() => { setSelectedOrg(org); setShowDeleteConfirm(true); }} style={styles.deleteButton} title="Delete">
                       <i className="fas fa-trash"></i>
                     </button>
                   </div>
@@ -379,18 +393,51 @@ const MasterDashboard = ({ onLogout }) => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Extend Subscription</h2>
             <p>Extend subscription for <strong>{selectedOrg?.name}</strong></p>
-            <input
-              type="number"
-              value={extendDays}
-              onChange={(e) => setExtendDays(parseInt(e.target.value))}
-              placeholder="Days to extend"
-              style={styles.input}
-              min="1"
-              max="365"
-            />
+            <input type="number" value={extendDays} onChange={(e) => setExtendDays(parseInt(e.target.value))} placeholder="Days to extend" style={styles.input} min="1" max="365" />
             <div style={styles.modalButtons}>
               <button onClick={() => setShowExtendModal(false)} style={styles.cancelButton}>Cancel</button>
               <button onClick={handleExtendSubscription} style={styles.submitButton}>Extend by {extendDays} days</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Plan Modal */}
+      {showPlanModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowPlanModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Change Subscription Plan</h2>
+            <p>Change plan for <strong>{selectedOrg?.name}</strong></p>
+            <div style={styles.planOptions}>
+              <div onClick={() => setSelectedPlan('basic')} style={{...styles.planCard, borderColor: selectedPlan === 'basic' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'basic' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+                <h3>Basic</h3>
+                <div style={styles.planPrice}>$49<span>/month</span></div>
+                <ul style={styles.planFeatures}><li>✓ Up to 50 employees</li><li>✓ 1 branch</li><li>✓ Basic reports</li><li>✓ Email support</li></ul>
+              </div>
+              <div onClick={() => setSelectedPlan('professional')} style={{...styles.planCard, borderColor: selectedPlan === 'professional' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'professional' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+                <h3>Professional</h3>
+                <div style={styles.planPrice}>$99<span>/month</span></div>
+                <ul style={styles.planFeatures}><li>✓ Up to 200 employees</li><li>✓ 5 branches</li><li>✓ Advanced reports</li><li>✓ Priority support</li><li>✓ API access</li></ul>
+              </div>
+              <div onClick={() => setSelectedPlan('enterprise')} style={{...styles.planCard, borderColor: selectedPlan === 'enterprise' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'enterprise' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+                <h3>Enterprise</h3>
+                <div style={styles.planPrice}>$299<span>/month</span></div>
+                <ul style={styles.planFeatures}><li>✓ Unlimited employees</li><li>✓ Unlimited branches</li><li>✓ Custom reports</li><li>✓ 24/7 dedicated support</li><li>✓ Full API access</li><li>✓ Custom integrations</li></ul>
+              </div>
+            </div>
+            <div style={styles.durationSelector}>
+              <label>Duration:</label>
+              <select value={selectedDuration} onChange={(e) => setSelectedDuration(parseInt(e.target.value))} style={styles.durationSelect}>
+                <option value={1}>1 month</option>
+                <option value={3}>3 months (save 5%)</option>
+                <option value={6}>6 months (save 10%)</option>
+                <option value={12}>12 months (save 15%)</option>
+              </select>
+            </div>
+            <div style={styles.priceSummary}><strong>Total:</strong> ${getTotalPrice(selectedPlan, selectedDuration)}</div>
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowPlanModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={handleChangePlan} style={styles.submitButton}>Change to {selectedPlan}</button>
             </div>
           </div>
         </div>
@@ -402,9 +449,7 @@ const MasterDashboard = ({ onLogout }) => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Delete Organization</h2>
             <p>Are you sure you want to delete <strong>{selectedOrg?.name}</strong>?</p>
-            <p style={{ color: '#ef4444', fontSize: '14px', marginTop: '8px' }}>
-              ⚠️ This action cannot be undone. All data will be permanently removed.
-            </p>
+            <p style={{ color: '#ef4444', fontSize: '14px', marginTop: '8px' }}>⚠️ This action cannot be undone. All data will be permanently removed.</p>
             <div style={styles.modalButtons}>
               <button onClick={() => setShowDeleteConfirm(false)} style={styles.cancelButton}>Cancel</button>
               <button onClick={handleDeleteOrg} style={styles.confirmDeleteButton}>Delete Forever</button>
@@ -433,7 +478,7 @@ const styles = {
   loadingSpinner: {
     width: '40px',
     height: '40px',
-    border: '3px solid rgba(0, 209, 255, 0.3)',
+    border: '3px solid rgba(0,209,255,0.3)',
     borderRadius: '50%',
     borderTopColor: '#00d1ff',
     animation: 'spin 1s linear infinite',
@@ -463,8 +508,6 @@ const styles = {
     borderRadius: '50px',
     color: 'white',
     cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.3s',
   },
   statsGrid: {
     display: 'grid',
@@ -511,8 +554,6 @@ const styles = {
     borderRadius: '12px',
     color: 'white',
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
   },
   searchFilter: {
     display: 'flex',
@@ -524,7 +565,6 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '12px',
     color: 'white',
-    fontSize: '14px',
     width: '250px',
   },
   filterSelect: {
@@ -533,7 +573,6 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '12px',
     color: 'white',
-    fontSize: '14px',
     cursor: 'pointer',
   },
   tableContainer: {
@@ -552,18 +591,17 @@ const styles = {
     color: 'rgba(255,255,255,0.6)',
     fontSize: '12px',
     textTransform: 'uppercase',
-    letterSpacing: '1px',
   },
-  tableHeaderTh: {
+  th: {
     padding: '16px 12px',
   },
   tableRow: {
     borderBottom: '1px solid rgba(255,255,255,0.05)',
     color: 'white',
-    fontSize: '14px',
   },
-  tableRowTd: {
+  td: {
     padding: '16px 12px',
+    fontSize: '14px',
   },
   orgDetails: {
     fontSize: '11px',
@@ -599,7 +637,7 @@ const styles = {
     gap: '8px',
   },
   extendButton: {
-    background: 'rgba(16, 185, 129, 0.2)',
+    background: 'rgba(16,185,129,0.2)',
     border: '1px solid #10b981',
     borderRadius: '8px',
     padding: '6px 10px',
@@ -607,7 +645,7 @@ const styles = {
     cursor: 'pointer',
   },
   pauseButton: {
-    background: 'rgba(245, 158, 11, 0.2)',
+    background: 'rgba(245,158,11,0.2)',
     border: '1px solid #f59e0b',
     borderRadius: '8px',
     padding: '6px 10px',
@@ -615,7 +653,7 @@ const styles = {
     cursor: 'pointer',
   },
   resumeButton: {
-    background: 'rgba(16, 185, 129, 0.2)',
+    background: 'rgba(16,185,129,0.2)',
     border: '1px solid #10b981',
     borderRadius: '8px',
     padding: '6px 10px',
@@ -623,11 +661,19 @@ const styles = {
     cursor: 'pointer',
   },
   deleteButton: {
-    background: 'rgba(239, 68, 68, 0.2)',
+    background: 'rgba(239,68,68,0.2)',
     border: '1px solid #ef4444',
     borderRadius: '8px',
     padding: '6px 10px',
     color: '#ef4444',
+    cursor: 'pointer',
+  },
+  planButton: {
+    background: 'rgba(139,92,246,0.2)',
+    border: '1px solid #8b5cf6',
+    borderRadius: '8px',
+    padding: '6px 10px',
+    color: '#8b5cf6',
     cursor: 'pointer',
   },
   modalOverlay: {
@@ -664,7 +710,6 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '12px',
     color: 'white',
-    fontSize: '14px',
     boxSizing: 'border-box',
   },
   select: {
@@ -675,7 +720,6 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '12px',
     color: 'white',
-    fontSize: '14px',
     cursor: 'pointer',
   },
   modalButtons: {
@@ -710,6 +754,51 @@ const styles = {
     borderRadius: '12px',
     color: 'white',
     cursor: 'pointer',
+  },
+  planOptions: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px',
+  },
+  planCard: {
+    padding: '16px',
+    borderRadius: '16px',
+    border: '2px solid',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+  },
+  planPrice: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    margin: '12px 0',
+  },
+  planFeatures: {
+    listStyle: 'none',
+    padding: 0,
+    fontSize: '12px',
+  },
+  durationSelector: {
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  durationSelect: {
+    padding: '8px 12px',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+  },
+  priceSummary: {
+    padding: '12px',
+    background: 'rgba(0,209,255,0.1)',
+    borderRadius: '8px',
+    textAlign: 'center',
+    marginBottom: '20px',
+    fontSize: '18px',
   },
 };
 

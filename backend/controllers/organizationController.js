@@ -4,7 +4,77 @@ const Branch = require('../models/Branch');
 const Subscription = require('../models/Subscription');
 const AuditLog = require('../models/AuditLog');
 const Task = require('../models/Task');
+// @desc    Change organization subscription plan
+// @route   PUT /api/organizations/:id/plan
+// @access  Private/Master
+exports.changePlan = async (req, res) => {
+  try {
+    const { plan, duration } = req.body; // duration in months
+    const organization = await Organization.findById(req.params.id);
+    
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    // Calculate new end date based on plan duration
+    const currentEndDate = organization.subscription.endDate || new Date();
+    const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
+    
+    // Update organization subscription
+    organization.subscription.plan = plan;
+    organization.subscription.status = 'active';
+    organization.subscription.endDate = newEndDate;
+    await organization.save();
+    
+    // Update subscription record
+    await Subscription.findOneAndUpdate(
+      { organization: organization._id },
+      { 
+        plan: plan,
+        status: 'active',
+        endDate: newEndDate,
+        price: {
+          amount: getPlanPrice(plan, duration),
+          currency: 'SEK'
+        }
+      }
+    );
+    
+    // Create audit log
+    await AuditLog.create({
+      user: req.user.id,
+      organization: organization._id,
+      action: 'change_plan',
+      entityType: 'subscription',
+      entityId: organization._id,
+      changes: { plan, duration },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Plan changed to ${plan}`,
+      data: {
+        plan,
+        endDate: newEndDate
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
+// Helper function to get plan price
+function getPlanPrice(plan, months) {
+  const prices = {
+    basic: 49,
+    professional: 99,
+    enterprise: 299
+  };
+  return (prices[plan] || 0) * months;
+}
 
 // @desc    Create organization (Master only)
 // @route   POST /api/organizations
