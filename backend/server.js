@@ -37,25 +37,35 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('🔐 Login attempt:', email);
+    console.log('========================================');
+    console.log('🔐 Login attempt for:', email);
+    console.log('Password received length:', password ? password.length : 0);
     
-    // IMPORTANT: Use .select('+password') to include the password field
-    const user = await User.findOne({ email })
-      .select('+password')
-      .populate('organization');
+    // Find user with password field
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      console.log('❌ User not found');
+      console.log('❌ User not found in database');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    console.log('✅ User found, password hash exists:', user.password ? 'Yes' : 'No');
+    console.log('✅ User found in database');
+    console.log('Stored password hash exists:', !!user.password);
+    console.log('Stored hash length:', user.password ? user.password.length : 0);
+    console.log('Stored hash preview:', user.password ? user.password.substring(0, 20) : 'N/A');
     
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Compare password
+    let isMatch = false;
+    try {
+      isMatch = await bcrypt.compare(password, user.password);
+      console.log('Password comparison result:', isMatch);
+    } catch (compareError) {
+      console.error('❌ Bcrypt compare error:', compareError);
+      return res.status(500).json({ success: false, message: 'Password verification error' });
+    }
     
     if (!isMatch) {
-      console.log('❌ Invalid password');
+      console.log('❌ Password does not match');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
@@ -67,6 +77,7 @@ app.post('/api/auth/login', async (req, res) => {
     );
     
     console.log('✅ Login successful!');
+    console.log('========================================');
     
     res.json({
       success: true,
@@ -82,6 +93,7 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Login error:', error);
+    console.log('========================================');
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
