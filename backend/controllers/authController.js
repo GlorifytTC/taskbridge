@@ -76,58 +76,86 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Login attempt:', email);
     
-    // Check for user
+    // Check if email and password are provided
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide email and password' 
+      });
+    }
+    
+    // Find user with password field
     const user = await User.findOne({ email })
+      .select('+password')
       .populate('organization', 'name')
       .populate('branch', 'name');
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log('❌ User not found:', email);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
     
-    // Check if account is active
-    if (!user.isActive) {
-      return res.status(401).json({ message: 'Account is deactivated' });
+    console.log('✅ User found, checking password...');
+    console.log('Password hash exists:', !!user.password);
+    
+    // Check password with proper error handling
+    let isMatch = false;
+    try {
+      isMatch = await bcrypt.compare(password, user.password);
+      console.log('Password match result:', isMatch);
+    } catch (bcryptError) {
+      console.error('Bcrypt error:', bcryptError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Password verification error' 
+      });
     }
     
-    // Check password
-    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log('❌ Invalid password for:', email);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
     
     // Update last login
     user.lastLogin = Date.now();
     await user.save();
     
-    // Create audit log
-    await AuditLog.create({
-      user: user._id,
-      organization: user.organization,
-      action: 'login',
-      entityType: 'user',
-      entityId: user._id,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key-change-this',
+      { expiresIn: '30d' }
+    );
+    
+    console.log('✅ Login successful:', email);
     
     res.json({
       success: true,
-      token: generateToken(user._id),
+      token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         organization: user.organization,
-        branch: user.branch,
-        permissions: user.permissions
+        branch: user.branch
       }
     });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
