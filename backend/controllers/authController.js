@@ -1,3 +1,4 @@
+// At the top of the file, keep this:
 const User = require('../models/User');
 const Organization = require('../models/Organization');
 const Branch = require('../models/Branch');
@@ -14,65 +15,6 @@ const generateToken = (id) => {
   });
 };
 
-// @desc    Register new user (Admin creates employees)
-// @route   POST /api/auth/register
-// @access  Private/Admin
-exports.register = async (req, res) => {
-  try {
-    const { name, email, password, role, jobDescription, branch } = req.body;
-    
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-    
-    // Get admin's organization
-    const admin = await User.findById(req.user.id);
-    const organization = admin.organization;
-    
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      organization,
-      jobDescription: role === 'employee' ? jobDescription : undefined,
-      branch: branch || admin.branch,
-      createdBy: req.user.id
-    });
-    
-    // Create audit log
-    await AuditLog.create({
-      user: req.user.id,
-      organization,
-      action: 'create',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { name, email, role },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
-    res.status(201).json({
-      success: true,
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -87,6 +29,9 @@ exports.login = async (req, res) => {
         message: 'Please provide email and password' 
       });
     }
+    
+    // REMOVE THIS LINE - IT'S DUPLICATE:
+    // const User = require('../models/User');
     
     // Find user with password
     const user = await User.findOne({ email }).select('+password');
