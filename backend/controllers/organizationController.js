@@ -9,24 +9,35 @@ const Task = require('../models/Task');
 // @access  Private/Master
 exports.changePlan = async (req, res) => {
   try {
-    const { plan, duration } = req.body; // duration in months
+    const { plan, duration } = req.body;
     const organization = await Organization.findById(req.params.id);
     
     if (!organization) {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // Calculate new end date based on plan duration
-    const currentEndDate = organization.subscription.endDate || new Date();
+    // Plan prices
+    const prices = {
+      basic: 49,
+      professional: 99,
+      enterprise: 299
+    };
+    
+    // Calculate new end date
+    const currentEndDate = organization.subscription?.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
     
     // Update organization subscription
-    organization.subscription.plan = plan;
-    organization.subscription.status = 'active';
-    organization.subscription.endDate = newEndDate;
+    organization.subscription = {
+      ...organization.subscription,
+      plan: plan,
+      status: 'active',
+      endDate: newEndDate
+    };
     await organization.save();
     
-    // Update subscription record
+    // Update subscription record if exists
+    const Subscription = require('../models/Subscription');
     await Subscription.findOneAndUpdate(
       { organization: organization._id },
       { 
@@ -34,10 +45,11 @@ exports.changePlan = async (req, res) => {
         status: 'active',
         endDate: newEndDate,
         price: {
-          amount: getPlanPrice(plan, duration),
+          amount: prices[plan] * duration,
           currency: 'SEK'
         }
-      }
+      },
+      { upsert: true }
     );
     
     // Create audit log
@@ -47,7 +59,7 @@ exports.changePlan = async (req, res) => {
       action: 'change_plan',
       entityType: 'subscription',
       entityId: organization._id,
-      changes: { plan, duration },
+      changes: { plan, duration, newEndDate },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -61,8 +73,8 @@ exports.changePlan = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error changing plan:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -75,6 +87,32 @@ function getPlanPrice(plan, months) {
   };
   return (prices[plan] || 0) * months;
 }
+
+
+
+// @desc    Get all users for an organization
+// @route   GET /api/organizations/:id/users
+// @access  Private/Master
+exports.getOrganizationUsers = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const users = await User.find({ organization: req.params.id })
+      .select('-password')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      users: users
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
 
 // @desc    Create organization (Master only)
 // @route   POST /api/organizations
@@ -286,6 +324,138 @@ exports.deleteOrganization = async (req, res) => {
   }
 };
 
+
+// @desc    Reset user password
+// @route   PUT /api/users/:id/reset-password
+// @access  Private/Admin/SuperAdmin/Master
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const User = require('../models/User');
+    const bcrypt = require('bcryptjs');
+    
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    // Check authorization
+    if (user.organization.toString() !== req.user.organization.toString() && req.user.role !== 'master') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Not authorized' 
+      });
+    }
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+    
+    // Create audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      user: req.user.id,
+      organization: user.organization,
+      action: 'reset_password',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { passwordReset: true },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully' 
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+};
+
+// @desc    Create user for organization (Super Admin or Admin)
+// @route   POST /api/organizations/:id/users
+// @access  Private/Master
+exports.createOrganizationUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    const User = require('../models/User');
+    const Organization = require('../models/Organization');
+    const bcrypt = require('bcryptjs');
+    
+    const organization = await Organization.findById(req.params.id);
+    
+    if (!organization) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Organization not found' 
+      });
+    }
+    
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User already exists' 
+      });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role === 'superadmin' ? 'superadmin' : 'admin',
+      organization: organization._id,
+      createdBy: req.user.id,
+      isActive: true
+    });
+    
+    // Create audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      user: req.user.id,
+      organization: organization._id,
+      action: 'create',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { name, email, role },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.status(201).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+};
+
+
 // @desc    Pause organization (Master only)
 // @route   PUT /api/organizations/:id/pause
 // @access  Private/Master
@@ -336,20 +506,22 @@ exports.extendSubscription = async (req, res) => {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // Extend end date
-    const currentEndDate = organization.subscription.endDate || new Date();
+    const currentEndDate = organization.subscription?.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + days * 24 * 60 * 60 * 1000);
     
-    organization.subscription.endDate = newEndDate;
+    organization.subscription = {
+      ...organization.subscription,
+      endDate: newEndDate
+    };
     await organization.save();
     
-    // Update subscription record
+    const Subscription = require('../models/Subscription');
     await Subscription.findOneAndUpdate(
       { organization: organization._id },
-      { endDate: newEndDate }
+      { endDate: newEndDate },
+      { upsert: true }
     );
     
-    // Create audit log
     await AuditLog.create({
       user: req.user.id,
       organization: organization._id,
@@ -364,13 +536,15 @@ exports.extendSubscription = async (req, res) => {
     res.json({ 
       success: true, 
       message: `Subscription extended by ${days} days`,
-      newEndDate 
+      newEndDate
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error extending subscription:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 // @desc    Resume organization (Master only)
 // @route   PUT /api/organizations/:id/resume
 // @access  Private/Master

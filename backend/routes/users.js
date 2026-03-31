@@ -10,7 +10,6 @@ const {
   transferOwnership
 } = require('../controllers/userController');
 
-// All routes require authentication
 router.use(protect);
 
 router.route('/')
@@ -18,10 +17,10 @@ router.route('/')
 
 router.route('/:id')
   .get(getUser)
-  .put(authorize('admin', 'superadmin'), updateUser)
-  .delete(authorize('admin', 'superadmin'), deleteUser);
+  .put(authorize('admin', 'superadmin', 'master'), updateUser)
+  .delete(authorize('admin', 'superadmin', 'master'), deleteUser);
 
-router.put('/:id/reset-password', authorize('admin', 'superadmin'), resetUserPassword);
+router.put('/:id/reset-password', authorize('admin', 'superadmin', 'master'), resetUserPassword);
 router.post('/transfer-ownership', authorize('superadmin'), transferOwnership);
 
 module.exports = router;
