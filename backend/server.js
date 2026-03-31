@@ -90,34 +90,52 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('========================================');
     console.log('🔐 Login attempt for:', email);
-    console.log('Password received length:', password ? password.length : 0);
+    console.log('Password received:', password ? 'Yes (length: ' + password.length + ')' : 'No');
     
+    // Check if User model is loaded
+    const User = require('./models/User');
+    console.log('User model loaded:', typeof User);
+    
+    // Find user
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      console.log('❌ User not found in database');
+      console.log('❌ User not found');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    console.log('✅ User found in database');
-    console.log('Stored password hash exists:', !!user.password);
-    console.log('Stored hash length:', user.password ? user.password.length : 0);
-    console.log('Stored hash preview:', user.password ? user.password.substring(0, 20) : 'N/A');
+    console.log('✅ User found:', user.email);
+    console.log('User password field exists:', !!user.password);
+    console.log('User password type:', typeof user.password);
+    console.log('User password length:', user.password ? user.password.length : 0);
     
+    // Check if password field is a string
+    if (typeof user.password !== 'string') {
+      console.log('❌ Password is not a string:', typeof user.password);
+      return res.status(500).json({ success: false, message: 'Invalid password format' });
+    }
+    
+    // Compare password
     let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password);
-      console.log('Password comparison result:', isMatch);
+      console.log('Password match result:', isMatch);
     } catch (compareError) {
-      console.error('❌ Bcrypt compare error:', compareError);
-      return res.status(500).json({ success: false, message: 'Password verification error' });
+      console.error('❌ Bcrypt compare error details:', compareError);
+      console.error('Error stack:', compareError.stack);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Password verification error',
+        error: compareError.message 
+      });
     }
     
     if (!isMatch) {
-      console.log('❌ Password does not match');
+      console.log('❌ Invalid password');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
+    // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'mysecretkey123',
@@ -141,6 +159,7 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Login error:', error);
+    console.error('Error stack:', error.stack);
     console.log('========================================');
     res.status(500).json({ 
       success: false, 

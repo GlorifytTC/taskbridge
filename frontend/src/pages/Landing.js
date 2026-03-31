@@ -4,11 +4,38 @@ const Landing = ({ onLoginClick }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
 
   const handleSignIn = () => {
-  console.log('Sign In button clicked');
-  if (onLoginClick) {
-    onLoginClick();
+    console.log('Sign In button clicked');
+    if (onLoginClick) {
+      onLoginClick();
+    }
+  };
+
+  // Get dynamic current date for calendar
+  const currentDate = new Date();
+  const today = currentDate.getDate();
+
+  // Generate dynamic calendar days based on current month/year
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+  
+  const getFirstDayOfMonth = (year, month) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+  const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
+  const days = [];
+  
+  // Add empty cells for days before month starts
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
   }
-};
+  
+  // Add actual days
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
 
   return (
     <div style={styles.container}>
@@ -23,7 +50,9 @@ const Landing = ({ onLoginClick }) => {
       {/* Navigation */}
       <nav style={styles.navbar}>
         <div style={styles.logo}>
-          <div style={styles.logoIcon}>T</div>
+          <div style={styles.logoIcon}>
+            <span>T</span>
+          </div>
           <span style={styles.logoText}>TaskBridge</span>
         </div>
         <button onClick={handleSignIn} style={styles.navButton}>
@@ -54,39 +83,36 @@ const Landing = ({ onLoginClick }) => {
               Watch Demo <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
             </button>
           </div>
-
-          {/* Stats */}
-          <div style={styles.stats}>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>500+</div>
-              <div style={styles.statLabel}>Active Organizations</div>
-            </div>
-            <div style={styles.statDivider}></div>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>10K+</div>
-              <div style={styles.statLabel}>Employees Managed</div>
-            </div>
-            <div style={styles.statDivider}></div>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>98%</div>
-              <div style={styles.statLabel}>Satisfaction Rate</div>
-            </div>
-          </div>
         </div>
 
-        {/* Robot Animation */}
-        <div style={styles.robotContainer}>
-          <div style={styles.robot}>
-            <div style={styles.robotHead}>
-              <div style={styles.robotAntenna}></div>
-              <div style={styles.robotFace}>
-                <div style={styles.robotEyes}>
-                  <div style={styles.robotEye}></div>
-                  <div style={styles.robotEye}></div>
-                </div>
-                <div style={styles.robotMouth}></div>
+        {/* Dynamic Calendar Animation */}
+        <div style={styles.calendarContainer}>
+          <div style={styles.calendar}>
+            <div style={styles.calendarHeader}>
+              <div style={styles.calendarMonth}>
+                TaskBridge
               </div>
             </div>
+            <div style={styles.calendarWeekdays}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} style={styles.weekday}>{day}</div>
+              ))}
+            </div>
+            <div style={styles.calendarDays}>
+              {days.map((day, index) => (
+                <div 
+                  key={index} 
+                  style={{
+                    ...styles.calendarDay,
+                    ...(day === today ? styles.today : {}),
+                    ...(day && day % 2 === 0 ? styles.blinkingEye : {})
+                  }}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div style={styles.calendarGlow}></div>
           </div>
         </div>
       </div>
@@ -128,13 +154,49 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
+      {/* Company Owner Section - GlorifyTC with original logo animation */}
+      <div style={styles.ownerSection}>
+        <div style={styles.ownerContainer}>
+          <div style={styles.ownerCard}>
+            <div style={styles.ownerLogo}>
+              <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
+                <div style={styles.glorifyLogoIcon}>
+                  <span>G</span>
+                </div>
+                <div style={styles.glorifyLogoText}>GlorifyTC</div>
+              </a>
+            </div>
+            <div style={styles.ownerInfo}>
+              <h3 style={styles.ownerTitle}>Project Owner & Lead Developer</h3>
+              <div style={styles.ownerDetails}>
+                <div style={styles.contactItem}>
+                  <i className="fas fa-envelope"></i>
+                  <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
+                </div>
+                <div style={styles.contactItem}>
+                  <i className="fas fa-globe"></i>
+                  <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={styles.footer}>
+        <div style={styles.footerContent}>
+          <p>&copy; 2026 TaskBridge. All rights reserved. Developed by <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
+        </div>
+      </footer>
+
       {/* Add Font Awesome */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     </div>
   );
 };
 
-// Styles object (same as before - keeping it compact)
+// Styles object
 const styles = {
   container: {
     minHeight: '100vh',
@@ -207,6 +269,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+    textDecoration: 'none',
   },
   logoIcon: {
     width: '40px',
@@ -216,9 +279,10 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: 'white',
+    position: 'relative',
+    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
+    animation: 'softGlow 3s ease-in-out infinite',
   },
   logoText: {
     fontSize: '24px',
@@ -320,86 +384,84 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s',
   },
-  stats: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '32px',
-    paddingTop: '32px',
-    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-  statItem: {
-    textAlign: 'center',
-  },
-  statNumber: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#00d1ff',
-    marginBottom: '4px',
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  statDivider: {
-    width: '1px',
-    height: '40px',
-    background: 'rgba(255, 255, 255, 0.2)',
-  },
-  robotContainer: {
+  calendarContainer: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  robot: {
-    width: '300px',
-    height: '300px',
-    animation: 'floatRobot 6s ease-in-out infinite',
-  },
-  robotHead: {
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-    borderRadius: '60px',
+  calendar: {
+    width: '350px',
+    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9))',
+    borderRadius: '24px',
+    padding: '20px',
     border: '2px solid rgba(0, 209, 255, 0.3)',
-    position: 'relative',
     boxShadow: '0 0 30px rgba(0, 209, 255, 0.2)',
+    position: 'relative',
+    backdropFilter: 'blur(10px)',
+    animation: 'floatCalendar 6s ease-in-out infinite',
   },
-  robotAntenna: {
-    position: 'absolute',
-    top: '-20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '4px',
-    height: '30px',
-    background: 'linear-gradient(to top, #00d1ff, transparent)',
-    borderRadius: '2px',
+  calendarHeader: {
+    textAlign: 'center',
+    marginBottom: '20px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid rgba(0, 209, 255, 0.3)',
   },
-  robotFace: {
+  calendarMonth: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+    letterSpacing: '1px',
+  },
+  calendarWeekdays: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  weekday: {
+    textAlign: 'center',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
+    padding: '8px 0',
+  },
+  calendarDays: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: '8px',
+  },
+  calendarDay: {
+    textAlign: 'center',
+    padding: '10px 0',
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
+    cursor: 'pointer',
+  },
+  today: {
+    background: 'rgba(0, 209, 255, 0.2)',
+    border: '1px solid rgba(0, 209, 255, 0.5)',
+    fontWeight: 'bold',
+    color: '#00d1ff',
+  },
+  blinkingEye: {
+    animation: 'calendarBlink 2s infinite',
+  },
+  calendarGlow: {
     position: 'absolute',
     top: '50%',
     left: '50%',
+    width: '100%',
+    height: '100%',
+    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.1) 0%, transparent 70%)',
     transform: 'translate(-50%, -50%)',
-    textAlign: 'center',
-  },
-  robotEyes: {
-    display: 'flex',
-    gap: '40px',
-    marginBottom: '20px',
-  },
-  robotEye: {
-    width: '40px',
-    height: '40px',
-    background: '#00d1ff',
-    borderRadius: '50%',
-    boxShadow: '0 0 20px rgba(0, 209, 255, 0.8)',
-    animation: 'eyeBlink 4s infinite',
-  },
-  robotMouth: {
-    width: '80px',
-    height: '12px',
-    background: '#00d1ff',
-    borderRadius: '6px',
-    margin: '0 auto',
+    borderRadius: '24px',
+    pointerEvents: 'none',
+    zIndex: -1,
   },
   features: {
     position: 'relative',
@@ -440,6 +502,112 @@ const styles = {
     fontSize: '28px',
     color: '#00d1ff',
   },
+  ownerSection: {
+    position: 'relative',
+    zIndex: 10,
+    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
+    borderTop: '1px solid rgba(0, 209, 255, 0.2)',
+    borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+    padding: '50px 40px',
+    marginTop: '20px',
+  },
+  ownerContainer: {
+    maxWidth: '800px',
+    margin: '0 auto',
+  },
+  ownerCard: {
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(0, 209, 255, 0.2)',
+    borderRadius: '28px',
+    padding: '35px 40px',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1.5fr',
+    gap: '40px',
+    backdropFilter: 'blur(10px)',
+    transition: 'all 0.3s ease',
+  },
+  ownerLogo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRight: '1px solid rgba(0, 209, 255, 0.2)',
+  },
+  glorifyLogoLink: {
+    textDecoration: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '15px',
+  },
+  glorifyLogoIcon: {
+    width: '80px',
+    height: '80px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    borderRadius: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
+    animation: 'softGlow 3s ease-in-out infinite',
+  },
+  glorifyLogoText: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+    letterSpacing: '-0.5px',
+    animation: 'shimmer 4s ease infinite',
+  },
+  ownerInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  ownerTitle: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#00d1ff',
+    marginBottom: '20px',
+  },
+  ownerDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  contactItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  contactLink: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    textDecoration: 'none',
+    transition: 'color 0.3s ease',
+  },
+  footer: {
+    position: 'relative',
+    zIndex: 10,
+    background: '#0a0f1a',
+    padding: '25px 40px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+  },
+  footerContent: {
+    maxWidth: '1400px',
+    margin: '0 auto',
+    textAlign: 'center',
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  glorifyHighlight: {
+    color: '#00d1ff',
+    fontWeight: '600',
+  },
 };
 
 // Add animations
@@ -457,13 +625,41 @@ styleSheet.textContent = `
     0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
     50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
   }
-  @keyframes floatRobot {
+  @keyframes floatCalendar {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-20px); }
   }
-  @keyframes eyeBlink {
-    0%, 90%, 100% { transform: scaleY(1); }
-    95% { transform: scaleY(0.1); }
+  @keyframes calendarBlink {
+    0%, 90%, 100% {
+      opacity: 1;
+      transform: scale(1);
+      background: rgba(0, 209, 255, 0);
+    }
+    95% {
+      opacity: 0.3;
+      transform: scale(0.9);
+      background: rgba(0, 209, 255, 0.3);
+      box-shadow: 0 0 10px rgba(0, 209, 255, 0.8);
+    }
+  }
+  @keyframes softGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(0, 209, 255, 0.6);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
@@ -477,6 +673,53 @@ styleSheet.textContent = `
     transform: translateY(-8px);
     border-color: rgba(0, 209, 255, 0.3);
     box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.3);
+  }
+  .calendarDay:not(.today):hover {
+    background: rgba(0, 209, 255, 0.1);
+    transform: scale(1.05);
+  }
+  .contactLink:hover {
+    color: #00d1ff;
+  }
+  .glorifyLogoIcon:hover {
+    transform: scale(1.03);
+    animation: none;
+  }
+  @media (max-width: 768px) {
+    .ownerCard {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 30px;
+    }
+    .ownerLogo {
+      border-right: none;
+      border-bottom: 1px solid rgba(0, 209, 255, 0.2);
+      padding-bottom: 25px;
+      margin-bottom: 20px;
+    }
+    .ownerDetails {
+      align-items: center;
+    }
+    .hero {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .heroContent {
+      max-width: 100%;
+    }
+    .buttons {
+      justify-content: center;
+    }
+    .title {
+      font-size: 36px;
+    }
+    .features {
+      padding: 40px 20px;
+    }
+    .featuresTitle {
+      font-size: 28px;
+    }
   }
 `;
 document.head.appendChild(styleSheet);
