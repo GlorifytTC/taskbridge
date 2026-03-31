@@ -11,13 +11,39 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 const Organization = require('./models/Organization');
 
+// Import all routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const taskRoutes = require('./routes/tasks');
+const applicationRoutes = require('./routes/applications');
+const organizationRoutes = require('./routes/organizations');
+const branchRoutes = require('./routes/branches');
+const jobDescriptionRoutes = require('./routes/jobDescriptions');
+const subscriptionRoutes = require('./routes/subscriptions');
+const notificationRoutes = require('./routes/notifications');
+const reportRoutes = require('./routes/reports');
+const dashboardRoutes = require('./routes/dashboard');
+
 const app = express();
 
 // Middleware
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Simple test routes
+// ============ MOUNT ALL API ROUTES ============
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/job-descriptions', jobDescriptionRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// ============ SIMPLE TEST ROUTES ============
 app.get('/', (req, res) => {
   res.json({ 
     name: 'TaskBridge API', 
@@ -34,6 +60,31 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/api/test', (req, res) => {
+  res.json({ success: true, message: 'API is working!' });
+});
+
+// Debug endpoint to check users
+app.get('/api/debug/users', async (req, res) => {
+  try {
+    const users = await User.find({}, { email: 1, name: 1, role: 1, password: 1 });
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map(u => ({
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        hasPassword: !!u.password,
+        passwordLength: u.password ? u.password.length : 0
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============ AUTH ENDPOINTS (keep existing) ============
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -41,7 +92,6 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('🔐 Login attempt for:', email);
     console.log('Password received length:', password ? password.length : 0);
     
-    // Find user with password field
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
@@ -54,7 +104,6 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('Stored hash length:', user.password ? user.password.length : 0);
     console.log('Stored hash preview:', user.password ? user.password.substring(0, 20) : 'N/A');
     
-    // Compare password
     let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password);
@@ -69,7 +118,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'mysecretkey123',
@@ -101,7 +149,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Get current user
 app.get('/api/auth/me', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -118,12 +165,7 @@ app.get('/api/auth/me', async (req, res) => {
   }
 });
 
-// Test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({ success: true, message: 'API is working!' });
-});
-
-// Connect to MongoDB and start server
+// ============ CONNECT TO MONGODB AND START SERVER ============
 const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGODB_URI)
@@ -134,28 +176,10 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Health: https://taskbridge-production-9d91.up.railway.app/health`);
       console.log(`🔑 Login: https://taskbridge-production-9d91.up.railway.app/api/auth/login`);
+      console.log(`🏢 Organizations: https://taskbridge-production-9d91.up.railway.app/api/organizations`);
     });
   })
   .catch(err => {
     console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  });// Debug endpoint to check users
-app.get('/api/debug/users', async (req, res) => {
-  try {
-    const User = require('./models/User');
-    const users = await User.find({}, { email: 1, name: 1, role: 1, password: 1 });
-    res.json({
-      success: true,
-      count: users.length,
-      users: users.map(u => ({
-        email: u.email,
-        name: u.name,
-        role: u.role,
-        hasPassword: !!u.password,
-        passwordLength: u.password ? u.password.length : 0
-      }))
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  });
