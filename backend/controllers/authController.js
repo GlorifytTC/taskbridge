@@ -70,6 +70,10 @@ exports.register = async (req, res) => {
   }
 };
 
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -85,11 +89,11 @@ exports.login = async (req, res) => {
       });
     }
     
-    // Find user and explicitly select password
+    // Find user with password
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('❌ User not found');
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid credentials' 
@@ -98,20 +102,11 @@ exports.login = async (req, res) => {
     
     console.log('✅ User found');
     
-    // Check if password exists
-    if (!user.password) {
-      console.log('❌ No password hash found');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid credentials' 
-      });
-    }
-    
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Use the comparePassword method
+    const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
-      console.log('❌ Invalid password');
+      console.log('❌ Password mismatch');
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid credentials' 
@@ -127,7 +122,7 @@ exports.login = async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'mysecretkey',
+      process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
     

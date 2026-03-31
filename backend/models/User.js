@@ -68,25 +68,28 @@ const UserSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Encrypt password using bcrypt - FIXED VERSION
-UserSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
+// Hash password before saving - FIXED VERSION
+UserSchema.pre('save', function(next) {
+  // Only hash if password is modified
   if (!this.isModified('password')) {
     return next();
   }
   
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  // Hash password
+  bcrypt.genSalt(10, (err, salt) => {
+    if (err) return next(err);
+    
+    bcrypt.hash(this.password, salt, (err, hash) => {
+      if (err) return next(err);
+      this.password = hash;
+      next();
+    });
+  });
 });
 
-// Match user entered password to hashed password in database
-UserSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+// Compare password method
+UserSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 module.exports = mongoose.model('User', UserSchema);
