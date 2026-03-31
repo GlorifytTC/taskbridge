@@ -19,7 +19,12 @@ function App() {
         .then(data => {
           if (data.success) {
             setUser(data.user);
-            setCurrentPage('dashboard');
+            // Check user role to set correct page
+            if (data.user.role === 'master') {
+              setCurrentPage('master');
+            } else {
+              setCurrentPage('dashboard');
+            }
           }
           setLoading(false);
         })
@@ -37,11 +42,6 @@ function App() {
     setCurrentPage('login');
   };
 
-  const goToDashboard = () => {
-    console.log('Going to dashboard');
-    setCurrentPage('dashboard');
-  };
-
   const goToLanding = () => {
     console.log('Going to landing');
     setCurrentPage('landing');
@@ -50,7 +50,12 @@ function App() {
   const handleLogin = (userData) => {
     console.log('User logged in:', userData);
     setUser(userData);
-    setCurrentPage('dashboard');
+    // Redirect based on role
+    if (userData.role === 'master') {
+      setCurrentPage('master');
+    } else {
+      setCurrentPage('dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -67,14 +72,15 @@ function App() {
     return <Login onBack={goToLanding} onLogin={handleLogin} />;
   }
 
+  if (currentPage === 'master' && user) {
+    return <MasterDashboard user={user} onLogout={handleLogout} />;
+  }
+
   if (currentPage === 'dashboard' && user) {
     return <Dashboard user={user} onLogout={handleLogout} />;
   }
 
   return <Landing onLoginClick={goToLogin} />;
-  if (user.role === 'master') {
-  return <MasterDashboard user={user} onLogout={handleLogout} />;
-}
 }
 
 export default App;
