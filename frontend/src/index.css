@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 * {
   margin: 0;
   padding: 0;
@@ -7,40 +5,38 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #F9FAFB;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+  color: #e5e5e5;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+#root {
+  min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: rgba(0, 209, 255, 0.5);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: rgba(0, 209, 255, 0.8);
 }
 
-/* Animation classes */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -53,18 +49,7 @@ code {
 }
 
 .fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-/* Loading spinner */
-.loading-spinner {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(79, 70, 229, 0.3);
-  border-radius: 50%;
-  border-top-color: #4F46E5;
-  animation: spin 1s ease-in-out infinite;
+  animation: fadeIn 0.5s ease-out;
 }
 
 @keyframes spin {
@@ -73,85 +58,11 @@ code {
   }
 }
 
-/* Toast customizations */
-.Toastify__toast {
-  border-radius: 8px;
-  font-family: 'Inter', sans-serif;
-}
-
-.Toastify__toast--success {
-  background: #10B981;
-}
-
-.Toastify__toast--error {
-  background: #EF4444;
-}
-
-.Toastify__toast--warning {
-  background: #F59E0B;
-}
-
-.Toastify__toast--info {
-  background: #4F46E5;
-}
-
-/* Calendar customizations */
-.rbc-calendar {
-  font-family: 'Inter', sans-serif;
-}
-
-.rbc-event {
-  background-color: #4F46E5;
-  border-radius: 4px;
-  padding: 2px 5px;
-}
-
-.rbc-today {
-  background-color: rgba(79, 70, 229, 0.1);
-}
-
-.rbc-selected {
-  background-color: rgba(79, 70, 229, 0.2);
-}
-
-/* Data grid customizations */
-.MuiDataGrid-root {
-  border: none !important;
-}
-
-.MuiDataGrid-cell {
-  border-bottom: 1px solid #e5e7eb !important;
-}
-
-.MuiDataGrid-columnHeaders {
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb !important;
-}
-
-/* Card hover effects */
-.hover-card {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.hover-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .hide-on-mobile {
-    display: none !important;
-  }
-}
-
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-  
-  .print-only {
-    display: block !important;
-  }
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 209, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #00d1ff;
+  animation: spin 1s linear infinite;
 }

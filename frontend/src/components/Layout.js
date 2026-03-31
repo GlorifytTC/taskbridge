@@ -15,7 +15,6 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Badge,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -30,7 +29,6 @@ import {
   Settings,
   Payment,
   Logout,
-  Notifications,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
@@ -101,11 +99,11 @@ const Layout = () => {
   const drawer = (
     <div>
       <Toolbar sx={{ justifyContent: 'center', py: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#00d1ff' }}>
           TaskBridge
         </Typography>
       </Toolbar>
-      <Divider />
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       <List>
         {getMenuItems().map((item) => (
           <ListItem
@@ -115,11 +113,11 @@ const Layout = () => {
             sx={{
               mx: 1,
               borderRadius: 1,
-              '&:hover': { backgroundColor: 'rgba(79, 70, 229, 0.08)' },
+              '&:hover': { backgroundColor: 'rgba(0, 209, 255, 0.1)' },
             }}
           >
-            <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemIcon sx={{ color: '#00d1ff' }}>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.text} sx={{ color: 'white' }} />
           </ListItem>
         ))}
       </List>
@@ -133,11 +131,11 @@ const Layout = () => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          backgroundColor: 'white',
-          color: 'text.primary',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(10px)',
+          color: 'white',
           boxShadow: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
         }}
       >
         <Toolbar>
@@ -149,23 +147,15 @@ const Layout = () => {
           >
             <MenuIcon />
           </IconButton>
-          
           <Box sx={{ flexGrow: 1 }} />
-          
-          <IconButton onClick={handleMenuOpen} sx={{ ml: 2 }}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
+          <IconButton onClick={handleMenuOpen}>
+            <Avatar sx={{ bgcolor: '#00d1ff' }}>
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
           </IconButton>
-          
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-            <MenuItem onClick={() => { handleNavigation('/profile'); handleMenuClose(); }}>
-              Profile
-            </MenuItem>
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon><Logout fontSize="small" /></ListItemIcon>
-              Logout
-            </MenuItem>
+            <MenuItem onClick={() => { handleNavigation('/profile'); handleMenuClose(); }}>Profile</MenuItem>
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
@@ -175,20 +165,26 @@ const Layout = () => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { width: drawerWidth } }}
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': { width: drawerWidth, backgroundColor: '#111827' },
+          }}
         >
           {drawer}
         </Drawer>
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { width: drawerWidth } }}
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': { width: drawerWidth, backgroundColor: '#111827', borderRight: '1px solid rgba(255,255,255,0.1)' },
+          }}
           open
         >
           {drawer}
         </Drawer>
       </Box>
       
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, minHeight: '100vh', backgroundColor: 'background.default' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, minHeight: '100vh' }}>
         <Toolbar />
         <Outlet />
       </Box>
