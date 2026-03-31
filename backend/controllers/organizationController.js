@@ -233,7 +233,53 @@ exports.pauseOrganization = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
+// @desc    Extend organization subscription
+// @route   PUT /api/organizations/:id/extend
+// @access  Private/Master
+exports.extendSubscription = async (req, res) => {
+  try {
+    const { days } = req.body;
+    const organization = await Organization.findById(req.params.id);
+    
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    // Extend end date
+    const currentEndDate = organization.subscription.endDate || new Date();
+    const newEndDate = new Date(currentEndDate.getTime() + days * 24 * 60 * 60 * 1000);
+    
+    organization.subscription.endDate = newEndDate;
+    await organization.save();
+    
+    // Update subscription record
+    await Subscription.findOneAndUpdate(
+      { organization: organization._id },
+      { endDate: newEndDate }
+    );
+    
+    // Create audit log
+    await AuditLog.create({
+      user: req.user.id,
+      organization: organization._id,
+      action: 'extend',
+      entityType: 'subscription',
+      entityId: organization._id,
+      changes: { days, newEndDate },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Subscription extended by ${days} days`,
+      newEndDate 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 // @desc    Resume organization (Master only)
 // @route   PUT /api/organizations/:id/resume
 // @access  Private/Master
