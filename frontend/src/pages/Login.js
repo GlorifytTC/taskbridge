@@ -7,32 +7,51 @@ const Login = ({ onBack, onLogin }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+  try {
+    console.log('🔐 Attempting login for:', email);
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-      const data = await response.json();
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response headers:', [...response.headers.entries()]);
+    
+    const data = await response.json();
+    console.log('📦 Response data:', data);
 
-      if (response.ok && data.success) {
-        localStorage.setItem('token', data.token);
-        onLogin(data.user);
-      } else {
-        setError(data.message || 'Invalid credentials');
-      }
-    } catch (err) {
-      setError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
+    if (response.ok && data.success) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      onLogin(data.user);
+    } else {
+      setError(data.message || 'Invalid credentials');
     }
-  };
-
+  } catch (err) {
+    console.error('❌ Login error details:', err);
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    
+    if (err.message.includes('CORS')) {
+      setError('CORS error: Unable to connect to server. Please check backend configuration.');
+    } else if (err.message.includes('Failed to fetch')) {
+      setError('Network error: Cannot reach the server. Please check if the backend is running.');
+    } else {
+      setError('Network error: ' + err.message);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div style={styles.container}>
       {/* Animated Background */}

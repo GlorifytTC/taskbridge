@@ -26,9 +26,44 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
+// ============ CORS CONFIGURATION - FIX THIS PART ============
+const allowedOrigins = [
+  'https://glorifyttc.github.io',
+  'https://taskbridge-production-9d91.up.railway.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5000'
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked for origin:', origin);
+      callback(null, true); // Allow all in development - change for production
+      // callback(new Error('Not allowed by CORS')); // Uncomment for strict mode
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Authorization'],
+  optionsSuccessStatus: 200
+};
+
+// Apply CORS middleware before other middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 // Middleware
-app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ============ MOUNT ALL API ROUTES ============
 app.use('/api/auth', authRoutes);
@@ -84,17 +119,12 @@ app.get('/api/debug/users', async (req, res) => {
   }
 });
 
-// ============ AUTH ENDPOINTS (keep existing) ============
+// ============ AUTH ENDPOINTS ============
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     console.log('========================================');
     console.log('🔐 Login attempt for:', email);
-    console.log('Password received:', password ? 'Yes (length: ' + password.length + ')' : 'No');
-    
-    // Check if User model is loaded
-    const User = require('./models/User');
-    console.log('User model loaded:', typeof User);
     
     // Find user
     const user = await User.findOne({ email }).select('+password');
@@ -105,35 +135,18 @@ app.post('/api/auth/login', async (req, res) => {
     }
     
     console.log('✅ User found:', user.email);
-    console.log('User password field exists:', !!user.password);
-    console.log('User password type:', typeof user.password);
-    console.log('User password length:', user.password ? user.password.length : 0);
-    
-    // Check if password field is a string
-    if (typeof user.password !== 'string') {
-      console.log('❌ Password is not a string:', typeof user.password);
-      return res.status(500).json({ success: false, message: 'Invalid password format' });
-    }
     
     // Compare password
-    let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(password, user.password);
-      console.log('Password match result:', isMatch);
-    } catch (compareError) {
-      console.error('❌ Bcrypt compare error details:', compareError);
-      console.error('Error stack:', compareError.stack);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Password verification error',
-        error: compareError.message 
-      });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {
       console.log('❌ Invalid password');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+    
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
     
     // Generate token
     const token = jwt.sign(
@@ -144,6 +157,10 @@ app.post('/api/auth/login', async (req, res) => {
     
     console.log('✅ Login successful!');
     console.log('========================================');
+    
+    // Set CORS headers explicitly for this response
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
     
     res.json({
       success: true,
@@ -159,8 +176,6 @@ app.post('/api/auth/login', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Login error:', error);
-    console.error('Error stack:', error.stack);
-    console.log('========================================');
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
@@ -178,6 +193,7 @@ app.get('/api/auth/me', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     const user = await User.findById(decoded.id).select('-password').populate('organization');
     
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.json({ success: true, user });
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid token' });
@@ -195,7 +211,6 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Health: https://taskbridge-production-9d91.up.railway.app/health`);
       console.log(`🔑 Login: https://taskbridge-production-9d91.up.railway.app/api/auth/login`);
-      console.log(`🏢 Organizations: https://taskbridge-production-9d91.up.railway.app/api/organizations`);
     });
   })
   .catch(err => {

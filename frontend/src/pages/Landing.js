@@ -154,7 +154,7 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* Company Owner Section - GlorifyTC with original logo animation */}
+      {/* Company Owner Section - GlorifyTC with exact original logo */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
@@ -196,7 +196,7 @@ const Landing = ({ onLoginClick }) => {
   );
 };
 
-// Styles object
+// Styles object with exact GlorifyTC logo styling from your code
 const styles = {
   container: {
     minHeight: '100vh',
@@ -537,30 +537,34 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '15px',
+    gap: '0.85rem',
   },
   glorifyLogoIcon: {
-    width: '80px',
-    height: '80px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '24px',
+    width: '3.8rem',
+    height: '3.8rem',
+    borderRadius: '1.2rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontWeight: '800',
+    fontSize: '2.4rem',
+    color: 'white',
     position: 'relative',
     transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
   },
   glorifyLogoText: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+    fontWeight: '800',
+    fontSize: '1.65rem',
+    background: 'linear-gradient(135deg, #fff, #00d1ff, #fff)',
+    backgroundSize: '200% auto',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    letterSpacing: '-0.5px',
     animation: 'shimmer 4s ease infinite',
+    letterSpacing: '-0.02em',
   },
   ownerInfo: {
     display: 'flex',
@@ -610,7 +614,7 @@ const styles = {
   },
 };
 
-// Add animations
+// Add animations (exactly as in your original)
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes float1 {
@@ -661,6 +665,22 @@ styleSheet.textContent = `
       background-position: 0% 50%;
     }
   }
+  .glorifyLogoIcon:hover {
+    transform: scale(1.03);
+    animation: none;
+  }
+  .glorifyLogoIcon:hover::before {
+    opacity: 1;
+    animation: rotateGlow 2s linear infinite;
+  }
+  @keyframes rotateGlow {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.3);
@@ -680,10 +700,6 @@ styleSheet.textContent = `
   }
   .contactLink:hover {
     color: #00d1ff;
-  }
-  .glorifyLogoIcon:hover {
-    transform: scale(1.03);
-    animation: none;
   }
   @media (max-width: 768px) {
     .ownerCard {
