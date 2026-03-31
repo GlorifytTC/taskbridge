@@ -1,69 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  LinearProgress,
-} from '@mui/material';
-import {
-  Event,
-  Assignment,
-  CheckCircle,
-  People,
-  TrendingUp,
-  CalendarToday,
-} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-
-const StatCard = ({ title, value, icon, color, trend }) => (
-  <Card>
-    <CardContent>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography color="textSecondary" gutterBottom variant="body2">
-            {title}
-          </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-            {value}
-          </Typography>
-          {trend && (
-            <Typography variant="caption" color="success.main">
-              {trend}% from last month
-            </Typography>
-          )}
-        </Box>
-        <Box
-          sx={{
-            backgroundColor: color,
-            borderRadius: '50%',
-            p: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {icon}
-        </Box>
-      </Box>
-    </CardContent>
-  </Card>
-);
+import { toast } from 'react-toastify';
+import '../styles/dashboard.css';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -75,10 +14,12 @@ const Dashboard = () => {
   });
   const [attendanceData, setAttendanceData] = useState([]);
   const [taskStatusData, setTaskStatusData] = useState([]);
+  const [upcomingShifts, setUpcomingShifts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchUpcomingShifts();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -99,117 +40,210 @@ const Dashboard = () => {
     }
   };
 
-  const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
+  const fetchUpcomingShifts = async () => {
+    try {
+      const response = await api.get('/tasks?status=open&limit=5');
+      setUpcomingShifts(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch shifts:', error);
+    }
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('sv-SE', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  };
 
   if (loading) {
-    return <LinearProgress />;
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+      </div>
+    );
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Welcome back, {user?.name}!
-      </Typography>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Tasks"
-            value={stats.totalTasks}
-            icon={<Event sx={{ color: 'white' }} />}
-            color="#4F46E5"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Pending Applications"
-            value={stats.pendingApplications}
-            icon={<Assignment sx={{ color: 'white' }} />}
-            color="#F59E0B"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Approved Shifts"
-            value={stats.approvedShifts}
-            icon={<CheckCircle sx={{ color: 'white' }} />}
-            color="#10B981"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Employees"
-            value={stats.totalEmployees}
-            icon={<People sx={{ color: 'white' }} />}
-            color="#EF4444"
-          />
-        </Grid>
+    <div className="dashboard-container">
+      {/* Animated Background */}
+      <div className="dashboard-bg">
+        <div className="bg-circle bg-circle-1"></div>
+        <div className="bg-circle bg-circle-2"></div>
+        <div className="bg-circle bg-circle-3"></div>
+      </div>
+
+      {/* Welcome Section */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: '100', color: 'white' }}>
+          Välkommen tillbaka, <span style={{ 
+            background: 'linear-gradient(to right, #00f5ff, #00d1ff)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent'
+          }}>{user?.name}!</span>
+        </h1>
+        <p style={{ color: 'var(--white-70)', marginTop: '0.5rem' }}>
+          Här är en översikt över din verksamhet
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-header">
+            <span className="stat-title">Totala Uppgifter</span>
+            <div className="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          </div>
+          <div className="stat-value">{stats.totalTasks}</div>
+          <div className="stat-trend">
+            <i className="fas fa-arrow-up"></i>
+            <span>+12% från förra månaden</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-header">
+            <span className="stat-title">Väntande Ansökningar</span>
+            <div className="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="stat-value">{stats.pendingApplications}</div>
+          <div className="stat-trend" style={{ color: '#f59e0b' }}>
+            <i className="fas fa-clock"></i>
+            <span>Behöver granskas</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-header">
+            <span className="stat-title">Godkända Skift</span>
+            <div className="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="stat-value">{stats.approvedShifts}</div>
+          <div className="stat-trend" style={{ color: '#10b981' }}>
+            <i className="fas fa-check-circle"></i>
+            <span>Bekräftade</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-header">
+            <span className="stat-title">Anställda</span>
+            <div className="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="stat-value">{stats.totalEmployees}</div>
+          <div className="stat-trend">
+            <i className="fas fa-users"></i>
+            <span>Aktiva medarbetare</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Shifts */}
+      <div className="shifts-card">
+        <div className="shifts-header">
+          <div className="shifts-title">
+            <i className="fas fa-calendar-alt"></i>
+            <span>Kommande Skift</span>
+          </div>
+          <button 
+            onClick={() => window.location.href = '/#/calendar'}
+            style={{
+              background: 'rgba(0, 209, 255, 0.1)',
+              border: '1px solid var(--cyan-400)',
+              borderRadius: '50px',
+              padding: '0.5rem 1rem',
+              color: 'var(--cyan-400)',
+              cursor: 'pointer',
+              fontSize: '0.8rem'
+            }}
+          >
+            Visa alla →
+          </button>
+        </div>
         
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Attendance Overview
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={attendanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="present"
-                  stackId="1"
-                  stroke="#4F46E5"
-                  fill="#4F46E5"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="absent"
-                  stackId="1"
-                  stroke="#EF4444"
-                  fill="#EF4444"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="late"
-                  stackId="1"
-                  stroke="#F59E0B"
-                  fill="#F59E0B"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Task Status
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={taskStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {taskStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+        <div className="shifts-list">
+          {upcomingShifts.length > 0 ? (
+            upcomingShifts.map((shift) => (
+              <div key={shift._id} className="shift-item">
+                <div className="shift-info">
+                  <div className="shift-date">
+                    <div className="shift-day">{formatDate(shift.date)}</div>
+                  </div>
+                  <div className="shift-details">
+                    <h4>{shift.title}</h4>
+                    <p>
+                      <i className="fas fa-clock"></i>
+                      {shift.startTime} - {shift.endTime}
+                    </p>
+                    <p>
+                      <i className="fas fa-map-marker-alt"></i>
+                      {shift.location || 'Plats ej angiven'}
+                    </p>
+                  </div>
+                </div>
+                <div className={`shift-status status-${shift.status === 'open' ? 'pending' : 'approved'}`}>
+                  {shift.status === 'open' ? 'Ledig plats' : 'Bekräftad'}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--white-50)' }}>
+              <i className="fas fa-calendar-day" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
+              <p>Inga kommande skift</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="actions-grid">
+        <button 
+          className="action-button"
+          onClick={() => window.location.href = '/#/tasks'}
+        >
+          <i className="fas fa-plus-circle"></i>
+          <span>Skapa Ny Uppgift</span>
+        </button>
+        <button 
+          className="action-button"
+          onClick={() => window.location.href = '/#/employees'}
+        >
+          <i className="fas fa-user-plus"></i>
+          <span>Lägg Till Anställd</span>
+        </button>
+        <button 
+          className="action-button"
+          onClick={() => window.location.href = '/#/reports'}
+        >
+          <i className="fas fa-chart-line"></i>
+          <span>Generera Rapport</span>
+        </button>
+        <button 
+          className="action-button"
+          onClick={() => window.location.href = '/#/calendar'}
+        >
+          <i className="fas fa-calendar-week"></i>
+          <span>Visa Kalender</span>
+        </button>
+      </div>
+    </div>
   );
 };
 
