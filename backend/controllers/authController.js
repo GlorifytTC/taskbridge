@@ -1,4 +1,3 @@
-// At the top of the file, keep this:
 const User = require('../models/User');
 const Organization = require('../models/Organization');
 const Branch = require('../models/Branch');
@@ -13,6 +12,58 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d'
   });
+};
+
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Private/Admin
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, role, jobDescription, branch } = req.body;
+    
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
+    const admin = await User.findById(req.user.id);
+    const organization = admin.organization;
+    
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role,
+      organization,
+      jobDescription: role === 'employee' ? jobDescription : undefined,
+      branch: branch || admin.branch,
+      createdBy: req.user.id
+    });
+    
+    await AuditLog.create({
+      user: req.user.id,
+      organization,
+      action: 'create',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { name, email, role },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 };
 
 // @desc    Login user
@@ -30,10 +81,6 @@ exports.login = async (req, res) => {
       });
     }
     
-    // REMOVE THIS LINE - IT'S DUPLICATE:
-    // const User = require('../models/User');
-    
-    // Find user with password
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
@@ -46,8 +93,7 @@ exports.login = async (req, res) => {
     
     console.log('✅ User found');
     
-    // Use the comparePassword method
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {
       console.log('❌ Password mismatch');
@@ -59,18 +105,15 @@ exports.login = async (req, res) => {
     
     console.log('✅ Password matched');
     
-    // Update last login
     user.lastLogin = new Date();
     await user.save();
     
-    // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
     
-    // Get user data without password
     const userData = await User.findById(user._id)
       .populate('organization', 'name')
       .populate('branch', 'name');
@@ -130,29 +173,25 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = crypto
       .createHash('sha256')
       .update(resetToken)
       .digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
     
     await user.save();
     
-    // Create reset URL
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
     
-    // Send email
     await sendEmail({
       to: user.email,
       subject: 'Password Reset Request',
       html: `
         <h1>Reset Your Password</h1>
-        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <p>You requested a password reset. Click the link below:</p>
         <a href="${resetUrl}" target="_blank">Reset Password</a>
         <p>This link expires in 10 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
       `
     });
     
@@ -185,7 +224,6 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
     
-    // Set new password
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -204,19 +242,16 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+password');
     
-    // Check current password
-    const isMatch = await user.matchPassword(currentPassword);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
     
-    // Update password
     user.password = newPassword;
     await user.save();
     
-    // Create audit log
     await AuditLog.create({
       user: req.user.id,
       organization: user.organization,
@@ -242,7 +277,6 @@ exports.deleteAccount = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     
-    // Anonymize user data
     user.name = `Deleted User ${user._id}`;
     user.email = `deleted_${user._id}@deleted.com`;
     user.password = await bcrypt.hash('deleted', 10);
@@ -252,7 +286,6 @@ exports.deleteAccount = async (req, res) => {
     
     await user.save();
     
-    // Create audit log
     await AuditLog.create({
       user: req.user.id,
       organization: user.organization,
