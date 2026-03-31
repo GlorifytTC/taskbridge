@@ -78,7 +78,6 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     console.log('🔐 Login attempt:', email);
     
-    // Check if email and password are provided
     if (!email || !password) {
       return res.status(400).json({ 
         success: false, 
@@ -86,11 +85,8 @@ exports.login = async (req, res) => {
       });
     }
     
-    // Find user with password field
-    const user = await User.findOne({ email })
-      .select('+password')
-      .populate('organization', 'name')
-      .populate('branch', 'name');
+    // Find user and explicitly select password
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
       console.log('❌ User not found:', email);
@@ -100,53 +96,56 @@ exports.login = async (req, res) => {
       });
     }
     
-    console.log('✅ User found, checking password...');
-    console.log('Password hash exists:', !!user.password);
+    console.log('✅ User found');
     
-    // Check password with proper error handling
-    let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(password, user.password);
-      console.log('Password match result:', isMatch);
-    } catch (bcryptError) {
-      console.error('Bcrypt error:', bcryptError);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Password verification error' 
-      });
-    }
-    
-    if (!isMatch) {
-      console.log('❌ Invalid password for:', email);
+    // Check if password exists
+    if (!user.password) {
+      console.log('❌ No password hash found');
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid credentials' 
       });
     }
     
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      console.log('❌ Invalid password');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
+    }
+    
+    console.log('✅ Password matched');
+    
     // Update last login
-    user.lastLogin = Date.now();
+    user.lastLogin = new Date();
     await user.save();
     
     // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key-change-this',
+      process.env.JWT_SECRET || 'mysecretkey',
       { expiresIn: '30d' }
     );
     
-    console.log('✅ Login successful:', email);
+    // Get user data without password
+    const userData = await User.findById(user._id)
+      .populate('organization', 'name')
+      .populate('branch', 'name');
     
     res.json({
       success: true,
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        organization: user.organization,
-        branch: user.branch
+        id: userData._id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        organization: userData.organization,
+        branch: userData.branch
       }
     });
     
