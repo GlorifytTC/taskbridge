@@ -26,40 +26,16 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
-// ============ CORS CONFIGURATION - FIX THIS PART ============
-const allowedOrigins = [
-  'https://glorifyttc.github.io',
-  'https://taskbridge-production-9d91.up.railway.app',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:5000'
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked for origin:', origin);
-      callback(null, true); // Allow all in development - change for production
-      // callback(new Error('Not allowed by CORS')); // Uncomment for strict mode
-    }
-  },
+// ============ SIMPLE CORS - ALLOW ALL (FIXED) ============
+app.use(cors({
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Authorization'],
-  optionsSuccessStatus: 200
-};
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
 
-// Apply CORS middleware before other middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+// REMOVE THIS LINE - it's causing the error:
+// app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(express.json());
@@ -158,10 +134,6 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('✅ Login successful!');
     console.log('========================================');
     
-    // Set CORS headers explicitly for this response
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
     res.json({
       success: true,
       token,
@@ -193,7 +165,6 @@ app.get('/api/auth/me', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     const user = await User.findById(decoded.id).select('-password').populate('organization');
     
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.json({ success: true, user });
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid token' });
@@ -209,8 +180,8 @@ mongoose.connect(process.env.MONGODB_URI)
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📍 Health: https://taskbridge-production-9d91.up.railway.app/health`);
-      console.log(`🔑 Login: https://taskbridge-production-9d91.up.railway.app/api/auth/login`);
+      console.log(`📍 Health: http://localhost:${PORT}/health`);
+      console.log(`🔑 Login: http://localhost:${PORT}/api/auth/login`);
     });
   })
   .catch(err => {
