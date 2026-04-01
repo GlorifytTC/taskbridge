@@ -2,6 +2,7 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 
+
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Private/Admin

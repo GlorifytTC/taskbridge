@@ -7,14 +7,16 @@ const {
   updateUser,
   deleteUser,
   resetUserPassword,
-  transferOwnership
+  transferOwnership,
+  createUser
 } = require('../controllers/userController');
 
 router.use(protect);
 
 router.route('/')
-  .get(getUsers);
+  .get(getUsers)
   .post(authorize('admin', 'superadmin', 'master'), createUser);
+
 router.route('/:id')
   .get(getUser)
   .put(authorize('admin', 'superadmin', 'master'), updateUser)
