@@ -3,7 +3,9 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MasterDashboard from './pages/MasterDashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Tasks from './pages/Tasks';
+import Profile from './pages/Profile';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -23,6 +25,8 @@ function App() {
             // Check user role to set correct page
             if (data.user.role === 'master') {
               setCurrentPage('master');
+            } else if (data.user.role === 'superadmin') {
+              setCurrentPage('superadmin');
             } else {
               setCurrentPage('dashboard');
             }
@@ -39,26 +43,24 @@ function App() {
   }, []);
 
   const goToLogin = () => {
-    console.log('Going to login page');
     setCurrentPage('login');
   };
 
   const goToLanding = () => {
-    console.log('Going to landing');
     setCurrentPage('landing');
   };
 
   const handleNavigate = (page) => {
-    console.log('Navigating to:', page);
     setCurrentPage(page);
   };
 
   const handleLogin = (userData) => {
-    console.log('User logged in:', userData);
     setUser(userData);
     // Redirect based on role
     if (userData.role === 'master') {
       setCurrentPage('master');
+    } else if (userData.role === 'superadmin') {
+      setCurrentPage('superadmin');
     } else {
       setCurrentPage('dashboard');
     }
@@ -82,8 +84,16 @@ function App() {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
+  if (currentPage === 'superadmin' && user) {
+    return <SuperAdminDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
   if (currentPage === 'dashboard' && user) {
     return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'profile' && user) {
+    return <Profile user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
   if (currentPage === 'tasks' && user) {
