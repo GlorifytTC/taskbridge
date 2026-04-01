@@ -154,7 +154,7 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* Company Owner Section - GlorifyTC with exact original logo */}
+      {/* Company Owner Section - GlorifyTC */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
@@ -192,11 +192,29 @@ const Landing = ({ onLoginClick }) => {
 
       {/* Add Font Awesome */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      
+      {/* Mobile Menu Overlay */}
+      <div id="mobileMenuOverlay" style={styles.mobileMenuOverlay}>
+        <div style={styles.mobileMenuContent}>
+          <button style={styles.mobileMenuClose} onClick={() => {
+            document.getElementById('mobileMenuOverlay').style.display = 'none';
+          }}>✕</button>
+          <div style={styles.mobileLogo}>
+            <div style={styles.logoIconMobile}>
+              <span>T</span>
+            </div>
+            <span style={styles.logoTextMobile}>TaskBridge</span>
+          </div>
+          <button onClick={handleSignIn} style={styles.mobileNavButton}>
+            Sign In
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
-// Styles object with exact GlorifyTC logo styling from your code
+// Styles object with full mobile responsiveness
 const styles = {
   container: {
     minHeight: '100vh',
@@ -261,9 +279,12 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 40px',
+    padding: '20px 24px',
     maxWidth: '1400px',
     margin: '0 auto',
+    '@media (max-width: 768px)': {
+      padding: '16px 20px',
+    },
   },
   logo: {
     display: 'flex',
@@ -283,6 +304,15 @@ const styles = {
     transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: 'white',
+    '@media (max-width: 768px)': {
+      width: '32px',
+      height: '32px',
+      fontSize: '18px',
+      borderRadius: '10px',
+    },
   },
   logoText: {
     fontSize: '24px',
@@ -291,6 +321,9 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+    },
   },
   navButton: {
     padding: '10px 24px',
@@ -301,6 +334,10 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '8px 20px',
+      fontSize: '13px',
+    },
   },
   hero: {
     position: 'relative',
@@ -312,9 +349,22 @@ const styles = {
     gridTemplateColumns: '1fr 1fr',
     gap: '60px',
     alignItems: 'center',
+    '@media (max-width: 1024px)': {
+      gridTemplateColumns: '1fr',
+      textAlign: 'center',
+      gap: '40px',
+      padding: '40px 24px',
+    },
+    '@media (max-width: 768px)': {
+      padding: '30px 20px',
+      gap: '30px',
+    },
   },
   heroContent: {
     maxWidth: '600px',
+    '@media (max-width: 1024px)': {
+      maxWidth: '100%',
+    },
   },
   tag: {
     display: 'inline-flex',
@@ -325,6 +375,9 @@ const styles = {
     borderRadius: '50px',
     padding: '6px 16px',
     marginBottom: '24px',
+    '@media (max-width: 1024px)': {
+      marginBottom: '20px',
+    },
   },
   tagDot: {
     width: '8px',
@@ -344,6 +397,16 @@ const styles = {
     lineHeight: '1.2',
     marginBottom: '24px',
     color: 'white',
+    '@media (max-width: 1024px)': {
+      fontSize: '42px',
+    },
+    '@media (max-width: 768px)': {
+      fontSize: '32px',
+      marginBottom: '16px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '28px',
+    },
   },
   titleGradient: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
@@ -356,11 +419,23 @@ const styles = {
     lineHeight: '1.6',
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: '32px',
+    '@media (max-width: 768px)': {
+      fontSize: '16px',
+      marginBottom: '24px',
+    },
   },
   buttons: {
     display: 'flex',
     gap: '16px',
     marginBottom: '48px',
+    '@media (max-width: 1024px)': {
+      justifyContent: 'center',
+    },
+    '@media (max-width: 480px)': {
+      flexDirection: 'column',
+      gap: '12px',
+      marginBottom: '32px',
+    },
   },
   primaryButton: {
     padding: '14px 32px',
@@ -372,6 +447,11 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s',
+    '@media (max-width: 480px)': {
+      padding: '12px 24px',
+      fontSize: '14px',
+      width: '100%',
+    },
   },
   secondaryButton: {
     padding: '14px 32px',
@@ -383,6 +463,11 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s',
+    '@media (max-width: 480px)': {
+      padding: '12px 24px',
+      fontSize: '14px',
+      width: '100%',
+    },
   },
   calendarContainer: {
     display: 'flex',
@@ -399,12 +484,24 @@ const styles = {
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '280px',
+      padding: '16px',
+    },
+    '@media (max-width: 480px)': {
+      width: '260px',
+      padding: '14px',
+    },
   },
   calendarHeader: {
     textAlign: 'center',
     marginBottom: '20px',
     paddingBottom: '12px',
     borderBottom: '1px solid rgba(0, 209, 255, 0.3)',
+    '@media (max-width: 768px)': {
+      marginBottom: '16px',
+      paddingBottom: '10px',
+    },
   },
   calendarMonth: {
     fontSize: '24px',
@@ -414,12 +511,19 @@ const styles = {
     backgroundClip: 'text',
     color: 'transparent',
     letterSpacing: '1px',
+    '@media (max-width: 768px)': {
+      fontSize: '20px',
+    },
   },
   calendarWeekdays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
     gap: '8px',
     marginBottom: '12px',
+    '@media (max-width: 768px)': {
+      gap: '4px',
+      marginBottom: '8px',
+    },
   },
   weekday: {
     textAlign: 'center',
@@ -427,11 +531,18 @@ const styles = {
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     padding: '8px 0',
+    '@media (max-width: 768px)': {
+      fontSize: '10px',
+      padding: '4px 0',
+    },
   },
   calendarDays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
     gap: '8px',
+    '@media (max-width: 768px)': {
+      gap: '4px',
+    },
   },
   calendarDay: {
     textAlign: 'center',
@@ -441,6 +552,14 @@ const styles = {
     borderRadius: '8px',
     transition: 'all 0.3s ease',
     cursor: 'pointer',
+    '@media (max-width: 768px)': {
+      padding: '8px 0',
+      fontSize: '12px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '6px 0',
+      fontSize: '11px',
+    },
   },
   today: {
     background: 'rgba(0, 209, 255, 0.2)',
@@ -469,6 +588,12 @@ const styles = {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '80px 40px',
+    '@media (max-width: 768px)': {
+      padding: '50px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '40px 20px',
+    },
   },
   featuresTitle: {
     fontSize: '36px',
@@ -476,11 +601,26 @@ const styles = {
     textAlign: 'center',
     marginBottom: '48px',
     color: 'white',
+    '@media (max-width: 768px)': {
+      fontSize: '28px',
+      marginBottom: '32px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '24px',
+      marginBottom: '24px',
+    },
   },
   featuresGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '24px',
+    '@media (max-width: 768px)': {
+      gap: '20px',
+    },
+    '@media (max-width: 480px)': {
+      gridTemplateColumns: '1fr',
+      gap: '16px',
+    },
   },
   featureCard: {
     background: 'rgba(255, 255, 255, 0.03)',
@@ -489,6 +629,12 @@ const styles = {
     padding: '32px',
     textAlign: 'center',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '20px',
+    },
   },
   featureIcon: {
     width: '64px',
@@ -501,6 +647,12 @@ const styles = {
     margin: '0 auto 20px',
     fontSize: '28px',
     color: '#00d1ff',
+    '@media (max-width: 480px)': {
+      width: '56px',
+      height: '56px',
+      fontSize: '24px',
+      marginBottom: '16px',
+    },
   },
   ownerSection: {
     position: 'relative',
@@ -510,6 +662,12 @@ const styles = {
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
     padding: '50px 40px',
     marginTop: '20px',
+    '@media (max-width: 768px)': {
+      padding: '40px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '30px 20px',
+    },
   },
   ownerContainer: {
     maxWidth: '800px',
@@ -525,12 +683,27 @@ const styles = {
     gap: '40px',
     backdropFilter: 'blur(10px)',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      textAlign: 'center',
+      padding: '30px',
+      gap: '30px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '24px',
+      gap: '24px',
+    },
   },
   ownerLogo: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     borderRight: '1px solid rgba(0, 209, 255, 0.2)',
+    '@media (max-width: 768px)': {
+      borderRight: 'none',
+      borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+      paddingBottom: '25px',
+    },
   },
   glorifyLogoLink: {
     textDecoration: 'none',
@@ -554,6 +727,12 @@ const styles = {
     transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '3rem',
+      height: '3rem',
+      fontSize: '1.8rem',
+      borderRadius: '1rem',
+    },
   },
   glorifyLogoText: {
     fontWeight: '800',
@@ -565,22 +744,35 @@ const styles = {
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
     letterSpacing: '-0.02em',
+    '@media (max-width: 768px)': {
+      fontSize: '1.3rem',
+    },
   },
   ownerInfo: {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
+    '@media (max-width: 768px)': {
+      alignItems: 'center',
+    },
   },
   ownerTitle: {
     fontSize: '22px',
     fontWeight: '600',
     color: '#00d1ff',
     marginBottom: '20px',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+      marginBottom: '16px',
+    },
   },
   ownerDetails: {
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
+    '@media (max-width: 768px)': {
+      alignItems: 'center',
+    },
   },
   contactItem: {
     display: 'flex',
@@ -588,6 +780,10 @@ const styles = {
     gap: '12px',
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.8)',
+    '@media (max-width: 480px)': {
+      fontSize: '12px',
+      gap: '8px',
+    },
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
@@ -600,6 +796,9 @@ const styles = {
     background: '#0a0f1a',
     padding: '25px 40px',
     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+    '@media (max-width: 768px)': {
+      padding: '20px 24px',
+    },
   },
   footerContent: {
     maxWidth: '1400px',
@@ -607,14 +806,88 @@ const styles = {
     textAlign: 'center',
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.6)',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+    },
   },
   glorifyHighlight: {
     color: '#00d1ff',
     fontWeight: '600',
   },
+  mobileMenuOverlay: {
+    display: 'none',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.95)',
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)',
+  },
+  mobileMenuContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    gap: '30px',
+    padding: '20px',
+  },
+  mobileMenuClose: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: 'none',
+    color: 'white',
+    fontSize: '24px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+  },
+  mobileLogo: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  logoIconMobile: {
+    width: '60px',
+    height: '60px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    borderRadius: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '32px',
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  logoTextMobile: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+  },
+  mobileNavButton: {
+    padding: '14px 40px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '18px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    width: '80%',
+    maxWidth: '300px',
+  },
 };
 
-// Add animations (exactly as in your original)
+// Add animations
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes float1 {
@@ -701,40 +974,14 @@ styleSheet.textContent = `
   .contactLink:hover {
     color: #00d1ff;
   }
+  
+  /* Mobile specific hover effects */
   @media (max-width: 768px) {
-    .ownerCard {
-      grid-template-columns: 1fr;
-      text-align: center;
-      padding: 30px;
+    .featureCard:active {
+      transform: scale(0.98);
     }
-    .ownerLogo {
-      border-right: none;
-      border-bottom: 1px solid rgba(0, 209, 255, 0.2);
-      padding-bottom: 25px;
-      margin-bottom: 20px;
-    }
-    .ownerDetails {
-      align-items: center;
-    }
-    .hero {
-      grid-template-columns: 1fr;
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .heroContent {
-      max-width: 100%;
-    }
-    .buttons {
-      justify-content: center;
-    }
-    .title {
-      font-size: 36px;
-    }
-    .features {
-      padding: 40px 20px;
-    }
-    .featuresTitle {
-      font-size: 28px;
+    .primaryButton:active, .secondaryButton:active {
+      transform: scale(0.98);
     }
   }
 `;
