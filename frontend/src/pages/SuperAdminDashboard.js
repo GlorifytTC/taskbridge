@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const SuperAdminDashboard = ({ user, onLogout }) => {
+const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -521,6 +521,12 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
     }, 800);
   };
 
+  const handleModalClose = (setter) => (e) => {
+    if (e.target === e.currentTarget) {
+      setter(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -531,7 +537,6 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <div style={styles.logoSection}>
           {logoPreview ? (
@@ -557,7 +562,6 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Stats Grid - Smaller icons and numbers */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-user-tie"></i></div><div style={styles.statValueSmall}>{stats.totalAdmins}</div><div style={styles.statLabelSmall}>Admins</div></div>
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users"></i></div><div style={styles.statValueSmall}>{stats.totalEmployees}</div><div style={styles.statLabelSmall}>Employees</div></div>
@@ -567,12 +571,12 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-clock"></i></div><div style={styles.statValueSmall}>{stats.pendingApplications}</div><div style={styles.statLabelSmall}>Pending</div></div>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent'}}>Home</button>
         <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent'}}>Admins</button>
         <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>Staff</button>
         <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent'}}>Branches</button>
+        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>Calendar</button>
         <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent'}}>Roles</button>
         <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent'}}>Tasks</button>
         <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent'}}>Requests</button>
@@ -580,7 +584,6 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
         <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent'}}>Settings</button>
       </div>
 
-      {/* Content */}
       <div style={styles.content}>
         {activeTab === 'dashboard' && (
           <div>
@@ -610,7 +613,7 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Branch</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {admins.map(admin => (
@@ -777,9 +780,9 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
           <div>
             <h2 style={styles.sectionTitle}>Reports</h2>
             <div style={styles.reportsGrid}>
-              <div style={styles.reportCard}><i className="fas fa-chart-bar"></i><h3>Attendance</h3><button style={styles.reportButton}>Generate</button></div>
-              <div style={styles.reportCard}><i className="fas fa-clock"></i><h3>Hours Worked</h3><button style={styles.reportButton}>Generate</button></div>
-              <div style={styles.reportCard}><i className="fas fa-file-pdf"></i><h3>Export PDF</h3><button style={styles.reportButton}>Export</button></div>
+              <div style={styles.reportCard}><i className="fas fa-chart-bar"></i><h3 style={{color: 'white'}}>Attendance</h3><button style={styles.reportButton}>Generate</button></div>
+              <div style={styles.reportCard}><i className="fas fa-clock"></i><h3 style={{color: 'white'}}>Hours Worked</h3><button style={styles.reportButton}>Generate</button></div>
+              <div style={styles.reportCard}><i className="fas fa-file-pdf"></i><h3 style={{color: 'white'}}>Export PDF</h3><button style={styles.reportButton}>Export</button></div>
             </div>
           </div>
         )}
@@ -799,14 +802,92 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
         )}
       </div>
 
-      {/* Task Creation Modal */}
+      {/* All Modals - Keep existing modal code */}
+      {showCreateAdminModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Add Admin</h2>
+            <form onSubmit={handleCreateAdmin}>
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select}>
+                <option value="">Select Branch (Optional)</option>
+                {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+              <div style={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={styles.cancelButton}>Cancel</button>
+                <button type="submit" style={styles.submitButton}>Create Admin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateEmployeeModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Add Staff</h2>
+            <form onSubmit={handleCreateEmployee}>
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
+              <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
+                <option value="">Select Job Role</option>
+                {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
+              </select>
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required>
+                <option value="">Select Branch</option>
+                {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+              <div style={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={styles.cancelButton}>Cancel</button>
+                <button type="submit" style={styles.submitButton}>Create Staff</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateBranchModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateBranchModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Add Branch</h2>
+            <form onSubmit={handleCreateBranch}>
+              <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
+              <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={styles.input} />
+              <div style={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCreateBranchModal(false)} style={styles.cancelButton}>Cancel</button>
+                <button type="submit" style={styles.submitButton}>Create Branch</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateJobModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateJobModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Add Job Role</h2>
+            <form onSubmit={handleCreateJob}>
+              <input type="text" placeholder="Role Name (e.g., Teacher, Nurse)" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
+              <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={styles.textarea} rows="2" />
+              <div style={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCreateJobModal(false)} style={styles.cancelButton}>Cancel</button>
+                <button type="submit" style={styles.submitButton}>Create Role</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showCreateTaskModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateTaskModal(false)}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Create New Task</h2>
             <form onSubmit={handleCreateTask}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Task Title</label>
+                <label style={styles.label}>Task Title *</label>
                 <input type="text" placeholder="e.g., Morning Shift" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} style={styles.input} required />
               </div>
               <div style={styles.formGroup}>
@@ -815,28 +896,28 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
               </div>
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Date</label>
+                  <label style={styles.label}>Date *</label>
                   <input type="date" value={formData.date || ''} onChange={(e) => setFormData({...formData, date: e.target.value})} style={styles.input} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Start Time</label>
+                  <label style={styles.label}>Start Time *</label>
                   <input type="time" value={formData.startTime || ''} onChange={(e) => setFormData({...formData, startTime: e.target.value})} style={styles.input} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>End Time</label>
+                  <label style={styles.label}>End Time *</label>
                   <input type="time" value={formData.endTime || ''} onChange={(e) => setFormData({...formData, endTime: e.target.value})} style={styles.input} required />
                 </div>
               </div>
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Job Role</label>
+                  <label style={styles.label}>Job Role *</label>
                   <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
                     <option value="">Select Role</option>
                     {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
                   </select>
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Branch</label>
+                  <label style={styles.label}>Branch *</label>
                   <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required>
                     <option value="">Select Branch</option>
                     {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
@@ -849,7 +930,7 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Location</label>
-                <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
+                <input type="text" placeholder="e.g., Room 101, Building A" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
               </div>
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateTaskModal(false)} style={styles.cancelButton}>Cancel</button>
@@ -860,127 +941,91 @@ const SuperAdminDashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Other Modals (simplified) */}
-      {showCreateAdminModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateAdminModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Add Admin</h2>
-            <form onSubmit={handleCreateAdmin}>
-              <input type="text" placeholder="Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="email" placeholder="Email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
-              <input type="password" placeholder="Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
-              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select}><option value="">Branch (Optional)</option>{branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}</select>
-              <div style={styles.modalButtons}><button type="button" onClick={() => setShowCreateAdminModal(false)} style={styles.cancelButton}>Cancel</button><button type="submit" style={styles.submitButton}>Create</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showCreateEmployeeModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateEmployeeModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Add Staff</h2>
-            <form onSubmit={handleCreateEmployee}>
-              <input type="text" placeholder="Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="email" placeholder="Email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
-              <input type="password" placeholder="Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
-              <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required><option value="">Select Role</option>{jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}</select>
-              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required><option value="">Select Branch</option>{branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}</select>
-              <div style={styles.modalButtons}><button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={styles.cancelButton}>Cancel</button><button type="submit" style={styles.submitButton}>Create</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showCreateBranchModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateBranchModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Add Branch</h2>
-            <form onSubmit={handleCreateBranch}>
-              <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={styles.input} />
-              <div style={styles.modalButtons}><button type="button" onClick={() => setShowCreateBranchModal(false)} style={styles.cancelButton}>Cancel</button><button type="submit" style={styles.submitButton}>Create</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showCreateJobModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateJobModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Add Job Role</h2>
-            <form onSubmit={handleCreateJob}>
-              <input type="text" placeholder="Role Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={styles.textarea} rows="2" />
-              <div style={styles.modalButtons}><button type="button" onClick={() => setShowCreateJobModal(false)} style={styles.cancelButton}>Cancel</button><button type="submit" style={styles.submitButton}>Create</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Modal */}
-      {showProfileModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Profile Settings</h2>
-            <p><strong>{user?.name}</strong> ({user?.email})</p>
-            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
-            <h3 style={styles.subTitle}>Change Password</h3>
-            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="Confirm" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={styles.input} />
-            <button onClick={handleUpdateProfile} style={styles.submitButton}>Update Password</button>
-            <div style={styles.dangerZone}><h3 style={{color:'#ef4444'}}>Danger Zone</h3><button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={styles.deleteAccountButton}>Delete My Account</button></div>
+      {showResetPasswordModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowResetPasswordModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Reset Password</h2>
+            <p>Reset password for <strong>{selectedUser?.name}</strong> ({selectedUser?.email})</p>
+            <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={styles.input} />
+            <input type="password" placeholder="Confirm Password" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={styles.input} />
+            <div style={styles.modalButtons}>
+              <button type="button" onClick={() => setShowResetPasswordModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={handleResetUserPassword} style={styles.submitButton}>Reset Password</button>
+            </div>
           </div>
         </div>
       )}
 
       {showChangeEmailModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowChangeEmailModal(false)}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Change Email</h2>
-            <p>Current: {user?.email}</p>
+            <p>Current email: <strong>{user?.email}</strong></p>
             <input type="email" placeholder="New Email" value={changeEmailData.newEmail} onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} style={styles.input} />
-            <input type="email" placeholder="Confirm" value={changeEmailData.confirmEmail} onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} style={styles.input} />
+            <input type="email" placeholder="Confirm New Email" value={changeEmailData.confirmEmail} onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} style={styles.input} />
             <input type="password" placeholder="Current Password" value={changeEmailData.password} onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} style={styles.input} />
-            <div style={styles.modalButtons}><button onClick={() => setShowChangeEmailModal(false)} style={styles.cancelButton}>Cancel</button><button onClick={handleChangeEmail} style={styles.submitButton}>Change</button></div>
+            <div style={styles.modalButtons}>
+              <button type="button" onClick={() => setShowChangeEmailModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={handleChangeEmail} style={styles.submitButton}>Change Email</button>
+            </div>
           </div>
         </div>
       )}
 
-      {showResetPasswordModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowResetPasswordModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Reset Password</h2>
-            <p>For: {selectedUser?.name}</p>
-            <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="Confirm" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={styles.input} />
-            <div style={styles.modalButtons}><button onClick={() => setShowResetPasswordModal(false)} style={styles.cancelButton}>Cancel</button><button onClick={handleResetUserPassword} style={styles.submitButton}>Reset</button></div>
+      {showProfileModal && (
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Profile Settings</h2>
+            <div style={styles.profileInfo}>
+              <p><strong>Name:</strong> {user?.name}</p>
+              <p><strong>Email:</strong> {user?.email}</p>
+              <p><strong>Role:</strong> Super Admin</p>
+              <p><strong>Organization:</strong> {user?.organization?.name}</p>
+            </div>
+            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
+            <h3 style={styles.subTitle}>Change Password</h3>
+            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={styles.input} />
+            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={styles.input} />
+            <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={styles.input} />
+            <button onClick={handleUpdateProfile} style={styles.submitButton}>Update Password</button>
+            <div style={styles.dangerZone}>
+              <h3 style={{ color: '#ef4444' }}>Danger Zone</h3>
+              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={styles.deleteAccountButton}>Delete My Account</button>
+              <p style={styles.warningText}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
+            </div>
           </div>
         </div>
       )}
 
       {showDeleteAccountModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowDeleteAccountModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Delete Account</h2>
-            <p>Are you sure? This cannot be undone.</p>
-            <div style={styles.modalButtons}><button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button><button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete</button></div>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowDeleteAccountModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Delete Your Account</h2>
+            <p>Are you sure you want to delete your account?</p>
+            <p style={{ color: '#ef4444' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
+            <p>Other admins can continue managing the organization.</p>
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete My Account</button>
+            </div>
           </div>
         </div>
       )}
 
       {showSubscriptionModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowSubscriptionModal(false)}>
-          <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Upgrade</h2>
-            <div style={styles.planOptions}><div style={styles.planCard}><h3>Professional</h3><div>$99/month</div><button style={styles.planButton}>Current</button></div><div style={styles.planCard}><h3>Enterprise</h3><div>$299/month</div><button style={styles.planButton}>Upgrade</button></div></div>
-            <p style={styles.contactInfo}><a href="mailto:georgeglor@hotmail.com">Contact for custom plans</a></p>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowSubscriptionModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Upgrade Subscription</h2>
+            <p>Choose a plan that fits your needs</p>
+            <div style={styles.planOptions}>
+              <div style={styles.planCard}><h3>Professional</h3><div>$99/month</div><ul><li>✓ Up to 200 employees</li><li>✓ 5 branches</li><li>✓ Advanced reports</li><li>✓ Priority support</li></ul><button style={styles.planButton}>Current Plan</button></div>
+              <div style={styles.planCard}><h3>Enterprise</h3><div>$299/month</div><ul><li>✓ Unlimited employees</li><li>✓ Unlimited branches</li><li>✓ Custom reports</li><li>✓ 24/7 support</li><li>✓ API access</li></ul><button style={styles.planButton}>Upgrade</button></div>
+            </div>
+            <p style={styles.contactInfo}>Need a custom plan? <a href="mailto:georgeglor@hotmail.com">Contact us</a></p>
           </div>
         </div>
       )}
 
-      {/* AI Chat Button */}
       <button style={styles.chatButton} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
@@ -1064,27 +1109,29 @@ const styles = {
   invoiceButton: { padding: '6px 12px', background: '#8b5cf6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   viewButton: { padding: '6px 12px', background: '#3b82f6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxWidth: '400px', width: '90%', maxHeight: '80vh', overflowY: 'auto' },
-  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxWidth: '550px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
-  modalTitle: { fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '16px' },
-  subTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
-  label: { color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '4px', display: 'block' },
-  input: { width: '100%', padding: '8px 10px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontSize: '12px' },
-  textarea: { width: '100%', padding: '8px 10px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '12px', resize: 'vertical' },
-  select: { width: '100%', padding: '8px 10px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  formGroup: { marginBottom: '12px' },
-  formRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '12px' },
-  modalButtons: { display: 'flex', gap: '10px', marginTop: '16px' },
-  cancelButton: { flex: 1, padding: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  submitButton: { flex: 1, padding: '8px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  confirmDeleteButton: { flex: 1, padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  deleteAccountButton: { padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '10px', fontSize: '12px' },
-  changeEmailButton: { padding: '8px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginBottom: '12px', fontSize: '12px' },
-  dangerZone: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' },
-  planOptions: { display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' },
-  planCard: { flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', textAlign: 'center' },
-  planButton: { marginTop: '10px', padding: '5px 10px', background: '#00d1ff', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '10px' },
-  contactInfo: { textAlign: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.6)' },
+  modal: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  modalTitle: { fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '20px' },
+  subTitle: { fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
+  label: { color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', display: 'block' },
+  input: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontSize: '13px' },
+  textarea: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '13px', resize: 'vertical' },
+  select: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  formGroup: { marginBottom: '14px' },
+  formRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '14px' },
+  modalButtons: { display: 'flex', gap: '12px', marginTop: '20px' },
+  cancelButton: { flex: 1, padding: '10px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  submitButton: { flex: 1, padding: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  confirmDeleteButton: { flex: 1, padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  deleteAccountButton: { padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '12px', fontSize: '13px' },
+  changeEmailButton: { padding: '10px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginBottom: '16px', fontSize: '13px' },
+  dangerZone: { marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' },
+  warningText: { fontSize: '11px', color: '#f87171', marginTop: '8px' },
+  profileInfo: { background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px' },
+  planOptions: { display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
+  planCard: { flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', textAlign: 'center' },
+  planButton: { marginTop: '12px', padding: '6px 12px', background: '#00d1ff', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  contactInfo: { textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' },
   logoPreview: { width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', marginBottom: '10px' },
   welcomeCard: { background: 'rgba(0,209,255,0.1)', borderRadius: '12px', padding: '16px', textAlign: 'center', marginTop: '12px' },
   welcomeTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '6px' },

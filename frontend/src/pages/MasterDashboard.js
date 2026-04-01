@@ -566,6 +566,7 @@ const handleDeleteUser = async (userId) => {
       </div>
       
       <div style={styles.modalButtons}>
+        
         <button onClick={() => setShowPlanModal(false)} style={styles.cancelButton}>Cancel</button>
         <button onClick={handleChangePlan} style={styles.submitButton}>Change to {selectedPlan}</button>
       </div>

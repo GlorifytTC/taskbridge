@@ -4,8 +4,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MasterDashboard from './pages/MasterDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
+import SmartCalendar from './components/SmartCalendar';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -27,6 +29,8 @@ function App() {
               setCurrentPage('master');
             } else if (data.user.role === 'superadmin') {
               setCurrentPage('superadmin');
+            } else if (data.user.role === 'admin') {
+              setCurrentPage('admin');
             } else {
               setCurrentPage('dashboard');
             }
@@ -61,6 +65,8 @@ function App() {
       setCurrentPage('master');
     } else if (userData.role === 'superadmin') {
       setCurrentPage('superadmin');
+    } else if (userData.role === 'admin') {
+      setCurrentPage('admin');
     } else {
       setCurrentPage('dashboard');
     }
@@ -76,10 +82,12 @@ function App() {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading...</div>;
   }
 
+  // Public routes
   if (currentPage === 'login') {
     return <Login onBack={goToLanding} onLogin={handleLogin} />;
   }
 
+  // Protected routes with role-based dashboards
   if (currentPage === 'master' && user) {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
@@ -88,10 +96,15 @@ function App() {
     return <SuperAdminDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
+  if (currentPage === 'admin' && user) {
+    return <AdminDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
   if (currentPage === 'dashboard' && user) {
     return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
+  // Feature pages
   if (currentPage === 'profile' && user) {
     return <Profile user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
@@ -100,6 +113,11 @@ function App() {
     return <Tasks user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
+  if (currentPage === 'calendar' && user) {
+    return <SmartCalendar user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
+  // Default landing page
   return <Landing onLoginClick={goToLogin} />;
 }
 

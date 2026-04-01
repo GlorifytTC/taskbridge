@@ -14,7 +14,7 @@ const Landing = ({ onLoginClick }) => {
   const currentDate = new Date();
   const today = currentDate.getDate();
 
-  // Generate dynamic calendar days based on current month/year
+  // Generate dynamic calendar days
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -27,12 +27,10 @@ const Landing = ({ onLoginClick }) => {
   const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
   const days = [];
   
-  // Add empty cells for days before month starts
   for (let i = 0; i < firstDay; i++) {
     days.push(null);
   }
   
-  // Add actual days
   for (let i = 1; i <= daysInMonth; i++) {
     days.push(i);
   }
@@ -127,29 +125,29 @@ const Landing = ({ onLoginClick }) => {
             <div style={styles.featureIcon}>
               <i className="fas fa-clock"></i>
             </div>
-            <h3>Shift Management</h3>
-            <p>Create and manage shifts with flexible scheduling and approval workflows.</p>
+            <h3 style={styles.featureTitle}>Shift Management</h3>
+            <p style={styles.featureDesc}>Create and manage shifts with flexible scheduling and approval workflows.</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-users"></i>
             </div>
-            <h3>Multi-branch Support</h3>
-            <p>Manage multiple locations with centralized control and branch-specific settings.</p>
+            <h3 style={styles.featureTitle}>Multi-branch Support</h3>
+            <p style={styles.featureDesc}>Manage multiple locations with centralized control and branch-specific settings.</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-chart-line"></i>
             </div>
-            <h3>Real-time Analytics</h3>
-            <p>Track attendance, hours worked, and generate comprehensive reports.</p>
+            <h3 style={styles.featureTitle}>Real-time Analytics</h3>
+            <p style={styles.featureDesc}>Track attendance, hours worked, and generate comprehensive reports.</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-bell"></i>
             </div>
-            <h3>Smart Notifications</h3>
-            <p>Automated alerts for shift assignments, approvals, and reminders.</p>
+            <h3 style={styles.featureTitle}>Smart Notifications</h3>
+            <p style={styles.featureDesc}>Automated alerts for shift assignments, approvals, and reminders.</p>
           </div>
         </div>
       </div>
@@ -170,11 +168,11 @@ const Landing = ({ onLoginClick }) => {
               <h3 style={styles.ownerTitle}>Project Owner & Lead Developer</h3>
               <div style={styles.ownerDetails}>
                 <div style={styles.contactItem}>
-                  <i className="fas fa-envelope"></i>
+                  <i className="fas fa-envelope" style={styles.contactIcon}></i>
                   <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
                 </div>
                 <div style={styles.contactItem}>
-                  <i className="fas fa-globe"></i>
+                  <i className="fas fa-globe" style={styles.contactIcon}></i>
                   <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
                 </div>
               </div>
@@ -192,29 +190,11 @@ const Landing = ({ onLoginClick }) => {
 
       {/* Add Font Awesome */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      
-      {/* Mobile Menu Overlay */}
-      <div id="mobileMenuOverlay" style={styles.mobileMenuOverlay}>
-        <div style={styles.mobileMenuContent}>
-          <button style={styles.mobileMenuClose} onClick={() => {
-            document.getElementById('mobileMenuOverlay').style.display = 'none';
-          }}>✕</button>
-          <div style={styles.mobileLogo}>
-            <div style={styles.logoIconMobile}>
-              <span>T</span>
-            </div>
-            <span style={styles.logoTextMobile}>TaskBridge</span>
-          </div>
-          <button onClick={handleSignIn} style={styles.mobileNavButton}>
-            Sign In
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
 
-// Styles object with full mobile responsiveness
+// Full responsive styles with all sections
 const styles = {
   container: {
     minHeight: '100vh',
@@ -241,6 +221,10 @@ const styles = {
     background: 'radial-gradient(circle, rgba(0, 209, 255, 0.1) 0%, transparent 70%)',
     borderRadius: '50%',
     animation: 'float1 20s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '300px',
+      height: '300px',
+    },
   },
   bgCircle2: {
     position: 'absolute',
@@ -251,6 +235,10 @@ const styles = {
     background: 'radial-gradient(circle, rgba(138, 43, 226, 0.1) 0%, transparent 70%)',
     borderRadius: '50%',
     animation: 'float2 25s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '250px',
+      height: '250px',
+    },
   },
   bgCircle3: {
     position: 'absolute',
@@ -262,6 +250,10 @@ const styles = {
     borderRadius: '50%',
     transform: 'translate(-50%, -50%)',
     animation: 'pulse 15s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '350px',
+      height: '350px',
+    },
   },
   bgGrid: {
     position: 'absolute',
@@ -272,6 +264,9 @@ const styles = {
     backgroundImage: 'linear-gradient(rgba(0, 209, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 209, 255, 0.03) 1px, transparent 1px)',
     backgroundSize: '50px 50px',
     zIndex: 0,
+    '@media (max-width: 768px)': {
+      backgroundSize: '30px 30px',
+    },
   },
   navbar: {
     position: 'relative',
@@ -300,13 +295,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
-    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
-    animation: 'softGlow 3s ease-in-out infinite',
     fontSize: '24px',
     fontWeight: 'bold',
     color: 'white',
+    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
+    animation: 'softGlow 3s ease-in-out infinite',
     '@media (max-width: 768px)': {
       width: '32px',
       height: '32px',
@@ -375,8 +368,9 @@ const styles = {
     borderRadius: '50px',
     padding: '6px 16px',
     marginBottom: '24px',
-    '@media (max-width: 1024px)': {
+    '@media (max-width: 768px)': {
       marginBottom: '20px',
+      padding: '5px 12px',
     },
   },
   tagDot: {
@@ -385,11 +379,18 @@ const styles = {
     background: '#00d1ff',
     borderRadius: '50%',
     animation: 'pulse 2s infinite',
+    '@media (max-width: 768px)': {
+      width: '6px',
+      height: '6px',
+    },
   },
   tagText: {
     fontSize: '14px',
     color: '#00d1ff',
     fontWeight: '500',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+    },
   },
   title: {
     fontSize: '56px',
@@ -427,14 +428,10 @@ const styles = {
   buttons: {
     display: 'flex',
     gap: '16px',
-    marginBottom: '48px',
-    '@media (max-width: 1024px)': {
-      justifyContent: 'center',
-    },
+    marginBottom: '0',
     '@media (max-width: 480px)': {
       flexDirection: 'column',
       gap: '12px',
-      marginBottom: '32px',
     },
   },
   primaryButton: {
@@ -485,11 +482,11 @@ const styles = {
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
     '@media (max-width: 768px)': {
-      width: '280px',
+      width: '300px',
       padding: '16px',
     },
     '@media (max-width: 480px)': {
-      width: '260px',
+      width: '280px',
       padding: '14px',
     },
   },
@@ -654,6 +651,23 @@ const styles = {
       marginBottom: '16px',
     },
   },
+  featureTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    marginBottom: '12px',
+    color: 'white',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+    },
+  },
+  featureDesc: {
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: '1.6',
+    '@media (max-width: 768px)': {
+      fontSize: '13px',
+    },
+  },
   ownerSection: {
     position: 'relative',
     zIndex: 10,
@@ -674,7 +688,7 @@ const styles = {
     margin: '0 auto',
   },
   ownerCard: {
-    background: 'rgba(255, 255, 255, 0.03)',
+    background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(0, 209, 255, 0.2)',
     borderRadius: '28px',
     padding: '35px 40px',
@@ -682,7 +696,6 @@ const styles = {
     gridTemplateColumns: '1fr 1.5fr',
     gap: '40px',
     backdropFilter: 'blur(10px)',
-    transition: 'all 0.3s ease',
     '@media (max-width: 768px)': {
       gridTemplateColumns: '1fr',
       textAlign: 'center',
@@ -710,42 +723,39 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '0.85rem',
+    gap: '12px',
   },
   glorifyLogoIcon: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    width: '3.8rem',
-    height: '3.8rem',
-    borderRadius: '1.2rem',
+    width: '80px',
+    height: '80px',
+    borderRadius: '24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: '800',
-    fontSize: '2.4rem',
+    fontSize: '48px',
     color: 'white',
-    position: 'relative',
-    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
     '@media (max-width: 768px)': {
-      width: '3rem',
-      height: '3rem',
-      fontSize: '1.8rem',
-      borderRadius: '1rem',
+      width: '70px',
+      height: '70px',
+      fontSize: '40px',
+      borderRadius: '20px',
     },
   },
   glorifyLogoText: {
     fontWeight: '800',
-    fontSize: '1.65rem',
+    fontSize: '28px',
     background: 'linear-gradient(135deg, #fff, #00d1ff, #fff)',
     backgroundSize: '200% auto',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
-    letterSpacing: '-0.02em',
     '@media (max-width: 768px)': {
-      fontSize: '1.3rem',
+      fontSize: '24px',
     },
   },
   ownerInfo: {
@@ -785,6 +795,10 @@ const styles = {
       gap: '8px',
     },
   },
+  contactIcon: {
+    width: '16px',
+    color: '#00d1ff',
+  },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
@@ -813,77 +827,6 @@ const styles = {
   glorifyHighlight: {
     color: '#00d1ff',
     fontWeight: '600',
-  },
-  mobileMenuOverlay: {
-    display: 'none',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.95)',
-    zIndex: 1000,
-    backdropFilter: 'blur(10px)',
-  },
-  mobileMenuContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: '30px',
-    padding: '20px',
-  },
-  mobileMenuClose: {
-    position: 'absolute',
-    top: '20px',
-    right: '20px',
-    background: 'rgba(255, 255, 255, 0.1)',
-    border: 'none',
-    color: 'white',
-    fontSize: '24px',
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-  },
-  mobileLogo: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  logoIconMobile: {
-    width: '60px',
-    height: '60px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '16px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  logoTextMobile: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    background: 'linear-gradient(135deg, #fff, #00d1ff)',
-    WebkitBackgroundClip: 'text',
-    backgroundClip: 'text',
-    color: 'transparent',
-  },
-  mobileNavButton: {
-    padding: '14px 40px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '50px',
-    color: 'white',
-    fontSize: '18px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    width: '80%',
-    maxWidth: '300px',
   },
 };
 
@@ -942,18 +885,6 @@ styleSheet.textContent = `
     transform: scale(1.03);
     animation: none;
   }
-  .glorifyLogoIcon:hover::before {
-    opacity: 1;
-    animation: rotateGlow 2s linear infinite;
-  }
-  @keyframes rotateGlow {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.3);
@@ -975,7 +906,6 @@ styleSheet.textContent = `
     color: #00d1ff;
   }
   
-  /* Mobile specific hover effects */
   @media (max-width: 768px) {
     .featureCard:active {
       transform: scale(0.98);
