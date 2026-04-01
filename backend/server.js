@@ -26,16 +26,13 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
-// ============ SIMPLE CORS - ALLOW ALL (FIXED) ============
+// ============ CORS - ALLOW ALL ============
 app.use(cors({
   origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
-
-// REMOVE THIS LINE - it's causing the error:
-// app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(express.json());
@@ -95,14 +92,14 @@ app.get('/api/debug/users', async (req, res) => {
   }
 });
 
-// ============ AUTH ENDPOINTS ============
+// ============ AUTH ENDPOINT - LOGIN ============
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     console.log('========================================');
     console.log('🔐 Login attempt for:', email);
     
-    // Find user
+    // Find user with password
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
@@ -110,15 +107,17 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    console.log('✅ User found:', user.email);
+    console.log('✅ User found');
     
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Use matchPassword method
+    const isMatch = await user.matchPassword(password);
     
     if (!isMatch) {
       console.log('❌ Invalid password');
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+    
+    console.log('✅ Password matched');
     
     // Update last login
     user.lastLogin = new Date();
@@ -155,6 +154,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ============ GET CURRENT USER ============
 app.get('/api/auth/me', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
