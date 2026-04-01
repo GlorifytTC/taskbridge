@@ -105,6 +105,70 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+
+// @desc    Create user (Admin, Super Admin, Master)
+// @route   POST /api/users
+// @access  Private/Admin
+exports.createUser = async (req, res) => {
+  try {
+    const { name, email, password, role, branch, jobDescription } = req.body;
+    
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User already exists' 
+      });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      organization: req.user.organization,
+      branch: branch || null,
+      jobDescription: jobDescription || null,
+      createdBy: req.user.id,
+      isActive: true
+    });
+    
+    // Create audit log
+    await AuditLog.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      action: 'create',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { name, email, role },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+};
+
+
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin

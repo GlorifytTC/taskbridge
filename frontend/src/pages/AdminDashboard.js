@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const AdminDashboard = ({ user, onLogout }) => {
+const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -13,6 +13,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [changeEmailData, setChangeEmailData] = useState({ newEmail: '', confirmEmail: '', password: '' });
+  const [logoPreview, setLogoPreview] = useState(null);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -20,7 +21,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [logoPreview, setLogoPreview] = useState(null);
   const [stats, setStats] = useState({
     totalEmployees: 0,
     totalTasks: 0,
@@ -361,6 +361,12 @@ const AdminDashboard = ({ user, onLogout }) => {
     }, 800);
   };
 
+  const handleModalClose = (setter) => (e) => {
+    if (e.target === e.currentTarget) {
+      setter(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -411,7 +417,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>Staff</button>
         <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent'}}>Tasks</button>
         <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent'}}>Requests</button>
-        <button onClick={() => handleTabChange('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>Calendar</button>
+        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>Calendar</button>
         <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent'}}>Reports</button>
       </div>
 
@@ -446,7 +452,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Job Role</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                   </tr>
+                    </tr>
                 </thead>
                 <tbody>
                   {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
@@ -478,7 +484,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Title</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Role</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                   </tr>
+                    </tr>
                 </thead>
                 <tbody>
                   {tasks.map(task => (
@@ -505,7 +511,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Staff</th><th style={styles.th}>Task</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Actions</th>
-                   </tr>
+                    </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
@@ -526,17 +532,6 @@ const AdminDashboard = ({ user, onLogout }) => {
           </div>
         )}
 
-        {activeTab === 'calendar' && (
-          <div>
-            <h2 style={styles.sectionTitle}>Calendar</h2>
-            <div style={styles.calendarCard}>
-              <i className="fas fa-calendar-alt" style={{ fontSize: '48px', color: '#00d1ff', marginBottom: '16px' }}></i>
-              <p>Calendar view coming soon. All approved shifts will appear here.</p>
-              <button style={styles.calendarButton}>View Full Calendar</button>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'reports' && (
           <div>
             <h2 style={styles.sectionTitle}>Reports</h2>
@@ -551,7 +546,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Create Employee Modal */}
       {showCreateEmployeeModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateEmployeeModal(false)}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Add Staff</h2>
             <form onSubmit={handleCreateEmployee}>
@@ -573,7 +568,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Create Task Modal */}
       {showCreateTaskModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateTaskModal(false)}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Create New Task</h2>
             <form onSubmit={handleCreateTask}>
@@ -627,8 +622,8 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Profile Modal */}
       {showProfileModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Profile Settings</h2>
             <p><strong>{user?.name}</strong> ({user?.email})</p>
             <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
@@ -643,8 +638,8 @@ const AdminDashboard = ({ user, onLogout }) => {
       )}
 
       {showChangeEmailModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowChangeEmailModal(false)}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Change Email</h2>
             <p>Current: {user?.email}</p>
             <input type="email" placeholder="New Email" value={changeEmailData.newEmail} onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} style={styles.input} />
@@ -656,8 +651,8 @@ const AdminDashboard = ({ user, onLogout }) => {
       )}
 
       {showResetPasswordModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowResetPasswordModal(false)}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowResetPasswordModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Reset Password</h2>
             <p>For: {selectedUser?.name}</p>
             <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={styles.input} />
@@ -668,8 +663,8 @@ const AdminDashboard = ({ user, onLogout }) => {
       )}
 
       {showDeleteAccountModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowDeleteAccountModal(false)}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowDeleteAccountModal)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Delete Account</h2>
             <p>Are you sure? This cannot be undone.</p>
             <div style={styles.modalButtons}><button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button><button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete</button></div>
@@ -753,8 +748,6 @@ const styles = {
   reportsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' },
   reportCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', textAlign: 'center' },
   reportButton: { marginTop: '10px', padding: '5px 10px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '10px' },
-  calendarCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '40px', textAlign: 'center' },
-  calendarButton: { marginTop: '16px', padding: '8px 20px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxWidth: '400px', width: '90%', maxHeight: '80vh', overflowY: 'auto' },
   modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxWidth: '550px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
