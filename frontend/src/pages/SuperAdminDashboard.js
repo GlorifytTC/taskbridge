@@ -655,61 +655,61 @@ const handleRemoveBranch = async (branchId) => {
         )}
 
         {activeTab === 'admins' && (
-        <div>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Admin Management</h2>
-            <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ Add Admin</button>
-          </div>
-          <div style={styles.tableContainer}>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHeaderRow}>
-                  <th style={styles.th}>Name</th>
-                  <th style={styles.th}>Email</th>
-                  <th style={styles.th}>Assigned Branches</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {admins.map(admin => (
-                  <tr key={admin._id} style={styles.tableRow}>
-                    <td style={styles.td}>{admin.name}</td>
-                    <td style={styles.td}>{admin.email}</td>
-                    <td style={styles.td}>
-                      {admin.assignedBranches?.length > 0 ? (
-                        <div>
-                          {admin.assignedBranches.map(b => (
-                            <span key={b._id} style={styles.branchTag}>{b.name}</span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span style={styles.noBranchText}>No branches assigned</span>
-                      )}
-                      <button 
-                        onClick={() => {
-                          setSelectedAdminForBranch(admin);
-                          setShowBranchAssignmentModal(true);
-                        }} 
-                        style={styles.assignBranchButton}
-                      >
-                        Manage
-                      </button>
-                    </td>
-                    <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td style={styles.td}>
-                      <div style={styles.actionButtons}>
-                        <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
-                        <button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+            <div>
+              <div style={styles.sectionHeader}>
+                <h2 style={styles.sectionTitle}>Admin Management</h2>
+                <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ Add Admin</button>
+              </div>
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHeaderRow}>
+                      <th style={styles.th}>Name</th>
+                      <th style={styles.th}>Email</th>
+                      <th style={styles.th}>Assigned Branches</th>
+                      <th style={styles.th}>Status</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {admins.map(admin => (
+                      <tr key={admin._id} style={styles.tableRow}>
+                        <td style={styles.td}>{admin.name}</td>
+                        <td style={styles.td}>{admin.email}</td>
+                        <td style={styles.td}>
+                          <div>
+                            {(admin.assignedBranches || []).map(b => (
+                              <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                            ))}
+                            <button 
+                              onClick={() => {
+                                setSelectedAdminForBranch(admin);
+                                setShowBranchAssignmentModal(true);
+                              }} 
+                              style={styles.assignBranchButton}
+                            >
+                              Manage Branches
+                            </button>
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>
+                            {admin.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
+                            <button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
         {activeTab === 'employees' && (
           <div>
@@ -1036,39 +1036,85 @@ const handleRemoveBranch = async (branchId) => {
         </div>
       )}
       {/* Branch Assignment Modal */}
-        {showBranchAssignmentModal && (
-          <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
-            <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-              <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
-              <p>Select branches this admin can manage:</p>
-              <div style={styles.branchListContainer}>
-                {branches.map(branch => (
-                  <div key={branch._id} style={styles.branchCheckboxItem}>
-                    <label style={styles.checkboxLabel}>
-                      <input
-                        type="checkbox"
-                        checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
-                        onChange={() => {
-                        const isAssigned = selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id);
-                        if (isAssigned) {
-                          handleRemoveBranch(branch._id);
-                        } else {
-                          handleAssignBranch(branch._id);
-                        }
-                      }}
-                        style={styles.checkbox}
-                      />
-                      {branch.name}
-                    </label>
+            {showBranchAssignmentModal && (
+              <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
+                <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+                  <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
+                  <p>Select branches this admin can manage:</p>
+                  <div style={styles.branchListContainer}>
+                    {branches.map(branch => (
+                      <div key={branch._id} style={styles.branchCheckboxItem}>
+                        <label style={styles.checkboxLabel}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
+                            onChange={async (e) => {
+                              const isChecked = e.target.checked;
+                              if (isChecked) {
+                                // Assign branch
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
+                                    method: 'PUT',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({ branchId: branch._id })
+                                  });
+                                  
+                                  if (response.ok) {
+                                    // Update local state
+                                    setSelectedAdminForBranch(prev => ({
+                                      ...prev,
+                                      assignedBranches: [...(prev.assignedBranches || []), branch]
+                                    }));
+                                    // Refresh admin list
+                                    fetchDashboardData();
+                                  }
+                                } catch (error) {
+                                  console.error('Error assigning branch:', error);
+                                }
+                              } else {
+                                // Remove branch
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
+                                    method: 'PUT',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({ branchId: branch._id })
+                                  });
+                                  
+                                  if (response.ok) {
+                                    // Update local state
+                                    setSelectedAdminForBranch(prev => ({
+                                      ...prev,
+                                      assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branch._id)
+                                    }));
+                                    // Refresh admin list
+                                    fetchDashboardData();
+                                  }
+                                } catch (error) {
+                                  console.error('Error removing branch:', error);
+                                }
+                              }
+                            }}
+                            style={styles.checkbox}
+                          />
+                          {branch.name}
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <div style={styles.modalButtons}>
+                    <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
+                  </div>
+                </div>
               </div>
-              <div style={styles.modalButtons}>
-                <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
       {showChangeEmailModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
