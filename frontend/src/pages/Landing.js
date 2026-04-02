@@ -13,6 +13,8 @@ const Landing = ({ onLoginClick }) => {
   // Get dynamic current date for calendar
   const currentDate = new Date();
   const today = currentDate.getDate();
+  const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+  const currentYear = currentDate.getFullYear();
 
   // Generate dynamic calendar days
   const getDaysInMonth = (year, month) => {
@@ -81,6 +83,24 @@ const Landing = ({ onLoginClick }) => {
               Watch Demo <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
             </button>
           </div>
+
+          {/* Stats Section - Restored */}
+          <div style={styles.stats}>
+            <div style={styles.statItem}>
+              <div style={styles.statNumber}>500+</div>
+              <div style={styles.statLabel}>Active Organizations</div>
+            </div>
+            <div style={styles.statDivider}></div>
+            <div style={styles.statItem}>
+              <div style={styles.statNumber}>10K+</div>
+              <div style={styles.statLabel}>Employees Managed</div>
+            </div>
+            <div style={styles.statDivider}></div>
+            <div style={styles.statItem}>
+              <div style={styles.statNumber}>98%</div>
+              <div style={styles.statLabel}>Satisfaction Rate</div>
+            </div>
+          </div>
         </div>
 
         {/* Dynamic Calendar Animation */}
@@ -88,7 +108,7 @@ const Landing = ({ onLoginClick }) => {
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
               <div style={styles.calendarMonth}>
-                TaskBridge
+                {currentMonth} {currentYear}
               </div>
             </div>
             <div style={styles.calendarWeekdays}>
@@ -168,11 +188,11 @@ const Landing = ({ onLoginClick }) => {
               <h3 style={styles.ownerTitle}>Project Owner & Lead Developer</h3>
               <div style={styles.ownerDetails}>
                 <div style={styles.contactItem}>
-                  <i className="fas fa-envelope" style={styles.contactIcon}></i>
+                  <i className="fas fa-envelope"></i>
                   <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
                 </div>
                 <div style={styles.contactItem}>
-                  <i className="fas fa-globe" style={styles.contactIcon}></i>
+                  <i className="fas fa-globe"></i>
                   <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
                 </div>
               </div>
@@ -194,7 +214,7 @@ const Landing = ({ onLoginClick }) => {
   );
 };
 
-// Full responsive styles with all sections
+// Complete styles with all sections
 const styles = {
   container: {
     minHeight: '100vh',
@@ -204,13 +224,14 @@ const styles = {
     overflowX: 'hidden',
   },
   bgAnimation: {
-    position: 'absolute',
+    position: 'fixed',
     top: 0,
     left: 0,
     width: '100%',
     height: '100%',
     overflow: 'hidden',
     zIndex: 0,
+    pointerEvents: 'none',
   },
   bgCircle1: {
     position: 'absolute',
@@ -218,13 +239,9 @@ const styles = {
     right: '5%',
     width: '500px',
     height: '500px',
-    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.1) 0%, transparent 70%)',
+    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.15) 0%, transparent 70%)',
     borderRadius: '50%',
     animation: 'float1 20s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '300px',
-      height: '300px',
-    },
   },
   bgCircle2: {
     position: 'absolute',
@@ -235,10 +252,6 @@ const styles = {
     background: 'radial-gradient(circle, rgba(138, 43, 226, 0.1) 0%, transparent 70%)',
     borderRadius: '50%',
     animation: 'float2 25s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '250px',
-      height: '250px',
-    },
   },
   bgCircle3: {
     position: 'absolute',
@@ -246,14 +259,10 @@ const styles = {
     left: '50%',
     width: '600px',
     height: '600px',
-    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.05) 0%, transparent 70%)',
+    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.08) 0%, transparent 70%)',
     borderRadius: '50%',
     transform: 'translate(-50%, -50%)',
     animation: 'pulse 15s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '350px',
-      height: '350px',
-    },
   },
   bgGrid: {
     position: 'absolute',
@@ -264,9 +273,6 @@ const styles = {
     backgroundImage: 'linear-gradient(rgba(0, 209, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 209, 255, 0.03) 1px, transparent 1px)',
     backgroundSize: '50px 50px',
     zIndex: 0,
-    '@media (max-width: 768px)': {
-      backgroundSize: '30px 30px',
-    },
   },
   navbar: {
     position: 'relative',
@@ -274,12 +280,9 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 24px',
+    padding: '20px 40px',
     maxWidth: '1400px',
     margin: '0 auto',
-    '@media (max-width: 768px)': {
-      padding: '16px 20px',
-    },
   },
   logo: {
     display: 'flex',
@@ -300,12 +303,6 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '32px',
-      height: '32px',
-      fontSize: '18px',
-      borderRadius: '10px',
-    },
   },
   logoText: {
     fontSize: '24px',
@@ -314,9 +311,6 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    '@media (max-width: 768px)': {
-      fontSize: '18px',
-    },
   },
   navButton: {
     padding: '10px 24px',
@@ -327,10 +321,6 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '8px 20px',
-      fontSize: '13px',
-    },
   },
   hero: {
     position: 'relative',
@@ -342,22 +332,9 @@ const styles = {
     gridTemplateColumns: '1fr 1fr',
     gap: '60px',
     alignItems: 'center',
-    '@media (max-width: 1024px)': {
-      gridTemplateColumns: '1fr',
-      textAlign: 'center',
-      gap: '40px',
-      padding: '40px 24px',
-    },
-    '@media (max-width: 768px)': {
-      padding: '30px 20px',
-      gap: '30px',
-    },
   },
   heroContent: {
     maxWidth: '600px',
-    '@media (max-width: 1024px)': {
-      maxWidth: '100%',
-    },
   },
   tag: {
     display: 'inline-flex',
@@ -368,10 +345,6 @@ const styles = {
     borderRadius: '50px',
     padding: '6px 16px',
     marginBottom: '24px',
-    '@media (max-width: 768px)': {
-      marginBottom: '20px',
-      padding: '5px 12px',
-    },
   },
   tagDot: {
     width: '8px',
@@ -379,18 +352,11 @@ const styles = {
     background: '#00d1ff',
     borderRadius: '50%',
     animation: 'pulse 2s infinite',
-    '@media (max-width: 768px)': {
-      width: '6px',
-      height: '6px',
-    },
   },
   tagText: {
     fontSize: '14px',
     color: '#00d1ff',
     fontWeight: '500',
-    '@media (max-width: 768px)': {
-      fontSize: '12px',
-    },
   },
   title: {
     fontSize: '56px',
@@ -398,16 +364,6 @@ const styles = {
     lineHeight: '1.2',
     marginBottom: '24px',
     color: 'white',
-    '@media (max-width: 1024px)': {
-      fontSize: '42px',
-    },
-    '@media (max-width: 768px)': {
-      fontSize: '32px',
-      marginBottom: '16px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '28px',
-    },
   },
   titleGradient: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
@@ -420,19 +376,11 @@ const styles = {
     lineHeight: '1.6',
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: '32px',
-    '@media (max-width: 768px)': {
-      fontSize: '16px',
-      marginBottom: '24px',
-    },
   },
   buttons: {
     display: 'flex',
     gap: '16px',
-    marginBottom: '0',
-    '@media (max-width: 480px)': {
-      flexDirection: 'column',
-      gap: '12px',
-    },
+    marginBottom: '48px',
   },
   primaryButton: {
     padding: '14px 32px',
@@ -443,12 +391,7 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    '@media (max-width: 480px)': {
-      padding: '12px 24px',
-      fontSize: '14px',
-      width: '100%',
-    },
+    transition: 'all 0.3s ease',
   },
   secondaryButton: {
     padding: '14px 32px',
@@ -459,12 +402,32 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    '@media (max-width: 480px)': {
-      padding: '12px 24px',
-      fontSize: '14px',
-      width: '100%',
-    },
+    transition: 'all 0.3s ease',
+  },
+  stats: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '32px',
+    paddingTop: '32px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  },
+  statItem: {
+    textAlign: 'center',
+  },
+  statNumber: {
+    fontSize: '32px',
+    fontWeight: 'bold',
+    color: '#00d1ff',
+    marginBottom: '4px',
+  },
+  statLabel: {
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  statDivider: {
+    width: '1px',
+    height: '40px',
+    background: 'rgba(255, 255, 255, 0.2)',
   },
   calendarContainer: {
     display: 'flex',
@@ -472,74 +435,48 @@ const styles = {
     alignItems: 'center',
   },
   calendar: {
-    width: '350px',
-    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9))',
+    width: '100%',
+    maxWidth: '380px',
+    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
     borderRadius: '24px',
-    padding: '20px',
+    padding: '24px',
     border: '2px solid rgba(0, 209, 255, 0.3)',
     boxShadow: '0 0 30px rgba(0, 209, 255, 0.2)',
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '300px',
-      padding: '16px',
-    },
-    '@media (max-width: 480px)': {
-      width: '280px',
-      padding: '14px',
-    },
   },
   calendarHeader: {
     textAlign: 'center',
     marginBottom: '20px',
     paddingBottom: '12px',
     borderBottom: '1px solid rgba(0, 209, 255, 0.3)',
-    '@media (max-width: 768px)': {
-      marginBottom: '16px',
-      paddingBottom: '10px',
-    },
   },
   calendarMonth: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: 'bold',
     background: 'linear-gradient(135deg, #fff, #00d1ff)',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    letterSpacing: '1px',
-    '@media (max-width: 768px)': {
-      fontSize: '20px',
-    },
   },
   calendarWeekdays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
     gap: '8px',
     marginBottom: '12px',
-    '@media (max-width: 768px)': {
-      gap: '4px',
-      marginBottom: '8px',
-    },
   },
   weekday: {
     textAlign: 'center',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     padding: '8px 0',
-    '@media (max-width: 768px)': {
-      fontSize: '10px',
-      padding: '4px 0',
-    },
   },
   calendarDays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
     gap: '8px',
-    '@media (max-width: 768px)': {
-      gap: '4px',
-    },
   },
   calendarDay: {
     textAlign: 'center',
@@ -547,20 +484,12 @@ const styles = {
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.9)',
     borderRadius: '8px',
-    transition: 'all 0.3s ease',
+    transition: 'all 0.2s ease',
     cursor: 'pointer',
-    '@media (max-width: 768px)': {
-      padding: '8px 0',
-      fontSize: '12px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '6px 0',
-      fontSize: '11px',
-    },
   },
   today: {
-    background: 'rgba(0, 209, 255, 0.2)',
-    border: '1px solid rgba(0, 209, 255, 0.5)',
+    background: 'rgba(0, 209, 255, 0.25)',
+    border: '1px solid rgba(0, 209, 255, 0.6)',
     fontWeight: 'bold',
     color: '#00d1ff',
   },
@@ -585,12 +514,6 @@ const styles = {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '80px 40px',
-    '@media (max-width: 768px)': {
-      padding: '50px 24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '40px 20px',
-    },
   },
   featuresTitle: {
     fontSize: '36px',
@@ -598,26 +521,11 @@ const styles = {
     textAlign: 'center',
     marginBottom: '48px',
     color: 'white',
-    '@media (max-width: 768px)': {
-      fontSize: '28px',
-      marginBottom: '32px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '24px',
-      marginBottom: '24px',
-    },
   },
   featuresGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '24px',
-    '@media (max-width: 768px)': {
-      gap: '20px',
-    },
-    '@media (max-width: 480px)': {
-      gridTemplateColumns: '1fr',
-      gap: '16px',
-    },
   },
   featureCard: {
     background: 'rgba(255, 255, 255, 0.03)',
@@ -626,12 +534,6 @@ const styles = {
     padding: '32px',
     textAlign: 'center',
     transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '20px',
-    },
   },
   featureIcon: {
     width: '64px',
@@ -644,79 +546,43 @@ const styles = {
     margin: '0 auto 20px',
     fontSize: '28px',
     color: '#00d1ff',
-    '@media (max-width: 480px)': {
-      width: '56px',
-      height: '56px',
-      fontSize: '24px',
-      marginBottom: '16px',
-    },
   },
   featureTitle: {
     fontSize: '20px',
     fontWeight: '600',
     marginBottom: '12px',
     color: 'white',
-    '@media (max-width: 768px)': {
-      fontSize: '18px',
-    },
   },
   featureDesc: {
     fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.6)',
     lineHeight: '1.6',
-    '@media (max-width: 768px)': {
-      fontSize: '13px',
-    },
   },
   ownerSection: {
     position: 'relative',
     zIndex: 10,
-    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
+    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%)',
     borderTop: '1px solid rgba(0, 209, 255, 0.2)',
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
-    padding: '50px 40px',
-    marginTop: '20px',
-    '@media (max-width: 768px)': {
-      padding: '40px 24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '30px 20px',
-    },
+    padding: '60px 40px',
   },
   ownerContainer: {
-    maxWidth: '800px',
+    maxWidth: '1000px',
     margin: '0 auto',
   },
   ownerCard: {
     background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(0, 209, 255, 0.2)',
+    border: '1px solid rgba(0, 209, 255, 0.25)',
     borderRadius: '28px',
-    padding: '35px 40px',
-    display: 'grid',
-    gridTemplateColumns: '1fr 1.5fr',
-    gap: '40px',
+    padding: '40px',
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '50px',
+    alignItems: 'center',
     backdropFilter: 'blur(10px)',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      textAlign: 'center',
-      padding: '30px',
-      gap: '30px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '24px',
-      gap: '24px',
-    },
   },
   ownerLogo: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRight: '1px solid rgba(0, 209, 255, 0.2)',
-    '@media (max-width: 768px)': {
-      borderRight: 'none',
-      borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
-      paddingBottom: '25px',
-    },
+    flexShrink: 0,
   },
   glorifyLogoLink: {
     textDecoration: 'none',
@@ -734,70 +600,41 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: '800',
-    fontSize: '48px',
+    fontSize: '44px',
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '70px',
-      height: '70px',
-      fontSize: '40px',
-      borderRadius: '20px',
-    },
   },
   glorifyLogoText: {
     fontWeight: '800',
-    fontSize: '28px',
+    fontSize: '24px',
     background: 'linear-gradient(135deg, #fff, #00d1ff, #fff)',
     backgroundSize: '200% auto',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
-    '@media (max-width: 768px)': {
-      fontSize: '24px',
-    },
   },
   ownerInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    '@media (max-width: 768px)': {
-      alignItems: 'center',
-    },
+    flex: 1,
   },
   ownerTitle: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: '600',
     color: '#00d1ff',
     marginBottom: '20px',
-    '@media (max-width: 768px)': {
-      fontSize: '18px',
-      marginBottom: '16px',
-    },
   },
   ownerDetails: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
-    '@media (max-width: 768px)': {
-      alignItems: 'center',
-    },
+    gap: '12px',
   },
   contactItem: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    fontSize: '14px',
+    fontSize: '15px',
     color: 'rgba(255, 255, 255, 0.8)',
-    '@media (max-width: 480px)': {
-      fontSize: '12px',
-      gap: '8px',
-    },
-  },
-  contactIcon: {
-    width: '16px',
-    color: '#00d1ff',
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
@@ -808,21 +645,15 @@ const styles = {
     position: 'relative',
     zIndex: 10,
     background: '#0a0f1a',
-    padding: '25px 40px',
+    padding: '30px 40px',
     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-    '@media (max-width: 768px)': {
-      padding: '20px 24px',
-    },
   },
   footerContent: {
     maxWidth: '1400px',
     margin: '0 auto',
     textAlign: 'center',
     fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.6)',
-    '@media (max-width: 768px)': {
-      fontSize: '12px',
-    },
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   glorifyHighlight: {
     color: '#00d1ff',
@@ -830,7 +661,7 @@ const styles = {
   },
 };
 
-// Add animations
+// Add animations and responsive styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes float1 {
@@ -843,23 +674,20 @@ styleSheet.textContent = `
   }
   @keyframes pulse {
     0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
   }
   @keyframes floatCalendar {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
+    50% { transform: translateY(-10px); }
   }
   @keyframes calendarBlink {
     0%, 90%, 100% {
       opacity: 1;
-      transform: scale(1);
       background: rgba(0, 209, 255, 0);
     }
     95% {
-      opacity: 0.3;
-      transform: scale(0.9);
-      background: rgba(0, 209, 255, 0.3);
-      box-shadow: 0 0 10px rgba(0, 209, 255, 0.8);
+      opacity: 0.5;
+      background: rgba(0, 209, 255, 0.2);
     }
   }
   @keyframes softGlow {
@@ -867,7 +695,7 @@ styleSheet.textContent = `
       box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
     }
     50% {
-      box-shadow: 0 0 40px rgba(0, 209, 255, 0.6);
+      box-shadow: 0 0 40px rgba(0, 209, 255, 0.5);
     }
   }
   @keyframes shimmer {
@@ -881,37 +709,273 @@ styleSheet.textContent = `
       background-position: 0% 50%;
     }
   }
+  
   .glorifyLogoIcon:hover {
     transform: scale(1.03);
-    animation: none;
   }
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.3);
   }
   .navButton:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(0, 209, 255, 0.5);
   }
   .featureCard:hover {
-    transform: translateY(-8px);
+    transform: translateY(-5px);
     border-color: rgba(0, 209, 255, 0.3);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.3);
   }
-  .calendarDay:not(.today):hover {
-    background: rgba(0, 209, 255, 0.1);
-    transform: scale(1.05);
+  .calendarDay:hover {
+    background: rgba(0, 209, 255, 0.15);
   }
   .contactLink:hover {
     color: #00d1ff;
   }
   
-  @media (max-width: 768px) {
-    .featureCard:active {
-      transform: scale(0.98);
+  /* Mobile Responsive Styles */
+  @media (max-width: 1024px) {
+    .hero {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 40px 24px;
+      gap: 40px;
     }
-    .primaryButton:active, .secondaryButton:active {
-      transform: scale(0.98);
+    .heroContent {
+      max-width: 100%;
+    }
+    .buttons {
+      justify-content: center;
+    }
+    .stats {
+      justify-content: center;
+    }
+    .title {
+      font-size: 42px;
+    }
+    .features {
+      padding: 60px 24px;
+    }
+    .featuresTitle {
+      font-size: 32px;
+    }
+    .ownerSection {
+      padding: 50px 24px;
+    }
+    .ownerCard {
+      padding: 35px;
+      gap: 35px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .navbar {
+      padding: 16px 20px;
+    }
+    .logoIcon {
+      width: 36px;
+      height: 36px;
+      font-size: 20px;
+    }
+    .logoText {
+      font-size: 20px;
+    }
+    .navButton {
+      padding: 8px 20px;
+      font-size: 13px;
+    }
+    .title {
+      font-size: 36px;
+    }
+    .subtitle {
+      font-size: 16px;
+      margin-bottom: 28px;
+    }
+    .buttons {
+      margin-bottom: 32px;
+      gap: 12px;
+    }
+    .primaryButton, .secondaryButton {
+      padding: 12px 24px;
+      font-size: 14px;
+    }
+    .stats {
+      gap: 20px;
+    }
+    .statNumber {
+      font-size: 24px;
+    }
+    .statLabel {
+      font-size: 12px;
+    }
+    .calendar {
+      max-width: 340px;
+      padding: 20px;
+    }
+    .calendarMonth {
+      font-size: 20px;
+    }
+    .weekday {
+      font-size: 12px;
+      padding: 6px 0;
+    }
+    .calendarDay {
+      font-size: 13px;
+      padding: 8px 0;
+    }
+    .featuresTitle {
+      font-size: 28px;
+      margin-bottom: 32px;
+    }
+    .featureCard {
+      padding: 24px;
+    }
+    .featureIcon {
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
+    }
+    .featureTitle {
+      font-size: 18px;
+    }
+    .ownerCard {
+      flex-direction: column;
+      text-align: center;
+      padding: 30px;
+      gap: 25px;
+    }
+    .ownerTitle {
+      font-size: 20px;
+    }
+    .ownerDetails {
+      align-items: center;
+    }
+    .glorifyLogoIcon {
+      width: 70px;
+      height: 70px;
+      font-size: 38px;
+    }
+    .glorifyLogoText {
+      font-size: 22px;
+    }
+    .footer {
+      padding: 20px 24px;
+    }
+    .footerContent {
+      font-size: 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .navbar {
+      padding: 12px 16px;
+    }
+    .logoIcon {
+      width: 32px;
+      height: 32px;
+      font-size: 18px;
+      border-radius: 10px;
+    }
+    .logoText {
+      font-size: 18px;
+    }
+    .navButton {
+      padding: 6px 16px;
+      font-size: 12px;
+    }
+    .hero {
+      padding: 30px 16px;
+    }
+    .title {
+      font-size: 28px;
+    }
+    .subtitle {
+      font-size: 14px;
+    }
+    .buttons {
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .primaryButton, .secondaryButton {
+      width: 100%;
+      padding: 10px 20px;
+    }
+    .stats {
+      flex-direction: column;
+      gap: 16px;
+      border-top: none;
+      padding-top: 0;
+    }
+    .statDivider {
+      display: none;
+    }
+    .statItem {
+      width: 100%;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+    }
+    .calendar {
+      max-width: 280px;
+      padding: 16px;
+    }
+    .calendarMonth {
+      font-size: 18px;
+    }
+    .weekday {
+      font-size: 10px;
+      padding: 4px 0;
+    }
+    .calendarDay {
+      font-size: 11px;
+      padding: 6px 0;
+    }
+    .features {
+      padding: 40px 16px;
+    }
+    .featuresTitle {
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+    .featureCard {
+      padding: 20px;
+    }
+    .featureIcon {
+      width: 50px;
+      height: 50px;
+      font-size: 22px;
+      border-radius: 16px;
+    }
+    .featureTitle {
+      font-size: 16px;
+    }
+    .featureDesc {
+      font-size: 13px;
+    }
+    .ownerSection {
+      padding: 40px 16px;
+    }
+    .ownerCard {
+      padding: 24px;
+    }
+    .glorifyLogoIcon {
+      width: 60px;
+      height: 60px;
+      font-size: 32px;
+      border-radius: 20px;
+    }
+    .glorifyLogoText {
+      font-size: 20px;
+    }
+    .ownerTitle {
+      font-size: 18px;
+    }
+    .contactItem {
+      font-size: 13px;
+    }
+    .footer {
+      padding: 16px;
+    }
+    .footerContent {
+      font-size: 11px;
     }
   }
 `;

@@ -101,8 +101,16 @@ exports.getTaskStatus = async (req, res) => {
   try {
     const organization = req.user.organization;
     
+    // Build query based on user role
+    let matchQuery = { organization: organization._id };
+    
+    // If user is admin, filter by their assigned branches
+    if (req.user.role === 'admin' && req.user.assignedBranches && req.user.assignedBranches.length > 0) {
+      matchQuery.branch = { $in: req.user.assignedBranches };
+    }
+    
     const tasks = await Task.aggregate([
-      { $match: { organization: organization._id } },
+      { $match: matchQuery },
       { $group: {
         _id: '$status',
         count: { $sum: 1 }

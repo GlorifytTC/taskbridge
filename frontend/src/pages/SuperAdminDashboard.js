@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
+  const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
+  const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
+  const [availableBranches, setAvailableBranches] = useState([]);
+  const [assignedBranches, setAssignedBranches] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -603,33 +607,61 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'admins' && (
-          <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Admin Management</h2>
-              <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ Add Admin</button>
-            </div>
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Branch</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                   </tr>
-                </thead>
-                <tbody>
-                  {admins.map(admin => (
-                    <tr key={admin._id} style={styles.tableRow}>
-                      <td style={styles.td}>{admin.name}</td>
-                      <td style={styles.td}>{admin.email}</td>
-                      <td style={styles.td}>{admin.branch?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button><button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Admin Management</h2>
+            <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ Add Admin</button>
           </div>
-        )}
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHeaderRow}>
+                  <th style={styles.th}>Name</th>
+                  <th style={styles.th}>Email</th>
+                  <th style={styles.th}>Assigned Branches</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {admins.map(admin => (
+                  <tr key={admin._id} style={styles.tableRow}>
+                    <td style={styles.td}>{admin.name}</td>
+                    <td style={styles.td}>{admin.email}</td>
+                    <td style={styles.td}>
+                      {admin.assignedBranches?.length > 0 ? (
+                        <div>
+                          {admin.assignedBranches.map(b => (
+                            <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={styles.noBranchText}>No branches assigned</span>
+                      )}
+                      <button 
+                        onClick={() => {
+                          setSelectedAdminForBranch(admin);
+                          setShowBranchAssignmentModal(true);
+                        }} 
+                        style={styles.assignBranchButton}
+                      >
+                        Manage
+                      </button>
+                    </td>
+                    <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td style={styles.td}>
+                      <div style={styles.actionButtons}>
+                        <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
+                        <button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
         {activeTab === 'employees' && (
           <div>
@@ -955,7 +987,40 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         </div>
       )}
-
+      {/* Branch Assignment Modal */}
+        {showBranchAssignmentModal && (
+          <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
+            <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+              <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
+              <p>Select branches this admin can manage:</p>
+              <div style={styles.branchListContainer}>
+                {branches.map(branch => (
+                  <div key={branch._id} style={styles.branchCheckboxItem}>
+                    <label style={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
+                        onChange={() => {
+                          const isAssigned = selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id);
+                          if (isAssigned) {
+                            handleRemoveBranch(branch._id);
+                          } else {
+                            handleAssignBranch(branch._id);
+                          }
+                        }}
+                        style={styles.checkbox}
+                      />
+                      {branch.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div style={styles.modalButtons}>
+                <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
       {showChangeEmailModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -1058,6 +1123,51 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 };
 
 const styles = {
+  branchTag: {
+  display: 'inline-block',
+  background: 'rgba(0,209,255,0.2)',
+  padding: '2px 8px',
+  borderRadius: '12px',
+  fontSize: '10px',
+  marginRight: '4px',
+  marginBottom: '4px',
+  color: '#00d1ff',
+},
+assignBranchButton: {
+  background: 'rgba(59,130,246,0.2)',
+  border: '1px solid #3b82f6',
+  borderRadius: '6px',
+  padding: '2px 8px',
+  color: '#3b82f6',
+  cursor: 'pointer',
+  fontSize: '10px',
+  marginTop: '4px',
+},
+branchListContainer: {
+  maxHeight: '300px',
+  overflowY: 'auto',
+  marginBottom: '20px',
+},
+branchCheckboxItem: {
+  padding: '8px',
+  borderBottom: '1px solid rgba(255,255,255,0.1)',
+},
+checkboxLabel: {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  color: 'white',
+  cursor: 'pointer',
+},
+checkbox: {
+  width: '16px',
+  height: '16px',
+  cursor: 'pointer',
+},
+noBranchText: {
+  color: 'rgba(255,255,255,0.5)',
+  fontSize: '11px',
+},
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },

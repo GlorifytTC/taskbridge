@@ -28,49 +28,43 @@ const SmartCalendar = ({ user, onNavigate }) => {
   }, [currentDate, viewMode]);
 
   const fetchCalendarData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      let startDate, endDate;
-      if (viewMode === 'month') {
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-      } else if (viewMode === 'week') {
-        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-      } else {
-        startDate = currentDate;
-        endDate = currentDate;
-      }
-      
-      const tasksRes = await fetch(
-        `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      const tasksData = await tasksRes.json();
-      
-      const appsRes = await fetch(
-        'https://taskbridge-production-9d91.up.railway.app/api/applications',
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      const appsData = await appsRes.json();
-      
-      const employeesRes = await fetch(
-        'https://taskbridge-production-9d91.up.railway.app/api/users?role=employee',
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      const employeesData = await employeesRes.json();
-      
-      setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
-      setEmployees(employeesData.data || []);
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get admin's assigned branches
+    const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const adminData = await adminRes.json();
+    const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+    
+    let startDate, endDate;
+    if (viewMode === 'month') {
+      startDate = startOfMonth(currentDate);
+      endDate = endOfMonth(currentDate);
+    } else if (viewMode === 'week') {
+      startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+      endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+    } else {
+      startDate = currentDate;
+      endDate = currentDate;
     }
-  };
+    
+    // Fetch only tasks from assigned branches
+    const tasksRes = await fetch(
+      `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&branches=${assignedBranchIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    const tasksData = await tasksRes.json();
+    
+    setTasks(tasksData.data || []);
+  } catch (error) {
+    console.error('Error fetching calendar data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getTasksForDate = (date) => {
     return tasks.filter(task => isSameDay(new Date(task.date), date));

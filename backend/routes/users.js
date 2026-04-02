@@ -8,7 +8,9 @@ const {
   deleteUser,
   resetUserPassword,
   transferOwnership,
-  createUser
+  createUser,
+  assignBranch,
+  removeBranch    
 } = require('../controllers/userController');
 
 router.use(protect);
@@ -24,5 +26,7 @@ router.route('/:id')
 
 router.put('/:id/reset-password', authorize('admin', 'superadmin', 'master'), resetUserPassword);
 router.post('/transfer-ownership', authorize('superadmin'), transferOwnership);
+router.put('/:id/assign-branch', authorize('master', 'superadmin'), assignBranch);
+router.put('/:id/remove-branch', authorize('master', 'superadmin'), removeBranch);
 
 module.exports = router;

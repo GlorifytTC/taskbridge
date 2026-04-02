@@ -50,38 +50,54 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   }, []);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const [employeesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const employeesData = await employeesRes.json();
-      const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      
-      setEmployees(employeesData.data || []);
-      setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setStats({
-        totalEmployees: employeesData.data?.length || 0,
-        totalTasks: tasksData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        approvedShifts: 0
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get admin's assigned branches
+    const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const adminData = await adminRes.json();
+    const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+    
+    // Fetch only tasks from assigned branches
+    const tasksRes = await fetch(
+      `https://taskbridge-production-9d91.up.railway.app/api/tasks?branches=${assignedBranchIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    // Fetch only employees from assigned branches
+    const employeesRes = await fetch(
+      `https://taskbridge-production-9d91.up.railway.app/api/users?role=employee&branches=${assignedBranchIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    // Fetch applications for tasks in assigned branches
+    const appsRes = await fetch(
+      `https://taskbridge-production-9d91.up.railway.app/api/applications/pending?branches=${assignedBranchIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    const tasksData = await tasksRes.json();
+    const employeesData = await employeesRes.json();
+    const appsData = await appsRes.json();
+    
+    setTasks(tasksData.data || []);
+    setEmployees(employeesData.data || []);
+    setApplications(appsData.data || []);
+    setStats({
+      totalEmployees: employeesData.data?.length || 0,
+      totalTasks: tasksData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      approvedShifts: 0
+    });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {

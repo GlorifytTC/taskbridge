@@ -54,17 +54,79 @@ const Tasks = () => {
   };
 
   const fetchBranches = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setBranches(data.data || []);
-    } catch (error) {
-      console.error('Error fetching branches:', error);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    setAvailableBranches(data.data || []);
+  } catch (error) {
+    console.error('Error fetching branches:', error);
+  }
+};
+
+// Add these functions - place them after your existing functions like handleCreateAdmin, etc.
+
+const handleAssignBranch = async (branchId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ branchId })
+    });
+    
+    if (response.ok) {
+      // Update the selected admin's assigned branches locally
+      setSelectedAdminForBranch(prev => ({
+        ...prev,
+        assignedBranches: [...(prev.assignedBranches || []), { _id: branchId, name: branches.find(b => b._id === branchId)?.name || '' }]
+      }));
+      // Refresh admin list
+      fetchDashboardData();
+      alert('Branch assigned successfully!');
+    } else {
+      alert('Failed to assign branch');
     }
-  };
+  } catch (error) {
+    console.error('Error assigning branch:', error);
+    alert('Failed to assign branch');
+  }
+};
+
+const handleRemoveBranch = async (branchId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ branchId })
+    });
+    
+    if (response.ok) {
+      // Update the selected admin's assigned branches locally
+      setSelectedAdminForBranch(prev => ({
+        ...prev,
+        assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
+      }));
+      // Refresh admin list
+      fetchDashboardData();
+      alert('Branch removed successfully!');
+    } else {
+      alert('Failed to remove branch');
+    }
+  } catch (error) {
+    console.error('Error removing branch:', error);
+    alert('Failed to remove branch');
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,6 +158,7 @@ const Tasks = () => {
       console.error('Error saving task:', error);
     }
   };
+  
 
   const handleDelete = async (taskId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;

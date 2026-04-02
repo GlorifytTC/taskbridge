@@ -60,6 +60,86 @@ exports.getUser = async (req, res) => {
   }
 };
 
+// @desc    Assign branch to admin
+// @route   PUT /api/users/:id/assign-branch
+// @access  Private/Master/SuperAdmin
+exports.assignBranch = async (req, res) => {
+  try {
+    const { branchId } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
+      return res.status(400).json({ message: 'Only admins can be assigned to branches' });
+    }
+    
+    if (!user.assignedBranches) {
+      user.assignedBranches = [];
+    }
+    
+    if (!user.assignedBranches.includes(branchId)) {
+      user.assignedBranches.push(branchId);
+      await user.save();
+    }
+    
+    await AuditLog.create({
+      user: req.user.id,
+      organization: user.organization,
+      action: 'assign_branch',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { branchId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ success: true, message: 'Branch assigned successfully' });
+  } catch (error) {
+    console.error('Error assigning branch:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Remove branch from admin
+// @route   PUT /api/users/:id/remove-branch
+// @access  Private/Master/SuperAdmin
+exports.removeBranch = async (req, res) => {
+  try {
+    const { branchId } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (user.assignedBranches) {
+      user.assignedBranches = user.assignedBranches.filter(b => b.toString() !== branchId);
+      await user.save();
+    }
+    
+    await AuditLog.create({
+      user: req.user.id,
+      organization: user.organization,
+      action: 'remove_branch',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { branchId },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ success: true, message: 'Branch removed successfully' });
+  } catch (error) {
+    console.error('Error removing branch:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+
 // @desc    Update user
 // @route   PUT /api/users/:id
 // @access  Private/Admin

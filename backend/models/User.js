@@ -67,5 +67,9 @@ const UserSchema = new mongoose.Schema({
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+assignedBranches: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Branch'
+}],
 
 module.exports = mongoose.model('User', UserSchema);
