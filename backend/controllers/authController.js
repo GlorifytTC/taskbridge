@@ -149,7 +149,8 @@ exports.getMe = async (req, res) => {
       .select('-password')
       .populate('organization', 'name logo settings')
       .populate('branch', 'name address')
-      .populate('jobDescription', 'name');
+      .populate('jobDescription', 'name')
+      .populate('assignedBranches', 'name');  // ADD THIS LINE
     
     res.json({
       success: true,

@@ -5,9 +5,11 @@ import Dashboard from './pages/Dashboard';
 import MasterDashboard from './pages/MasterDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard';
 import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
+
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -31,6 +33,8 @@ function App() {
               setCurrentPage('superadmin');
             } else if (data.user.role === 'admin') {
               setCurrentPage('admin');
+            } else if (data.user.role === 'employee') {
+              setCurrentPage('employee');
             } else {
               setCurrentPage('dashboard');
             }
@@ -67,6 +71,8 @@ function App() {
       setCurrentPage('superadmin');
     } else if (userData.role === 'admin') {
       setCurrentPage('admin');
+    } else if (userData.role === 'employee') {
+      setCurrentPage('employee');
     } else {
       setCurrentPage('dashboard');
     }
@@ -100,6 +106,10 @@ function App() {
     return <AdminDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
 
+  if (currentPage === 'employee' && user) {
+    return <EmployeeDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
   if (currentPage === 'dashboard' && user) {
     return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
@@ -114,7 +124,12 @@ function App() {
   }
 
   if (currentPage === 'calendar' && user) {
-    return <SmartCalendar user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+    return <SmartCalendar user={user} onLogout={handleLogout} onNavigate={handleNavigate} onBack={() => {
+      if (user?.role === 'master') setCurrentPage('master');
+      else if (user?.role === 'superadmin') setCurrentPage('superadmin');
+      else if (user?.role === 'admin') setCurrentPage('admin');
+      else setCurrentPage('dashboard');
+    }} />;
   }
 
   // Default landing page

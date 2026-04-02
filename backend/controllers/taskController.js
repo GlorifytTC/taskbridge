@@ -118,12 +118,11 @@ exports.createTask = async (req, res) => {
   }
 };
 
-// @desc    Get all tasks for organization
+// @desc    Get all tasks
 // @route   GET /api/tasks
 // @access  Private
 exports.getTasks = async (req, res) => {
   try {
-    const { startDate, endDate, status, branch, jobDescription } = req.query;
     const query = { organization: req.user.organization };
     
     // Filter by role
@@ -131,20 +130,22 @@ exports.getTasks = async (req, res) => {
       query.jobDescription = req.user.jobDescription;
       query.status = 'open';
     } else if (req.user.role === 'admin') {
-      if (branch) query.branch = branch;
-      else if (req.user.branch) query.branch = req.user.branch;
+      // If admin has assigned branches, only show tasks from those branches
+      if (req.user.assignedBranches && req.user.assignedBranches.length > 0) {
+        query.branch = { $in: req.user.assignedBranches };
+      } else if (req.query.branches) {
+        const branches = req.query.branches.split(',');
+        query.branch = { $in: branches };
+      }
     }
     
     // Date filter
-    if (startDate && endDate) {
+    if (req.query.startDate && req.query.endDate) {
       query.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: new Date(req.query.startDate),
+        $lte: new Date(req.query.endDate)
       };
     }
-    
-    if (status) query.status = status;
-    if (jobDescription) query.jobDescription = jobDescription;
     
     const tasks = await Task.find(query)
       .populate('branch', 'name')
