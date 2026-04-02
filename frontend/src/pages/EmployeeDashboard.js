@@ -21,29 +21,37 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [message, setMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
     fetchEmployeeData();
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchEmployeeData();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [currentDate]);
+
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+  };
 
   const fetchEmployeeData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
-      // Get available tasks (open tasks matching employee's job description)
       const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const tasksData = await tasksRes.json();
       
-      // Filter available tasks (open status)
       const available = (tasksData.data || []).filter(task => task.status === 'open');
       setAvailableTasks(available);
       
-      // Get employee's applications
       const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -52,30 +60,31 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       const allApps = appsData.data || [];
       setApplications(allApps);
       
-      // Filter approved applications
       const approved = allApps.filter(app => app.status === 'approved');
       setApprovedShifts(approved);
       
-      // Get pending applications count for notification
       const pending = allApps.filter(app => app.status === 'pending').length;
       setNotificationCount(pending);
       
-      // Create notifications
+      // Create notifications (only unread)
       const newNotifications = [];
-      if (available.length > 0) {
+      const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
+      if (hasNewTasks) {
         newNotifications.push({
           id: 'new-tasks',
           title: 'New Tasks Available',
           message: `${available.length} new task${available.length > 1 ? 's' : ''} available for you`,
-          time: new Date().toLocaleTimeString()
+          time: new Date().toLocaleTimeString(),
+          read: false
         });
       }
-      if (pending > 0) {
+      if (pending > 0 && !localStorage.getItem('notified_pending')) {
         newNotifications.push({
           id: 'pending-apps',
           title: 'Applications Pending',
           message: `You have ${pending} application${pending > 1 ? 's' : ''} awaiting review`,
-          time: new Date().toLocaleTimeString()
+          time: new Date().toLocaleTimeString(),
+          read: false
         });
       }
       setNotifications(newNotifications);
@@ -88,6 +97,14 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const handleApplyForTask = async (taskId) => {
+    // Check if already applied
+    const alreadyApplied = applications.some(app => app.task === taskId);
+    if (alreadyApplied) {
+      showMessage('You have already applied for this task', 'error');
+      setShowApplyModal(false);
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/apply', {
@@ -99,23 +116,35 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         body: JSON.stringify({ taskId })
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
-        alert('Application submitted successfully!');
+        showMessage('Application submitted successfully!', 'success');
         setShowApplyModal(false);
         fetchEmployeeData();
       } else {
-        const data = await response.json();
-        alert(data.message || 'Failed to apply');
+        showMessage(data.message || 'Failed to apply', 'error');
       }
     } catch (error) {
       console.error('Error applying for task:', error);
-      alert('Error applying for task');
+      showMessage('Error applying for task', 'error');
     }
+  };
+
+  const handleMarkNotificationAsRead = (notifId) => {
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
+    if (notifId === 'new-tasks') localStorage.setItem('notified_tasks', 'true');
+    if (notifId === 'pending-apps') localStorage.setItem('notified_pending', 'true');
+    setNotificationCount(prev => Math.max(0, prev - 1));
   };
 
   const handleUpdatePassword = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
-      alert('New passwords do not match');
+      showMessage('New passwords do not match', 'error');
+      return;
+    }
+    if (profileData.newPassword && profileData.newPassword.length < 6) {
+      showMessage('Password must be at least 6 characters', 'error');
       return;
     }
     try {
@@ -133,15 +162,15 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       });
       
       if (response.ok) {
-        alert('Password changed successfully!');
+        showMessage('Password changed successfully!', 'success');
         setShowProfileModal(false);
         setProfileData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
-        alert('Failed to change password');
+        showMessage('Failed to change password', 'error');
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      alert('Error changing password');
+      showMessage('Error changing password', 'error');
     }
   };
 
@@ -157,7 +186,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       onLogout();
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert('Failed to delete account');
+      showMessage('Failed to delete account', 'error');
     }
   };
 
@@ -225,7 +254,14 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 
   return (
     <div style={styles.container}>
-      {/* Header with Organization Logo */}
+      {/* Message Toast */}
+      {message.text && (
+        <div style={{...styles.messageToast, background: message.type === 'success' ? '#10b981' : '#ef4444'}}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Header */}
       <div style={styles.header}>
         <div style={styles.logoSection}>
           {logoPreview ? (
@@ -262,7 +298,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
                   <div style={styles.noNotifications}>No new notifications</div>
                 ) : (
                   notifications.map(notif => (
-                    <div key={notif.id} style={styles.notificationItem}>
+                    <div key={notif.id} style={styles.notificationItem} onClick={() => handleMarkNotificationAsRead(notif.id)}>
                       <div style={styles.notificationTitle}>{notif.title}</div>
                       <div style={styles.notificationMessage}>{notif.message}</div>
                       <div style={styles.notificationTime}>{notif.time}</div>
@@ -318,32 +354,35 @@ const EmployeeDashboard = ({ user, onLogout }) => {
           {availableTasks.length === 0 ? (
             <p style={styles.noTasks}>No available jobs at the moment</p>
           ) : (
-            availableTasks.slice(0, 5).map(task => (
-              <div key={task._id} style={styles.taskItem}>
-                <div style={styles.taskItemInfo}>
-                  <div style={styles.taskItemTitle}>{task.title}</div>
-                  <div style={styles.taskItemDetails}>
-                    <span><i className="fas fa-calendar"></i> {new Date(task.date).toLocaleDateString()}</span>
-                    <span><i className="fas fa-clock"></i> {task.startTime} - {task.endTime}</span>
-                    <span><i className="fas fa-map-marker-alt"></i> {task.location || 'No location'}</span>
+            availableTasks.slice(0, 5).map(task => {
+              const alreadyApplied = applications.some(app => app.task === task._id);
+              return (
+                <div key={task._id} style={styles.taskItem}>
+                  <div style={styles.taskItemInfo}>
+                    <div style={styles.taskItemTitle}>{task.title}</div>
+                    <div style={styles.taskItemDetails}>
+                      <span><i className="fas fa-calendar"></i> {new Date(task.date).toLocaleDateString()}</span>
+                      <span><i className="fas fa-clock"></i> {task.startTime} - {task.endTime}</span>
+                      <span><i className="fas fa-map-marker-alt"></i> {task.location || 'No location'}</span>
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => {
+                      if (alreadyApplied) {
+                        showMessage('You have already applied for this task', 'error');
+                      } else {
+                        setSelectedTask(task);
+                        setShowApplyModal(true);
+                      }
+                    }} 
+                    style={{...styles.applyButton, background: alreadyApplied ? '#6b7280' : 'linear-gradient(135deg, #00f5ff, #00d1ff)'}}
+                    disabled={alreadyApplied}
+                  >
+                    {alreadyApplied ? 'Applied' : 'Apply'}
+                  </button>
                 </div>
-                <button 
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setShowApplyModal(true);
-                  }} 
-                  style={styles.applyButton}
-                >
-                  Apply
-                </button>
-              </div>
-            ))
-          )}
-          {availableTasks.length > 5 && (
-            <div style={styles.moreTasksLink}>
-              <button onClick={() => setShowAllTasks(true)} style={styles.viewAllButton}>View all {availableTasks.length} jobs →</button>
-            </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -358,19 +397,16 @@ const EmployeeDashboard = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {/* Weekday Headers */}
         <div style={styles.weekHeaders}>
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
             <div key={day} style={styles.weekDay}>{day}</div>
           ))}
         </div>
 
-        {/* Calendar Grid */}
         <div style={styles.calendarGrid}>
           {getMonthDays().map(day => renderDayCell(day))}
         </div>
 
-        {/* Legend */}
         <div style={styles.legend}>
           <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> Your Approved Shifts</div>
         </div>
@@ -452,18 +488,18 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Profile Modal (same as before) */}
+      {/* Profile Modal - Fixed text colors */}
       {showProfileModal && (
         <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Profile Settings</h2>
             <div style={styles.profileInfo}>
-              <p><strong>Name:</strong> {user?.name}</p>
-              <p><strong>Email:</strong> {user?.email}</p>
-              <p><strong>Role:</strong> Employee</p>
-              <p><strong>Organization:</strong> {user?.organization?.name}</p>
-              {user?.jobDescription && <p><strong>Job Role:</strong> {user.jobDescription.name}</p>}
-              {user?.branch && <p><strong>Branch:</strong> {user.branch.name}</p>}
+              <p><strong style={{color: '#00d1ff'}}>Name:</strong> <span style={{color: 'white'}}>{user?.name}</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Email:</strong> <span style={{color: 'white'}}>{user?.email}</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Role:</strong> <span style={{color: 'white'}}>Employee</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Organization:</strong> <span style={{color: 'white'}}>{user?.organization?.name}</span></p>
+              {user?.jobDescription && <p><strong style={{color: '#00d1ff'}}>Job Role:</strong> <span style={{color: 'white'}}>{user.jobDescription.name}</span></p>}
+              {user?.branch && <p><strong style={{color: '#00d1ff'}}>Branch:</strong> <span style={{color: 'white'}}>{user.branch.name}</span></p>}
             </div>
             <h3 style={styles.subTitle}>Change Password</h3>
             <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={styles.input} />
@@ -500,6 +536,7 @@ const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
+  messageToast: { position: 'fixed', top: '20px', right: '20px', padding: '12px 20px', borderRadius: '8px', color: 'white', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
   logoSection: { display: 'flex', alignItems: 'center', gap: '12px' },
   orgLogo: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' },
@@ -534,8 +571,6 @@ const styles = {
   taskItemDetails: { display: 'flex', gap: '12px', fontSize: '10px', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
   applyButton: { background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', padding: '6px 16px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   noTasks: { textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '20px' },
-  moreTasksLink: { textAlign: 'center', marginTop: '10px' },
-  viewAllButton: { background: 'none', border: 'none', color: '#00d1ff', cursor: 'pointer', fontSize: '11px' },
   calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
   headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
   navButton: { padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px' },
@@ -574,5 +609,17 @@ const styles = {
   dangerZone: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' },
   warningText: { fontSize: '10px', color: '#f87171', marginTop: '6px' },
 };
+
+// Add animation for toast
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(20px); }
+    15% { opacity: 1; transform: translateX(0); }
+    85% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(20px); }
+  }
+`;
+document.head.appendChild(styleSheet);
 
 export default EmployeeDashboard;
