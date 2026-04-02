@@ -92,8 +92,7 @@ import React, { useState, useEffect } from 'react';
       const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
       const jobsData = await jobsRes.json();
-      const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
-      const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
+      
       const allUsers = usersData.data || [];
       const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
       const filteredEmployees = allUsers.filter(u => u.role === 'employee');
@@ -212,6 +211,54 @@ import React, { useState, useEffect } from 'react';
       alert('Error creating admin');
     }
   };
+const handleAssignBranch = async (branchId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ branchId })
+    });
+    
+    if (response.ok) {
+      fetchDashboardData();
+      alert('Branch assigned successfully!');
+    } else {
+      alert('Failed to assign branch');
+    }
+  } catch (error) {
+    console.error('Error assigning branch:', error);
+    alert('Failed to assign branch');
+  }
+};
+
+const handleRemoveBranch = async (branchId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ branchId })
+    });
+    
+    if (response.ok) {
+      fetchDashboardData();
+      alert('Branch removed successfully!');
+    } else {
+      alert('Failed to remove branch');
+    }
+  } catch (error) {
+    console.error('Error removing branch:', error);
+    alert('Failed to remove branch');
+  }
+};
+
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
