@@ -224,7 +224,25 @@ const handleAssignBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      fetchDashboardData();
+      // Find the branch name from the branches list
+      const assignedBranch = branches.find(b => b._id === branchId);
+      
+      // Update local state only - NO fetchDashboardData()
+      setSelectedAdminForBranch(prev => ({
+        ...prev,
+        assignedBranches: [...(prev.assignedBranches || []), assignedBranch]
+      }));
+      
+      // Also update the admin in the admins list
+      setAdmins(prevAdmins => 
+        prevAdmins.map(admin => 
+          admin._id === selectedAdminForBranch._id 
+            ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
+            : admin
+        )
+      );
+      
+      // Show success message
       alert('Branch assigned successfully!');
     } else {
       alert('Failed to assign branch');
@@ -248,7 +266,22 @@ const handleRemoveBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      fetchDashboardData();
+      // Update local state only - NO fetchDashboardData()
+      setSelectedAdminForBranch(prev => ({
+        ...prev,
+        assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
+      }));
+      
+      // Also update the admin in the admins list
+      setAdmins(prevAdmins => 
+        prevAdmins.map(admin => 
+          admin._id === selectedAdminForBranch._id 
+            ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
+            : admin
+        )
+      );
+      
+      // Show success message
       alert('Branch removed successfully!');
     } else {
       alert('Failed to remove branch');
