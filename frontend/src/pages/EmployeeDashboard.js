@@ -3,19 +3,24 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 
 const EmployeeDashboard = ({ user, onLogout }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [tasks, setTasks] = useState([]);
+  const [availableTasks, setAvailableTasks] = useState([]);
+  const [approvedShifts, setApprovedShifts] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [profileData, setProfileData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     fetchEmployeeData();
@@ -28,30 +33,83 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     try {
       const token = localStorage.getItem('token');
       
-      // Get employee's approved shifts (applications with status approved)
+      // Get available tasks (open tasks matching employee's job description)
+      const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const tasksData = await tasksRes.json();
+      
+      // Filter available tasks (open status)
+      const available = (tasksData.data || []).filter(task => task.status === 'open');
+      setAvailableTasks(available);
+      
+      // Get employee's applications
       const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const appsData = await appsRes.json();
       
-      // Filter only approved applications
-      const approvedApps = (appsData.data || []).filter(app => app.status === 'approved');
-      setApplications(approvedApps);
+      const allApps = appsData.data || [];
+      setApplications(allApps);
       
-      // Get task details for each approved application
-      const taskPromises = approvedApps.map(app => 
-        fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${app.task}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.json())
-      );
+      // Filter approved applications
+      const approved = allApps.filter(app => app.status === 'approved');
+      setApprovedShifts(approved);
       
-      const tasksData = await Promise.all(taskPromises);
-      setTasks(tasksData.map(t => t.data).filter(t => t));
+      // Get pending applications count for notification
+      const pending = allApps.filter(app => app.status === 'pending').length;
+      setNotificationCount(pending);
+      
+      // Create notifications
+      const newNotifications = [];
+      if (available.length > 0) {
+        newNotifications.push({
+          id: 'new-tasks',
+          title: 'New Tasks Available',
+          message: `${available.length} new task${available.length > 1 ? 's' : ''} available for you`,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+      if (pending > 0) {
+        newNotifications.push({
+          id: 'pending-apps',
+          title: 'Applications Pending',
+          message: `You have ${pending} application${pending > 1 ? 's' : ''} awaiting review`,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+      setNotifications(newNotifications);
       
     } catch (error) {
       console.error('Error fetching employee data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApplyForTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ taskId })
+      });
+      
+      if (response.ok) {
+        alert('Application submitted successfully!');
+        setShowApplyModal(false);
+        fetchEmployeeData();
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to apply');
+      }
+    } catch (error) {
+      console.error('Error applying for task:', error);
+      alert('Error applying for task');
     }
   };
 
@@ -103,8 +161,8 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const getTasksForDate = (date) => {
-    return tasks.filter(task => isSameDay(new Date(task.date), date));
+  const getApprovedTasksForDate = (date) => {
+    return approvedShifts.filter(app => isSameDay(new Date(app.task?.date), date));
   };
 
   const handleTaskClick = (task) => {
@@ -119,14 +177,14 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const renderDayCell = (day) => {
-    const dayTasks = getTasksForDate(day);
+    const dayTasks = getApprovedTasksForDate(day);
     const isToday = isSameDay(day, new Date());
     const isCurrentMonth = isSameMonth(day, currentDate);
     
     return (
       <div
         key={day.toISOString()}
-        onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0])}
+        onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0].task)}
         style={{
           ...styles.dayCell,
           background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
@@ -137,16 +195,16 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       >
         <div style={styles.dayNumber}>{format(day, 'd')}</div>
         <div style={styles.dayTasks}>
-          {dayTasks.slice(0, 2).map(task => (
+          {dayTasks.slice(0, 2).map(app => (
             <div
-              key={task._id}
+              key={app._id}
               style={{
                 ...styles.taskDot,
                 backgroundColor: '#10b981'
               }}
-              title={task.title}
+              title={app.task?.title}
             >
-              {task.title.length > 20 ? task.title.substring(0, 20) + '...' : task.title}
+              {app.task?.title?.length > 20 ? app.task.title.substring(0, 20) + '...' : app.task?.title}
             </div>
           ))}
           {dayTasks.length > 2 && (
@@ -184,10 +242,36 @@ const EmployeeDashboard = ({ user, onLogout }) => {
                 <i className="fas fa-user"></i> {user?.name}
               </span>
             </div>
-            <p style={styles.subtitle}>Your approved shifts and schedule</p>
+            <p style={styles.subtitle}>Your schedule and available shifts</p>
           </div>
         </div>
         <div style={styles.headerButtons}>
+          <div style={styles.notificationContainer}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)} 
+              style={styles.notificationButton}
+            >
+              <i className="fas fa-bell"></i>
+              {notificationCount > 0 && (
+                <span style={styles.notificationBadge}>{notificationCount > 9 ? '9+' : notificationCount}</span>
+              )}
+            </button>
+            {showNotifications && (
+              <div style={styles.notificationDropdown}>
+                {notifications.length === 0 ? (
+                  <div style={styles.noNotifications}>No new notifications</div>
+                ) : (
+                  notifications.map(notif => (
+                    <div key={notif.id} style={styles.notificationItem}>
+                      <div style={styles.notificationTitle}>{notif.title}</div>
+                      <div style={styles.notificationMessage}>{notif.message}</div>
+                      <div style={styles.notificationTime}>{notif.time}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <button onClick={() => setShowProfileModal(true)} style={styles.profileButton}>Profile</button>
           <button onClick={onLogout} style={styles.logoutButton}>Logout</button>
         </div>
@@ -196,56 +280,139 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       {/* Stats Summary */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
+          <div style={styles.statIconSmall}><i className="fas fa-briefcase"></i></div>
+          <div style={styles.statValueSmall}>{availableTasks.length}</div>
+          <div style={styles.statLabelSmall}>Available Jobs</div>
+        </div>
+        <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-calendar-check"></i></div>
-          <div style={styles.statValueSmall}>{tasks.length}</div>
+          <div style={styles.statValueSmall}>{approvedShifts.length}</div>
           <div style={styles.statLabelSmall}>Approved Shifts</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-clock"></i></div>
           <div style={styles.statValueSmall}>
-            {tasks.reduce((total, task) => {
-              const start = new Date(`1970-01-01T${task.startTime}`);
-              const end = new Date(`1970-01-01T${task.endTime}`);
-              const hours = (end - start) / (1000 * 60 * 60);
-              return total + hours;
+            {approvedShifts.reduce((total, app) => {
+              if (app.task) {
+                const start = new Date(`1970-01-01T${app.task.startTime}`);
+                const end = new Date(`1970-01-01T${app.task.endTime}`);
+                const hours = (end - start) / (1000 * 60 * 60);
+                return total + hours;
+              }
+              return total;
             }, 0)}
           </div>
           <div style={styles.statLabelSmall}>Total Hours</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-building"></i></div>
-          <div style={styles.statValueSmall}>{user?.organization?.name || 'N/A'}</div>
+          <div style={styles.statValueSmall}>{user?.organization?.name?.substring(0, 10) || 'N/A'}</div>
           <div style={styles.statLabelSmall}>Organization</div>
         </div>
       </div>
 
-      {/* Calendar Header */}
-      <div style={styles.calendarHeader}>
-        <div style={styles.headerLeft}>
-          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
-          <h2 style={styles.monthTitle}>{format(currentDate, 'MMMM yyyy')}</h2>
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={styles.navButton}>→</button>
+      {/* Available Tasks Section */}
+      <div style={styles.sectionCard}>
+        <h3 style={styles.sectionTitle}>Available Jobs for You</h3>
+        <div style={styles.tasksList}>
+          {availableTasks.length === 0 ? (
+            <p style={styles.noTasks}>No available jobs at the moment</p>
+          ) : (
+            availableTasks.slice(0, 5).map(task => (
+              <div key={task._id} style={styles.taskItem}>
+                <div style={styles.taskItemInfo}>
+                  <div style={styles.taskItemTitle}>{task.title}</div>
+                  <div style={styles.taskItemDetails}>
+                    <span><i className="fas fa-calendar"></i> {new Date(task.date).toLocaleDateString()}</span>
+                    <span><i className="fas fa-clock"></i> {task.startTime} - {task.endTime}</span>
+                    <span><i className="fas fa-map-marker-alt"></i> {task.location || 'No location'}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setShowApplyModal(true);
+                  }} 
+                  style={styles.applyButton}
+                >
+                  Apply
+                </button>
+              </div>
+            ))
+          )}
+          {availableTasks.length > 5 && (
+            <div style={styles.moreTasksLink}>
+              <button onClick={() => setShowAllTasks(true)} style={styles.viewAllButton}>View all {availableTasks.length} jobs →</button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Weekday Headers */}
-      <div style={styles.weekHeaders}>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-          <div key={day} style={styles.weekDay}>{day}</div>
-        ))}
+      {/* Calendar Section */}
+      <div style={styles.sectionCard}>
+        <div style={styles.calendarHeader}>
+          <div style={styles.headerLeft}>
+            <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
+            <h2 style={styles.monthTitle}>{format(currentDate, 'MMMM yyyy')}</h2>
+            <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={styles.navButton}>→</button>
+          </div>
+        </div>
+
+        {/* Weekday Headers */}
+        <div style={styles.weekHeaders}>
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+            <div key={day} style={styles.weekDay}>{day}</div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div style={styles.calendarGrid}>
+          {getMonthDays().map(day => renderDayCell(day))}
+        </div>
+
+        {/* Legend */}
+        <div style={styles.legend}>
+          <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> Your Approved Shifts</div>
+        </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div style={styles.calendarGrid}>
-        {getMonthDays().map(day => renderDayCell(day))}
-      </div>
+      {/* Apply Modal */}
+      {showApplyModal && selectedTask && (
+        <div style={styles.modalOverlay} onClick={() => setShowApplyModal(false)}>
+          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Apply for Shift</h2>
+              <button onClick={() => setShowApplyModal(false)} style={styles.closeButton}>✕</button>
+            </div>
+            <div style={styles.taskInfoCard}>
+              <h3>{selectedTask.title}</h3>
+              <div style={styles.taskInfoRow}>
+                <span><strong>Date:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
+                <span><strong>Time:</strong> {selectedTask.startTime} - {selectedTask.endTime}</span>
+              </div>
+              <div style={styles.taskInfoRow}>
+                <span><strong>Location:</strong> {selectedTask.location || 'Not specified'}</span>
+                <span><strong>Role:</strong> {selectedTask.jobDescription?.name}</span>
+              </div>
+              <div style={styles.taskInfoRow}>
+                <span><strong>Branch:</strong> {selectedTask.branch?.name}</span>
+                <span><strong>Slots:</strong> {selectedTask.currentEmployees}/{selectedTask.maxEmployees} available</span>
+              </div>
+              {selectedTask.description && (
+                <div style={styles.taskDescription}>
+                  <strong>Description:</strong><br/>{selectedTask.description}
+                </div>
+              )}
+            </div>
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowApplyModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={() => handleApplyForTask(selectedTask._id)} style={styles.submitButton}>Confirm Application</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Legend */}
-      <div style={styles.legend}>
-        <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> Your Approved Shifts</div>
-      </div>
-
-      {/* Task Details Modal */}
+      {/* Task Details Modal for Approved Shifts */}
       {showTaskModal && selectedTask && (
         <div style={styles.modalOverlay} onClick={() => setShowTaskModal(false)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
@@ -254,7 +421,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
               <button onClick={() => setShowTaskModal(false)} style={styles.closeButton}>✕</button>
             </div>
             
-            {/* Task Info */}
             <div style={styles.taskInfoCard}>
               <div style={styles.taskInfoRow}>
                 <span><strong>Date:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
@@ -273,12 +439,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
                   {selectedTask.description}
                 </div>
               )}
-              {selectedTask.notes && (
-                <div style={styles.taskNotes}>
-                  <strong>📌 Special Instructions:</strong><br/>
-                  {selectedTask.notes}
-                </div>
-              )}
             </div>
             
             <div style={styles.taskStatusCard}>
@@ -292,7 +452,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Profile Modal */}
+      {/* Profile Modal (same as before) */}
       {showProfileModal && (
         <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -319,7 +479,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Delete Account Modal */}
       {showDeleteAccountModal && (
         <div style={styles.modalOverlay} onClick={() => setShowDeleteAccountModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -349,14 +508,34 @@ const styles = {
   title: { fontSize: '22px', fontWeight: 'bold', color: 'white', margin: 0 },
   userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', color: '#00d1ff' },
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginTop: '2px' },
-  headerButtons: { display: 'flex', gap: '8px' },
+  headerButtons: { display: 'flex', gap: '12px', alignItems: 'center' },
+  notificationContainer: { position: 'relative' },
+  notificationButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', padding: '6px 12px', fontSize: '14px', position: 'relative' },
+  notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationDropdown: { position: 'absolute', top: '40px', right: '0', width: '280px', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, maxHeight: '300px', overflowY: 'auto' },
+  noNotifications: { padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' },
+  notificationItem: { padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
+  notificationTitle: { fontSize: '12px', fontWeight: '600', color: '#00d1ff', marginBottom: '4px' },
+  notificationMessage: { fontSize: '11px', color: 'rgba(255,255,255,0.7)' },
+  notificationTime: { fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' },
   profileButton: { padding: '6px 14px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   logoutButton: { padding: '6px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '20px' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' },
   statCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', textAlign: 'center' },
   statIconSmall: { fontSize: '20px', color: '#00d1ff', marginBottom: '6px' },
   statValueSmall: { fontSize: '22px', fontWeight: 'bold', color: 'white' },
   statLabelSmall: { fontSize: '10px', color: 'rgba(255,255,255,0.6)' },
+  sectionCard: { background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px', marginBottom: '20px' },
+  sectionTitle: { fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '12px' },
+  tasksList: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', flexWrap: 'wrap', gap: '10px' },
+  taskItemInfo: { flex: 1 },
+  taskItemTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '4px' },
+  taskItemDetails: { display: 'flex', gap: '12px', fontSize: '10px', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
+  applyButton: { background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', padding: '6px 16px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  noTasks: { textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '20px' },
+  moreTasksLink: { textAlign: 'center', marginTop: '10px' },
+  viewAllButton: { background: 'none', border: 'none', color: '#00d1ff', cursor: 'pointer', fontSize: '11px' },
   calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
   headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
   navButton: { padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px' },
@@ -380,7 +559,6 @@ const styles = {
   taskInfoCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '16px' },
   taskInfoRow: { display: 'flex', gap: '16px', marginBottom: '6px', fontSize: '12px', color: 'white', flexWrap: 'wrap' },
   taskDescription: { fontSize: '12px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', lineHeight: '1.5' },
-  taskNotes: { fontSize: '12px', color: '#00d1ff', marginTop: '8px', padding: '8px', background: 'rgba(0,209,255,0.1)', borderRadius: '8px', lineHeight: '1.5' },
   taskStatusCard: { background: 'rgba(16,185,129,0.1)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid rgba(16,185,129,0.3)' },
   statusIcon: { fontSize: '24px' },
   statusTitle: { fontSize: '14px', fontWeight: '600', color: '#10b981' },
