@@ -92,7 +92,8 @@ import React, { useState, useEffect } from 'react';
       const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
       const jobsData = await jobsRes.json();
-      
+      const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
+      const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
       const allUsers = usersData.data || [];
       const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
       const filteredEmployees = allUsers.filter(u => u.role === 'employee');
