@@ -34,6 +34,10 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch'
   },
+  assignedBranches: [{     
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
+  }],
   jobDescription: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'JobDescription'

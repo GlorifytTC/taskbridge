@@ -18,6 +18,7 @@ exports.getUsers = async (req, res) => {
       .select('-password')
       .populate('branch', 'name')
       .populate('jobDescription', 'name')
+      .populate('assignedBranches', 'name')
       .sort({ createdAt: -1 });
     
     res.json({
@@ -76,30 +77,23 @@ exports.assignBranch = async (req, res) => {
       return res.status(400).json({ message: 'Only admins can be assigned to branches' });
     }
     
+    // Initialize assignedBranches if it doesn't exist
     if (!user.assignedBranches) {
       user.assignedBranches = [];
     }
     
-    if (!user.assignedBranches.includes(branchId)) {
+    // Check if branch already assigned
+    const alreadyAssigned = user.assignedBranches.some(id => id.toString() === branchId);
+    
+    if (!alreadyAssigned) {
       user.assignedBranches.push(branchId);
       await user.save();
     }
     
-    await AuditLog.create({
-      user: req.user.id,
-      organization: user.organization,
-      action: 'assign_branch',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { branchId },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
     res.json({ success: true, message: 'Branch assigned successfully' });
   } catch (error) {
     console.error('Error assigning branch:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
@@ -116,25 +110,14 @@ exports.removeBranch = async (req, res) => {
     }
     
     if (user.assignedBranches) {
-      user.assignedBranches = user.assignedBranches.filter(b => b.toString() !== branchId);
+      user.assignedBranches = user.assignedBranches.filter(id => id.toString() !== branchId);
       await user.save();
     }
-    
-    await AuditLog.create({
-      user: req.user.id,
-      organization: user.organization,
-      action: 'remove_branch',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { branchId },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
     
     res.json({ success: true, message: 'Branch removed successfully' });
   } catch (error) {
     console.error('Error removing branch:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
