@@ -97,39 +97,51 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const handleApplyForTask = async (taskId) => {
-    // Check if already applied
-    const alreadyApplied = applications.some(app => app.task === taskId);
-    if (alreadyApplied) {
-      showMessage('You have already applied for this task', 'error');
-      setShowApplyModal(false);
-      return;
-    }
+  // Check if already applied
+  const alreadyApplied = applications.some(app => app.task === taskId);
+  if (alreadyApplied) {
+    showMessage('You have already applied for this task', 'error');
+    setShowApplyModal(false);
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/apply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ taskId })
+    });
     
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/apply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ taskId })
-      });
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Remove the applied task from availableTasks immediately
+      setAvailableTasks(prev => prev.filter(task => task._id !== taskId));
       
-      const data = await response.json();
+      // Add to applications list
+      const newApplication = { task: taskId, status: 'pending' };
+      setApplications(prev => [...prev, newApplication]);
       
-      if (response.ok) {
-        showMessage('Application submitted successfully!', 'success');
-        setShowApplyModal(false);
-        fetchEmployeeData();
-      } else {
-        showMessage(data.message || 'Failed to apply', 'error');
-      }
-    } catch (error) {
-      console.error('Error applying for task:', error);
-      showMessage('Error applying for task', 'error');
+      // Update notification count
+      setNotificationCount(prev => prev + 1);
+      
+      showMessage('Application submitted successfully!', 'success');
+      setShowApplyModal(false);
+      
+      // Also refresh data in background to sync with server
+      setTimeout(() => fetchEmployeeData(), 1000);
+    } else {
+      showMessage(data.message || 'Failed to apply', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error applying for task:', error);
+    showMessage('Error applying for task', 'error');
+  }
+};
 
   const handleMarkNotificationAsRead = (notifId) => {
     setNotifications(prev => prev.filter(n => n.id !== notifId));
