@@ -66,8 +66,6 @@ const Tasks = () => {
   }
 };
 
-// Add these functions - place them after your existing functions like handleCreateAdmin, etc.
-
 const handleAssignBranch = async (branchId) => {
   try {
     const token = localStorage.getItem('token');
@@ -81,12 +79,7 @@ const handleAssignBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      // Update the selected admin's assigned branches locally
-      setSelectedAdminForBranch(prev => ({
-        ...prev,
-        assignedBranches: [...(prev.assignedBranches || []), { _id: branchId, name: branches.find(b => b._id === branchId)?.name || '' }]
-      }));
-      // Refresh admin list
+      // Refresh admin list to show updated branches
       fetchDashboardData();
       alert('Branch assigned successfully!');
     } else {
@@ -111,12 +104,7 @@ const handleRemoveBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      // Update the selected admin's assigned branches locally
-      setSelectedAdminForBranch(prev => ({
-        ...prev,
-        assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
-      }));
-      // Refresh admin list
+      // Refresh admin list to show updated branches
       fetchDashboardData();
       alert('Branch removed successfully!');
     } else {
