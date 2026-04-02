@@ -66,6 +66,8 @@ const Tasks = () => {
   }
 };
 
+// Inside your SuperAdminDashboard component, add these functions:
+
 const handleAssignBranch = async (branchId) => {
   try {
     const token = localStorage.getItem('token');
@@ -79,7 +81,6 @@ const handleAssignBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      // Refresh admin list to show updated branches
       fetchDashboardData();
       alert('Branch assigned successfully!');
     } else {
@@ -104,7 +105,6 @@ const handleRemoveBranch = async (branchId) => {
     });
     
     if (response.ok) {
-      // Refresh admin list to show updated branches
       fetchDashboardData();
       alert('Branch removed successfully!');
     } else {

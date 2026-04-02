@@ -1,7 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const Landing = ({ onLoginClick }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if device is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSignIn = () => {
     console.log('Sign In button clicked');
@@ -84,7 +95,7 @@ const Landing = ({ onLoginClick }) => {
             </button>
           </div>
 
-          {/* Stats Section - Restored */}
+          {/* Stats Section */}
           <div style={styles.stats}>
             <div style={styles.statItem}>
               <div style={styles.statNumber}>500+</div>
@@ -103,7 +114,7 @@ const Landing = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* Dynamic Calendar Animation */}
+        {/* Dynamic Calendar Animation - Now visible on mobile */}
         <div style={styles.calendarContainer}>
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
@@ -283,6 +294,12 @@ const styles = {
     padding: '20px 40px',
     maxWidth: '1400px',
     margin: '0 auto',
+    '@media (max-width: 768px)': {
+      padding: '16px 20px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '12px 16px',
+    },
   },
   logo: {
     display: 'flex',
@@ -303,6 +320,17 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '36px',
+      height: '36px',
+      fontSize: '20px',
+    },
+    '@media (max-width: 480px)': {
+      width: '32px',
+      height: '32px',
+      fontSize: '18px',
+      borderRadius: '10px',
+    },
   },
   logoText: {
     fontSize: '24px',
@@ -311,6 +339,12 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    '@media (max-width: 768px)': {
+      fontSize: '20px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '18px',
+    },
   },
   navButton: {
     padding: '10px 24px',
@@ -321,6 +355,14 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '8px 20px',
+      fontSize: '13px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '6px 16px',
+      fontSize: '12px',
+    },
   },
   hero: {
     position: 'relative',
@@ -332,9 +374,21 @@ const styles = {
     gridTemplateColumns: '1fr 1fr',
     gap: '60px',
     alignItems: 'center',
+    '@media (max-width: 1024px)': {
+      gridTemplateColumns: '1fr',
+      textAlign: 'center',
+      padding: '40px 24px',
+      gap: '40px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '30px 16px',
+    },
   },
   heroContent: {
     maxWidth: '600px',
+    '@media (max-width: 1024px)': {
+      maxWidth: '100%',
+    },
   },
   tag: {
     display: 'inline-flex',
@@ -364,6 +418,15 @@ const styles = {
     lineHeight: '1.2',
     marginBottom: '24px',
     color: 'white',
+    '@media (max-width: 1024px)': {
+      fontSize: '42px',
+    },
+    '@media (max-width: 768px)': {
+      fontSize: '36px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '28px',
+    },
   },
   titleGradient: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
@@ -376,11 +439,30 @@ const styles = {
     lineHeight: '1.6',
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: '32px',
+    '@media (max-width: 768px)': {
+      fontSize: '16px',
+      marginBottom: '28px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '14px',
+    },
   },
   buttons: {
     display: 'flex',
     gap: '16px',
     marginBottom: '48px',
+    '@media (max-width: 1024px)': {
+      justifyContent: 'center',
+    },
+    '@media (max-width: 768px)': {
+      marginBottom: '32px',
+      gap: '12px',
+    },
+    '@media (max-width: 480px)': {
+      flexDirection: 'column',
+      gap: '10px',
+      marginBottom: '24px',
+    },
   },
   primaryButton: {
     padding: '14px 32px',
@@ -392,6 +474,14 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '12px 24px',
+      fontSize: '14px',
+    },
+    '@media (max-width: 480px)': {
+      width: '100%',
+      padding: '10px 20px',
+    },
   },
   secondaryButton: {
     padding: '14px 32px',
@@ -403,6 +493,14 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '12px 24px',
+      fontSize: '14px',
+    },
+    '@media (max-width: 480px)': {
+      width: '100%',
+      padding: '10px 20px',
+    },
   },
   stats: {
     display: 'flex',
@@ -410,29 +508,57 @@ const styles = {
     gap: '32px',
     paddingTop: '32px',
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+    '@media (max-width: 1024px)': {
+      justifyContent: 'center',
+    },
+    '@media (max-width: 768px)': {
+      gap: '20px',
+    },
+    '@media (max-width: 480px)': {
+      flexDirection: 'column',
+      gap: '16px',
+      borderTop: 'none',
+      paddingTop: '0',
+    },
   },
   statItem: {
     textAlign: 'center',
+    '@media (max-width: 480px)': {
+      width: '100%',
+      padding: '12px',
+      background: 'rgba(255, 255, 255, 0.03)',
+      borderRadius: '12px',
+    },
   },
   statNumber: {
     fontSize: '32px',
     fontWeight: 'bold',
     color: '#00d1ff',
     marginBottom: '4px',
+    '@media (max-width: 768px)': {
+      fontSize: '24px',
+    },
   },
   statLabel: {
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.6)',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+    },
   },
   statDivider: {
     width: '1px',
     height: '40px',
     background: 'rgba(255, 255, 255, 0.2)',
+    '@media (max-width: 480px)': {
+      display: 'none',
+    },
   },
   calendarContainer: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
   },
   calendar: {
     width: '100%',
@@ -445,6 +571,14 @@ const styles = {
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      maxWidth: '340px',
+      padding: '20px',
+    },
+    '@media (max-width: 480px)': {
+      maxWidth: '280px',
+      padding: '16px',
+    },
   },
   calendarHeader: {
     textAlign: 'center',
@@ -459,6 +593,12 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    '@media (max-width: 768px)': {
+      fontSize: '20px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '18px',
+    },
   },
   calendarWeekdays: {
     display: 'grid',
@@ -472,6 +612,14 @@ const styles = {
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     padding: '8px 0',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+      padding: '6px 0',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '10px',
+      padding: '4px 0',
+    },
   },
   calendarDays: {
     display: 'grid',
@@ -486,6 +634,14 @@ const styles = {
     borderRadius: '8px',
     transition: 'all 0.2s ease',
     cursor: 'pointer',
+    '@media (max-width: 768px)': {
+      fontSize: '13px',
+      padding: '8px 0',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '11px',
+      padding: '6px 0',
+    },
   },
   today: {
     background: 'rgba(0, 209, 255, 0.25)',
@@ -514,6 +670,12 @@ const styles = {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '80px 40px',
+    '@media (max-width: 1024px)': {
+      padding: '60px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '40px 16px',
+    },
   },
   featuresTitle: {
     fontSize: '36px',
@@ -521,6 +683,17 @@ const styles = {
     textAlign: 'center',
     marginBottom: '48px',
     color: 'white',
+    '@media (max-width: 1024px)': {
+      fontSize: '32px',
+    },
+    '@media (max-width: 768px)': {
+      fontSize: '28px',
+      marginBottom: '32px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '24px',
+      marginBottom: '24px',
+    },
   },
   featuresGrid: {
     display: 'grid',
@@ -534,6 +707,12 @@ const styles = {
     padding: '32px',
     textAlign: 'center',
     transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '20px',
+    },
   },
   featureIcon: {
     width: '64px',
@@ -546,17 +725,37 @@ const styles = {
     margin: '0 auto 20px',
     fontSize: '28px',
     color: '#00d1ff',
+    '@media (max-width: 768px)': {
+      width: '56px',
+      height: '56px',
+      fontSize: '24px',
+    },
+    '@media (max-width: 480px)': {
+      width: '50px',
+      height: '50px',
+      fontSize: '22px',
+      borderRadius: '16px',
+    },
   },
   featureTitle: {
     fontSize: '20px',
     fontWeight: '600',
     marginBottom: '12px',
     color: 'white',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '16px',
+    },
   },
   featureDesc: {
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.6)',
     lineHeight: '1.6',
+    '@media (max-width: 480px)': {
+      fontSize: '13px',
+    },
   },
   ownerSection: {
     position: 'relative',
@@ -565,6 +764,12 @@ const styles = {
     borderTop: '1px solid rgba(0, 209, 255, 0.2)',
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
     padding: '60px 40px',
+    '@media (max-width: 1024px)': {
+      padding: '50px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '40px 16px',
+    },
   },
   ownerContainer: {
     maxWidth: '1000px',
@@ -580,6 +785,19 @@ const styles = {
     gap: '50px',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
+    '@media (max-width: 1024px)': {
+      padding: '35px',
+      gap: '35px',
+    },
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      textAlign: 'center',
+      padding: '30px',
+      gap: '25px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '24px',
+    },
   },
   ownerLogo: {
     flexShrink: 0,
@@ -604,6 +822,17 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '70px',
+      height: '70px',
+      fontSize: '38px',
+    },
+    '@media (max-width: 480px)': {
+      width: '60px',
+      height: '60px',
+      fontSize: '32px',
+      borderRadius: '20px',
+    },
   },
   glorifyLogoText: {
     fontWeight: '800',
@@ -614,20 +843,38 @@ const styles = {
     backgroundClip: 'text',
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
+    '@media (max-width: 768px)': {
+      fontSize: '22px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '20px',
+    },
   },
   ownerInfo: {
     flex: 1,
+    '@media (max-width: 768px)': {
+      width: '100%',
+    },
   },
   ownerTitle: {
     fontSize: '24px',
     fontWeight: '600',
     color: '#00d1ff',
     marginBottom: '20px',
+    '@media (max-width: 768px)': {
+      fontSize: '20px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '18px',
+    },
   },
   ownerDetails: {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
+    '@media (max-width: 768px)': {
+      alignItems: 'center',
+    },
   },
   contactItem: {
     display: 'flex',
@@ -635,11 +882,17 @@ const styles = {
     gap: '12px',
     fontSize: '15px',
     color: 'rgba(255, 255, 255, 0.8)',
+    '@media (max-width: 480px)': {
+      fontSize: '13px',
+    },
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
     transition: 'color 0.3s ease',
+    '&:hover': {
+      color: '#00d1ff',
+    },
   },
   footer: {
     position: 'relative',
@@ -647,6 +900,12 @@ const styles = {
     background: '#0a0f1a',
     padding: '30px 40px',
     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+    '@media (max-width: 768px)': {
+      padding: '20px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '16px',
+    },
   },
   footerContent: {
     maxWidth: '1400px',
@@ -654,6 +913,12 @@ const styles = {
     textAlign: 'center',
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.5)',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '11px',
+    },
   },
   glorifyHighlight: {
     color: '#00d1ff',
@@ -730,252 +995,10 @@ styleSheet.textContent = `
     color: #00d1ff;
   }
   
-  /* Mobile Responsive Styles */
-  @media (max-width: 1024px) {
-    .hero {
-      grid-template-columns: 1fr;
-      text-align: center;
-      padding: 40px 24px;
-      gap: 40px;
-    }
-    .heroContent {
-      max-width: 100%;
-    }
-    .buttons {
-      justify-content: center;
-    }
-    .stats {
-      justify-content: center;
-    }
-    .title {
-      font-size: 42px;
-    }
-    .features {
-      padding: 60px 24px;
-    }
-    .featuresTitle {
-      font-size: 32px;
-    }
-    .ownerSection {
-      padding: 50px 24px;
-    }
-    .ownerCard {
-      padding: 35px;
-      gap: 35px;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .navbar {
-      padding: 16px 20px;
-    }
-    .logoIcon {
-      width: 36px;
-      height: 36px;
-      font-size: 20px;
-    }
-    .logoText {
-      font-size: 20px;
-    }
-    .navButton {
-      padding: 8px 20px;
-      font-size: 13px;
-    }
-    .title {
-      font-size: 36px;
-    }
-    .subtitle {
-      font-size: 16px;
-      margin-bottom: 28px;
-    }
-    .buttons {
-      margin-bottom: 32px;
-      gap: 12px;
-    }
-    .primaryButton, .secondaryButton {
-      padding: 12px 24px;
-      font-size: 14px;
-    }
-    .stats {
-      gap: 20px;
-    }
-    .statNumber {
-      font-size: 24px;
-    }
-    .statLabel {
-      font-size: 12px;
-    }
-    .calendar {
-      max-width: 340px;
-      padding: 20px;
-    }
-    .calendarMonth {
-      font-size: 20px;
-    }
-    .weekday {
-      font-size: 12px;
-      padding: 6px 0;
-    }
-    .calendarDay {
-      font-size: 13px;
-      padding: 8px 0;
-    }
-    .featuresTitle {
-      font-size: 28px;
-      margin-bottom: 32px;
-    }
-    .featureCard {
-      padding: 24px;
-    }
-    .featureIcon {
-      width: 56px;
-      height: 56px;
-      font-size: 24px;
-    }
-    .featureTitle {
-      font-size: 18px;
-    }
-    .ownerCard {
-      flex-direction: column;
-      text-align: center;
-      padding: 30px;
-      gap: 25px;
-    }
-    .ownerTitle {
-      font-size: 20px;
-    }
-    .ownerDetails {
-      align-items: center;
-    }
-    .glorifyLogoIcon {
-      width: 70px;
-      height: 70px;
-      font-size: 38px;
-    }
-    .glorifyLogoText {
-      font-size: 22px;
-    }
-    .footer {
-      padding: 20px 24px;
-    }
-    .footerContent {
-      font-size: 12px;
-    }
-  }
-  
+  /* Mobile specific adjustments */
   @media (max-width: 480px) {
-    .navbar {
-      padding: 12px 16px;
-    }
-    .logoIcon {
-      width: 32px;
-      height: 32px;
-      font-size: 18px;
-      border-radius: 10px;
-    }
-    .logoText {
-      font-size: 18px;
-    }
-    .navButton {
-      padding: 6px 16px;
-      font-size: 12px;
-    }
-    .hero {
-      padding: 30px 16px;
-    }
-    .title {
-      font-size: 28px;
-    }
-    .subtitle {
-      font-size: 14px;
-    }
-    .buttons {
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .primaryButton, .secondaryButton {
-      width: 100%;
-      padding: 10px 20px;
-    }
-    .stats {
-      flex-direction: column;
-      gap: 16px;
-      border-top: none;
-      padding-top: 0;
-    }
-    .statDivider {
-      display: none;
-    }
-    .statItem {
-      width: 100%;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 12px;
-    }
     .calendar {
-      max-width: 280px;
-      padding: 16px;
-    }
-    .calendarMonth {
-      font-size: 18px;
-    }
-    .weekday {
-      font-size: 10px;
-      padding: 4px 0;
-    }
-    .calendarDay {
-      font-size: 11px;
-      padding: 6px 0;
-    }
-    .features {
-      padding: 40px 16px;
-    }
-    .featuresTitle {
-      font-size: 24px;
-      margin-bottom: 24px;
-    }
-    .featureCard {
-      padding: 20px;
-    }
-    .featureIcon {
-      width: 50px;
-      height: 50px;
-      font-size: 22px;
-      border-radius: 16px;
-    }
-    .featureTitle {
-      font-size: 16px;
-    }
-    .featureDesc {
-      font-size: 13px;
-    }
-    .ownerSection {
-      padding: 40px 16px;
-    }
-    .ownerCard {
-      padding: 24px;
-    }
-    .glorifyLogoIcon {
-      width: 60px;
-      height: 60px;
-      font-size: 32px;
-      border-radius: 20px;
-    }
-    .glorifyLogoText {
-      font-size: 20px;
-    }
-    .ownerTitle {
-      font-size: 18px;
-    }
-    .contactItem {
-      font-size: 13px;
-    }
-    .footer {
-      padding: 16px;
-    }
-    .footerContent {
-      font-size: 11px;
+      animation: floatCalendar 4s ease-in-out infinite;
     }
   }
 `;

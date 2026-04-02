@@ -1001,13 +1001,13 @@ import React, { useState, useEffect } from 'react';
                         type="checkbox"
                         checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
                         onChange={() => {
-                          const isAssigned = selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id);
-                          if (isAssigned) {
-                            handleRemoveBranch(branch._id);
-                          } else {
-                            handleAssignBranch(branch._id);
-                          }
-                        }}
+                        const isAssigned = selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id);
+                        if (isAssigned) {
+                          handleRemoveBranch(branch._id);
+                        } else {
+                          handleAssignBranch(branch._id);
+                        }
+                      }}
                         style={styles.checkbox}
                       />
                       {branch.name}
