@@ -40,67 +40,76 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const fetchEmployeeData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
-        headers: { 'Authorization': `Bearer ${token}` }
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const tasksData = await tasksRes.json();
+    
+    // Get employee's applications to know which tasks they already applied for
+    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const appsData = await appsRes.json();
+    
+    const allApps = appsData.data || [];
+    setApplications(allApps);
+    
+    // Get task IDs that employee already applied for
+    const appliedTaskIds = allApps.map(app => app.task);
+    
+    // Filter available tasks (open status AND not already applied for)
+    const available = (tasksData.data || []).filter(task => 
+      task.status === 'open' && !appliedTaskIds.includes(task._id)
+    );
+    setAvailableTasks(available);
+    
+    const approved = allApps.filter(app => app.status === 'approved');
+    setApprovedShifts(approved);
+    
+    const pending = allApps.filter(app => app.status === 'pending').length;
+    setNotificationCount(pending);
+    
+    // Create notifications (only unread)
+    const newNotifications = [];
+    const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
+    if (hasNewTasks) {
+      newNotifications.push({
+        id: 'new-tasks',
+        title: 'New Tasks Available',
+        message: `${available.length} new task${available.length > 1 ? 's' : ''} available for you`,
+        time: new Date().toLocaleTimeString(),
+        read: false
       });
-      const tasksData = await tasksRes.json();
-      
-      const available = (tasksData.data || []).filter(task => task.status === 'open');
-      setAvailableTasks(available);
-      
-      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const appsData = await appsRes.json();
-      
-      const allApps = appsData.data || [];
-      setApplications(allApps);
-      
-      const approved = allApps.filter(app => app.status === 'approved');
-      setApprovedShifts(approved);
-      
-      const pending = allApps.filter(app => app.status === 'pending').length;
-      setNotificationCount(pending);
-      
-      // Create notifications (only unread)
-      const newNotifications = [];
-      const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
-      if (hasNewTasks) {
-        newNotifications.push({
-          id: 'new-tasks',
-          title: 'New Tasks Available',
-          message: `${available.length} new task${available.length > 1 ? 's' : ''} available for you`,
-          time: new Date().toLocaleTimeString(),
-          read: false
-        });
-      }
-      if (pending > 0 && !localStorage.getItem('notified_pending')) {
-        newNotifications.push({
-          id: 'pending-apps',
-          title: 'Applications Pending',
-          message: `You have ${pending} application${pending > 1 ? 's' : ''} awaiting review`,
-          time: new Date().toLocaleTimeString(),
-          read: false
-        });
-      }
-      setNotifications(newNotifications);
-      
-    } catch (error) {
-      console.error('Error fetching employee data:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+    if (pending > 0 && !localStorage.getItem('notified_pending')) {
+      newNotifications.push({
+        id: 'pending-apps',
+        title: 'Applications Pending',
+        message: `You have ${pending} application${pending > 1 ? 's' : ''} awaiting review`,
+        time: new Date().toLocaleTimeString(),
+        read: false
+      });
+    }
+    setNotifications(newNotifications);
+    
+  } catch (error) {
+    console.error('Error fetching employee data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleApplyForTask = async (taskId) => {
   // Check if already applied
   const alreadyApplied = applications.some(app => app.task === taskId);
   if (alreadyApplied) {
     showMessage('You have already applied for this task', 'error');
+    // Remove from available tasks even if already applied (to clean up UI)
+    setAvailableTasks(prev => prev.filter(task => task._id !== taskId));
     setShowApplyModal(false);
     return;
   }
@@ -133,7 +142,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       setShowApplyModal(false);
       
       // Also refresh data in background to sync with server
-      setTimeout(() => fetchEmployeeData(), 1000);
+      fetchEmployeeData();
     } else {
       showMessage(data.message || 'Failed to apply', 'error');
     }
