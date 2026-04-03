@@ -143,83 +143,84 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   // Add this useEffect to listen for changes
-useEffect(() => {
-  fetchEmployeeData();
-  const savedLogo = localStorage.getItem('organizationLogo');
-  if (savedLogo) setLogoPreview(savedLogo);
-  
-  // Refresh every 10 seconds to catch approvals
-  const interval = setInterval(() => {
-    fetchEmployeeData();
-  }, 10000);
-  
-  return () => clearInterval(interval);
-}, [currentDate]);
+        useEffect(() => {
+        fetchEmployeeData();
+        const savedLogo = localStorage.getItem('organizationLogo');
+        if (savedLogo) setLogoPreview(savedLogo);
+        
+        // Refresh every 10 seconds to catch approvals
+        const interval = setInterval(() => {
+            fetchEmployeeData();
+        }, 10000);
+        
+        return () => clearInterval(interval);
+        }, [currentDate]);
 
-  const showMessage = (text, type = 'success') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-  };
+        const showMessage = (text, type = 'success') => {
+            setMessage({ text, type });
+            setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+        };
 
-  const fetchEmployeeData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const tasksData = await tasksRes.json();
-      
-      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-        });
-      const appsData = await appsRes.json();
-      
-      const allApps = appsData.data || [];
-      setApplications(allApps);
-      
-      const appliedTaskIds = allApps.map(app => app.task);
-      
-      const available = (tasksData.data || []).filter(task => 
-        task.status === 'open' && !appliedTaskIds.includes(task._id)
-      );
-      setAvailableTasks(available);
-      
-      const approved = allApps.filter(app => app.status === 'approved');
-      setApprovedShifts(approved);
-      
-      const pending = allApps.filter(app => app.status === 'pending').length;
-      setNotificationCount(pending);
-      
-      const newNotifications = [];
-      const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
-      if (hasNewTasks) {
-        newNotifications.push({
-          id: 'new-tasks',
-          title: language === 'en' ? 'New Tasks Available' : 'Nya Uppgifter Tillgängliga',
-          message: `${available.length} ${language === 'en' ? 'new task' : 'ny uppgift'}${available.length > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'available for you' : 'tillgängliga för dig'}`,
-          time: new Date().toLocaleTimeString(),
-          read: false
-        });
-      }
-      if (pending > 0 && !localStorage.getItem('notified_pending')) {
-        newNotifications.push({
-          id: 'pending-apps',
-          title: language === 'en' ? 'Applications Pending' : 'Väntande Ansökningar',
-          message: `${language === 'en' ? 'You have' : 'Du har'} ${pending} ${language === 'en' ? 'application' : 'ansökan'}${pending > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'awaiting review' : 'som väntar på granskning'}`,
-          time: new Date().toLocaleTimeString(),
-          read: false
-        });
-      }
-      setNotifications(newNotifications);
-      
-    } catch (error) {
-      console.error('Error fetching employee data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const fetchEmployeeData = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            
+            const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
+            headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const tasksData = await tasksRes.json();
+            
+            // FIXED: Use my-applications endpoint for employees
+            const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
+            headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const appsData = await appsRes.json();
+            
+            const allApps = appsData.data || [];
+            setApplications(allApps);
+            
+            const appliedTaskIds = allApps.map(app => app.task);
+            
+            const available = (tasksData.data || []).filter(task => 
+            task.status === 'open' && !appliedTaskIds.includes(task._id)
+            );
+            setAvailableTasks(available);
+            
+            const approved = allApps.filter(app => app.status === 'approved');
+            setApprovedShifts(approved);
+            
+            const pending = allApps.filter(app => app.status === 'pending').length;
+            setNotificationCount(pending);
+            
+            const newNotifications = [];
+            const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
+            if (hasNewTasks) {
+            newNotifications.push({
+                id: 'new-tasks',
+                title: language === 'en' ? 'New Tasks Available' : 'Nya Uppgifter Tillgängliga',
+                message: `${available.length} ${language === 'en' ? 'new task' : 'ny uppgift'}${available.length > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'available for you' : 'tillgängliga för dig'}`,
+                time: new Date().toLocaleTimeString(),
+                read: false
+            });
+            }
+            if (pending > 0 && !localStorage.getItem('notified_pending')) {
+            newNotifications.push({
+                id: 'pending-apps',
+                title: language === 'en' ? 'Applications Pending' : 'Väntande Ansökningar',
+                message: `${language === 'en' ? 'You have' : 'Du har'} ${pending} ${language === 'en' ? 'application' : 'ansökan'}${pending > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'awaiting review' : 'som väntar på granskning'}`,
+                time: new Date().toLocaleTimeString(),
+                read: false
+            });
+            }
+            setNotifications(newNotifications);
+            
+        } catch (error) {
+            console.error('Error fetching employee data:', error);
+        } finally {
+            setLoading(false);
+        }
+        };
 
   const handleApplyForTask = async (taskId) => {
     const alreadyApplied = applications.some(app => app.task === taskId);

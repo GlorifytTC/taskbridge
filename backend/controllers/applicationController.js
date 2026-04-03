@@ -219,22 +219,17 @@ exports.approveApplication = async (req, res) => {
     // Increment task's current employees count
     task.currentEmployees = (task.currentEmployees || 0) + 1;
     
+    // FIX: Update status based on employee count
     if (task.currentEmployees >= task.maxEmployees) {
       task.status = 'filled';
+    } else {
+      task.status = 'open';
     }
+    
     await task.save();
     
     console.log(`✅ Application approved. Task ${task.title} now has ${task.currentEmployees}/${task.maxEmployees} employees`);
-    
-    // Create notification for employee
-    await Notification.create({
-      user: application.employee._id,
-      organization: req.user.organization,
-      type: 'application_approved',
-      title: 'Shift Approved',
-      message: `Your application for ${task.title} on ${new Date(task.date).toLocaleDateString()} has been approved!`,
-      data: { taskId: task._id, applicationId: application._id }
-    });
+    console.log(`Task status: ${task.status}`);
     
     res.json({
       success: true,
@@ -243,7 +238,8 @@ exports.approveApplication = async (req, res) => {
         application,
         task: {
           currentEmployees: task.currentEmployees,
-          status: task.status
+          status: task.status,
+          maxEmployees: task.maxEmployees
         }
       }
     });
