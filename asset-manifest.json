@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/taskbridge/static/js/main.722052ae.js",
+    "main.js": "/taskbridge/static/js/main.55f77f61.js",
     "index.html": "/taskbridge/index.html",
-    "main.722052ae.js.map": "/taskbridge/static/js/main.722052ae.js.map"
+    "main.55f77f61.js.map": "/taskbridge/static/js/main.55f77f61.js.map"
   },
   "entrypoints": [
-    "static/js/main.722052ae.js"
+    "static/js/main.55f77f61.js"
   ]
 }
