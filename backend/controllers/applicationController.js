@@ -103,11 +103,12 @@ exports.applyForTask = async (req, res) => {
       data: application
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error applying for task:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-// @desc    Get all applications (for Super Admin)
+
+// @desc    Get all applications (for Super Admin/Master)
 // @route   GET /api/applications
 // @access  Private/SuperAdmin/Master
 exports.getAllApplications = async (req, res) => {
@@ -116,7 +117,7 @@ exports.getAllApplications = async (req, res) => {
     
     const applications = await Application.find(query)
       .populate('employee', 'name email')
-      .populate('task', 'title date startTime endTime branch')
+      .populate('task', 'title date startTime endTime branch location')
       .sort({ appliedAt: -1 });
     
     res.json({
@@ -125,7 +126,7 @@ exports.getAllApplications = async (req, res) => {
       data: applications
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error getting all applications:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -148,7 +149,7 @@ exports.getMyApplications = async (req, res) => {
       data: applications
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error getting my applications:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -180,7 +181,7 @@ exports.getPendingApplications = async (req, res) => {
       data: applications
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error getting pending applications:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -215,7 +216,7 @@ exports.approveApplication = async (req, res) => {
     application.reviewedAt = Date.now();
     await application.save();
     
-    // IMPORTANT: Increment task's current employees count
+    // Increment task's current employees count
     task.currentEmployees = (task.currentEmployees || 0) + 1;
     
     if (task.currentEmployees >= task.maxEmployees) {
@@ -234,24 +235,6 @@ exports.approveApplication = async (req, res) => {
       message: `Your application for ${task.title} on ${new Date(task.date).toLocaleDateString()} has been approved!`,
       data: { taskId: task._id, applicationId: application._id }
     });
-    
-    res.json({
-      success: true,
-      message: 'Application approved successfully',
-      data: {
-        application,
-        task: {
-          currentEmployees: task.currentEmployees,
-          status: task.status
-        }
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error approving application:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
-  }
-};
     
     res.json({
       success: true,
@@ -291,14 +274,11 @@ exports.rejectApplication = async (req, res) => {
     application.reviewNotes = reason || '';
     await application.save();
     
-    // Note: When rejecting, we DON'T decrement currentEmployees
-    // because the employee was never counted as assigned
-    
-    // Notify employee
+    // Create notification for employee
     await Notification.create({
       user: application.employee._id,
       organization: req.user.organization,
-      type: 'application_status_changed',
+      type: 'application_rejected',
       title: 'Application Rejected',
       message: `Your application for ${application.task.title} has been rejected${reason ? `: ${reason}` : ''}`,
       data: { applicationId: application._id, taskId: application.task._id }
