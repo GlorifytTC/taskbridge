@@ -6,7 +6,8 @@ const {
   getMyApplications,
   getPendingApplications,
   approveApplication,
-  rejectApplication
+  rejectApplication,
+  getAllApplications  
 } = require('../controllers/applicationController');
 
 // All routes require authentication
@@ -20,5 +21,8 @@ router.get('/my-applications', authorize('employee'), getMyApplications);
 router.get('/pending', authorize('admin', 'superadmin'), getPendingApplications);
 router.put('/:id/approve', authorize('admin', 'superadmin'), approveApplication);
 router.put('/:id/reject', authorize('admin', 'superadmin'), rejectApplication);
+
+// Super Admin/Master routes
 router.get('/', protect, authorize('superadmin', 'master'), getAllApplications);
+
 module.exports = router;
