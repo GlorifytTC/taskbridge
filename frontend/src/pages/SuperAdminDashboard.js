@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-  const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
+const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,12 @@ import React, { useState, useEffect } from 'react';
     pendingApplications: 0,
     totalJobDescriptions: 0
   });
+  const [subscriptionData, setSubscriptionData] = useState(null);
+  const [usageData, setUsageData] = useState({
+    employees: { current: 0, limit: 0, percentage: 0 },
+    branches: { current: 0, limit: 0, percentage: 0 },
+    admins: { current: 0, limit: 0, percentage: 0 }
+  });
   const [admins, setAdmins] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -47,19 +53,238 @@ import React, { useState, useEffect } from 'react';
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
   const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
-  const [availableBranches, setAvailableBranches] = useState([]);
-  const [assignedBranches, setAssignedBranches] = useState([]);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+  const [reportData, setReportData] = useState(null);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+
+  const t = {
+    en: {
+      dashboard: 'Dashboard',
+      admins: 'Admins',
+      staff: 'Staff',
+      branches: 'Branches',
+      calendar: 'Calendar',
+      roles: 'Roles',
+      tasks: 'Tasks',
+      requests: 'Requests',
+      reports: 'Reports',
+      settings: 'Settings',
+      profile: 'Profile',
+      logout: 'Logout',
+      welcome: 'Welcome',
+      subscriptionOverview: 'Subscription',
+      daysRemaining: 'days remaining',
+      usage: 'Usage',
+      employees: 'Employees',
+      adminsLabel: 'Admins',
+      branchesLabel: 'Branches',
+      contactSales: 'Contact Sales',
+      manage: 'Manage',
+      search: 'Search...',
+      addAdmin: 'Add Admin',
+      addStaff: 'Add Staff',
+      addBranch: 'Add Branch',
+      addRole: 'Add Role',
+      createTask: 'Create Task',
+      pendingRequests: 'Pending Requests',
+      activeTasks: 'active tasks',
+      noData: 'No data found',
+      success: 'Success',
+      error: 'Error',
+      subscriptionExpired: 'Your subscription has expired. Please contact your administrator.',
+      subscriptionPaused: 'Your subscription is paused. Please contact support.',
+      generateReport: 'Generate Report',
+      exportPDF: 'Export PDF',
+      exportExcel: 'Export Excel',
+      attendance: 'Attendance',
+      hoursWorked: 'Hours Worked',
+      selectDateRange: 'Select Date Range',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      adminManagement: 'Admin Management',
+      staffManagement: 'Staff Management',
+      branchManagement: 'Branch Management',
+      roleManagement: 'Role Management',
+      taskManagement: 'Task Management',
+      applicationManagement: 'Application Management',
+      reportManagement: 'Report Management',
+      settingsManagement: 'Settings Management',
+      language: 'Language',
+      swedish: 'Swedish',
+      english: 'English'
+    },
+    sv: {
+      dashboard: 'Instrumentpanel',
+      admins: 'Administratörer',
+      staff: 'Personal',
+      branches: 'Avdelningar',
+      calendar: 'Kalender',
+      roles: 'Roller',
+      tasks: 'Uppgifter',
+      requests: 'Förfrågningar',
+      reports: 'Rapporter',
+      settings: 'Inställningar',
+      profile: 'Profil',
+      logout: 'Logga ut',
+      welcome: 'Välkommen',
+      subscriptionOverview: 'Prenumeration',
+      daysRemaining: 'dagar kvar',
+      usage: 'Användning',
+      employees: 'Anställda',
+      adminsLabel: 'Administratörer',
+      branchesLabel: 'Avdelningar',
+      contactSales: 'Kontakta oss',
+      manage: 'Hantera',
+      search: 'Sök...',
+      addAdmin: 'Lägg till administratör',
+      addStaff: 'Lägg till personal',
+      addBranch: 'Lägg till avdelning',
+      addRole: 'Lägg till roll',
+      createTask: 'Skapa uppgift',
+      pendingRequests: 'Väntande förfrågningar',
+      activeTasks: 'aktiva uppgifter',
+      noData: 'Ingen data hittades',
+      success: 'Klart',
+      error: 'Fel',
+      subscriptionExpired: 'Din prenumeration har löpt ut. Kontakta din administratör.',
+      subscriptionPaused: 'Din prenumeration är pausad. Kontakta support.',
+      generateReport: 'Generera rapport',
+      exportPDF: 'Exportera PDF',
+      exportExcel: 'Exportera Excel',
+      attendance: 'Närvaro',
+      hoursWorked: 'Arbetade timmar',
+      selectDateRange: 'Välj datumintervall',
+      startDate: 'Startdatum',
+      endDate: 'Slutdatum',
+      adminManagement: 'Administratörshantering',
+      staffManagement: 'Personalhantering',
+      branchManagement: 'Avdelningshantering',
+      roleManagement: 'Rollhantering',
+      taskManagement: 'Uppgiftshantering',
+      applicationManagement: 'Ansökningshantering',
+      reportManagement: 'Rapporthantering',
+      settingsManagement: 'Inställningshantering',
+      language: 'Språk',
+      swedish: 'Svenska',
+      english: 'Engelska'
+    }
+  };
+
+  const lang = t[language];
+
+  const changeLanguage = (langCode) => {
+    setLanguage(langCode);
+    localStorage.setItem('taskbridge_language', langCode);
+    setShowLanguageDropdown(false);
+  };
+
+  const showToast = (message, type = 'success') => {
+    const toastDiv = document.createElement('div');
+    toastDiv.textContent = message;
+    toastDiv.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px; background: ${type === 'success' ? '#10b981' : '#ef4444'};
+      color: white; padding: 12px 20px; border-radius: 8px; z-index: 2000; font-size: 14px;
+      animation: fadeInOut 3s ease; font-family: Inter, sans-serif;
+    `;
+    document.body.appendChild(toastDiv);
+    setTimeout(() => toastDiv.remove(), 3000);
+  };
 
   useEffect(() => {
     fetchDashboardData();
+    fetchSubscriptionData();
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
     setChatMessages([{
-      text: "Hello! I'm your TaskBridge AI Assistant. I can help you manage your organization. What would you like to do?",
+      text: language === 'en' ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
       sender: 'ai',
       time: new Date().toLocaleTimeString()
     }]);
+    const interval = setInterval(() => {
+      fetchDashboardData();
+      fetchSubscriptionData();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchSubscriptionData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubscriptionData(data.data);
+        if (data.data.usage) {
+          setUsageData(data.data.usage);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+    }
+  };
+
+  const generateAttendanceReport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/reports/attendance', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setReportData(data);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'generated!' : 'genererad!'), 'success');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'failed' : 'misslyckades'), 'error');
+    }
+  };
+
+  const exportToPDF = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head><title>TaskBridge Report</title>
+        <style>
+          body { font-family: Arial; padding: 20px; }
+          h1 { color: #00d1ff; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+        </style>
+        </head>
+        <body>
+          <h1>TaskBridge Report</h1>
+          <p>Generated: ${new Date().toLocaleString()}</p>
+          <pre>${JSON.stringify(reportData, null, 2)}</pre>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const exportToExcel = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    const csvContent = "data:text/csv;charset=utf-8," + JSON.stringify(reportData, null, 2);
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "taskbridge_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(lang.exportExcel + ' ' + (language === 'en' ? 'exported!' : 'exporterad!'), 'success');
+  };
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -68,7 +293,7 @@ import React, { useState, useEffect } from 'react';
       reader.onloadend = () => {
         setLogoPreview(reader.result);
         localStorage.setItem('organizationLogo', reader.result);
-        alert('Logo uploaded successfully!');
+        showToast(language === 'en' ? 'Logo uploaded successfully!' : 'Logotyp uppladdad!', 'success');
       };
       reader.readAsDataURL(file);
     }
@@ -120,7 +345,7 @@ import React, { useState, useEffect } from 'react';
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
-      alert('New passwords do not match');
+      showToast(language === 'en' ? 'New passwords do not match' : 'Lösenorden matchar inte', 'error');
       return;
     }
     try {
@@ -139,22 +364,22 @@ import React, { useState, useEffect } from 'react';
         });
         
         if (response.ok) {
-          alert('Password changed successfully!');
+          showToast(language === 'en' ? 'Password changed successfully!' : 'Lösenordet ändrades!', 'success');
           setShowProfileModal(false);
           setProfileData({ ...profileData, currentPassword: '', newPassword: '', confirmPassword: '' });
         } else {
-          alert('Failed to change password');
+          showToast(language === 'en' ? 'Failed to change password' : 'Kunde inte ändra lösenord', 'error');
         }
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      alert('Error changing password');
+      showToast(language === 'en' ? 'Error changing password' : 'Fel vid lösenordsändring', 'error');
     }
   };
 
   const handleChangeEmail = async () => {
     if (changeEmailData.newEmail !== changeEmailData.confirmEmail) {
-      alert('Email addresses do not match');
+      showToast(language === 'en' ? 'Email addresses do not match' : 'E-postadresserna matchar inte', 'error');
       return;
     }
     try {
@@ -172,16 +397,16 @@ import React, { useState, useEffect } from 'react';
       });
       
       if (response.ok) {
-        alert('Email changed successfully! Please login again.');
+        showToast(language === 'en' ? 'Email changed! Please login again.' : 'E-post ändrad! Logga in igen.', 'success');
         localStorage.removeItem('token');
         onLogout();
       } else {
         const data = await response.json();
-        alert(data.message || 'Failed to change email');
+        showToast(data.message || (language === 'en' ? 'Failed to change email' : 'Kunde inte ändra e-post'), 'error');
       }
     } catch (error) {
       console.error('Error changing email:', error);
-      alert('Error changing email');
+      showToast(language === 'en' ? 'Error changing email' : 'Fel vid e-poständring', 'error');
     }
   };
 
@@ -199,99 +424,87 @@ import React, { useState, useEffect } from 'react';
       });
       
       if (response.ok) {
-        alert('Admin created successfully!');
+        showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
         setShowCreateAdminModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create admin');
+        showToast(language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör', 'error');
       }
     } catch (error) {
       console.error('Error creating admin:', error);
-      alert('Error creating admin');
+      showToast(language === 'en' ? 'Error creating admin' : 'Fel vid skapande av administratör', 'error');
     }
   };
-const handleAssignBranch = async (branchId) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ branchId })
-    });
-    
-    if (response.ok) {
-      // Find the branch name from the branches list
-      const assignedBranch = branches.find(b => b._id === branchId);
-      
-      // Update local state only - NO fetchDashboardData()
-      setSelectedAdminForBranch(prev => ({
-        ...prev,
-        assignedBranches: [...(prev.assignedBranches || []), assignedBranch]
-      }));
-      
-      // Also update the admin in the admins list
-      setAdmins(prevAdmins => 
-        prevAdmins.map(admin => 
-          admin._id === selectedAdminForBranch._id 
-            ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
-            : admin
-        )
-      );
-      
-      // Show success message
-      alert('Branch assigned successfully!');
-    } else {
-      alert('Failed to assign branch');
-    }
-  } catch (error) {
-    console.error('Error assigning branch:', error);
-    alert('Failed to assign branch');
-  }
-};
 
-const handleRemoveBranch = async (branchId) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ branchId })
-    });
-    
-    if (response.ok) {
-      // Update local state only - NO fetchDashboardData()
-      setSelectedAdminForBranch(prev => ({
-        ...prev,
-        assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
-      }));
+  const handleAssignBranch = async (branchId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ branchId })
+      });
       
-      // Also update the admin in the admins list
-      setAdmins(prevAdmins => 
-        prevAdmins.map(admin => 
-          admin._id === selectedAdminForBranch._id 
-            ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
-            : admin
-        )
-      );
-      
-      // Show success message
-      alert('Branch removed successfully!');
-    } else {
-      alert('Failed to remove branch');
+      if (response.ok) {
+        const assignedBranch = branches.find(b => b._id === branchId);
+        setSelectedAdminForBranch(prev => ({
+          ...prev,
+          assignedBranches: [...(prev.assignedBranches || []), assignedBranch]
+        }));
+        setAdmins(prevAdmins => 
+          prevAdmins.map(admin => 
+            admin._id === selectedAdminForBranch._id 
+              ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
+              : admin
+          )
+        );
+        showToast(language === 'en' ? 'Branch assigned successfully!' : 'Avdelning tilldelad!', 'success');
+      } else {
+        showToast(language === 'en' ? 'Failed to assign branch' : 'Kunde inte tilldela avdelning', 'error');
+      }
+    } catch (error) {
+      console.error('Error assigning branch:', error);
+      showToast(language === 'en' ? 'Error assigning branch' : 'Fel vid tilldelning av avdelning', 'error');
     }
-  } catch (error) {
-    console.error('Error removing branch:', error);
-    alert('Failed to remove branch');
-  }
-};
+  };
 
+  const handleRemoveBranch = async (branchId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ branchId })
+      });
+      
+      if (response.ok) {
+        setSelectedAdminForBranch(prev => ({
+          ...prev,
+          assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
+        }));
+        setAdmins(prevAdmins => 
+          prevAdmins.map(admin => 
+            admin._id === selectedAdminForBranch._id 
+              ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
+              : admin
+          )
+        );
+        showToast(language === 'en' ? 'Branch removed successfully!' : 'Avdelning borttagen!', 'success');
+      } else {
+        showToast(language === 'en' ? 'Failed to remove branch' : 'Kunde inte ta bort avdelning', 'error');
+      }
+    } catch (error) {
+      console.error('Error removing branch:', error);
+      showToast(language === 'en' ? 'Error removing branch' : 'Fel vid borttagning av avdelning', 'error');
+    }
+  };
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
@@ -307,16 +520,16 @@ const handleRemoveBranch = async (branchId) => {
       });
       
       if (response.ok) {
-        alert('Employee created successfully!');
+        showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
         setShowCreateEmployeeModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create employee');
+        showToast(language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd', 'error');
       }
     } catch (error) {
       console.error('Error creating employee:', error);
-      alert('Error creating employee');
+      showToast(language === 'en' ? 'Error creating employee' : 'Fel vid skapande av anställd', 'error');
     }
   };
 
@@ -334,16 +547,16 @@ const handleRemoveBranch = async (branchId) => {
       });
       
       if (response.ok) {
-        alert('Branch created successfully!');
+        showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
         setShowCreateBranchModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create branch');
+        showToast(language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning', 'error');
       }
     } catch (error) {
       console.error('Error creating branch:', error);
-      alert('Error creating branch');
+      showToast(language === 'en' ? 'Error creating branch' : 'Fel vid skapande av avdelning', 'error');
     }
   };
 
@@ -361,16 +574,16 @@ const handleRemoveBranch = async (branchId) => {
       });
       
       if (response.ok) {
-        alert('Job role created successfully!');
+        showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
         setShowCreateJobModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create job role');
+        showToast(language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll', 'error');
       }
     } catch (error) {
       console.error('Error creating job:', error);
-      alert('Error creating job role');
+      showToast(language === 'en' ? 'Error creating job role' : 'Fel vid skapande av jobbroll', 'error');
     }
   };
 
@@ -388,22 +601,22 @@ const handleRemoveBranch = async (branchId) => {
       });
       
       if (response.ok) {
-        alert('Task created successfully!');
+        showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
         setShowCreateTaskModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create task');
+        showToast(language === 'en' ? 'Failed to create task' : 'Kunde inte skapa uppgift', 'error');
       }
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Error creating task');
+      showToast(language === 'en' ? 'Error creating task' : 'Fel vid skapande av uppgift', 'error');
     }
   };
 
   const handleResetUserPassword = async () => {
     if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
-      alert('Passwords do not match');
+      showToast(language === 'en' ? 'Passwords do not match' : 'Lösenorden matchar inte', 'error');
       return;
     }
     try {
@@ -418,91 +631,96 @@ const handleRemoveBranch = async (branchId) => {
       });
       
       if (response.ok) {
-        alert(`Password for ${selectedUser.name} has been reset!`);
+        showToast(language === 'en' ? `Password for ${selectedUser.name} reset!` : `Lösenord för ${selectedUser.name} återställt!`, 'success');
         setShowResetPasswordModal(false);
         setSelectedUser(null);
         setResetPasswordData({ newPassword: '', confirmPassword: '' });
       } else {
-        alert('Failed to reset password');
+        showToast(language === 'en' ? 'Failed to reset password' : 'Kunde inte återställa lösenord', 'error');
       }
     } catch (error) {
       console.error('Error resetting password:', error);
-      alert('Error resetting password');
+      showToast(language === 'en' ? 'Error resetting password' : 'Fel vid lösenordsåterställning', 'error');
     }
   };
 
   const handleDeleteAdmin = async (adminId, adminName) => {
-    if (!confirm(`Delete ${adminName}? This cannot be undone.`)) return;
+    if (!confirm(language === 'en' ? `Delete ${adminName}? This cannot be undone.` : `Radera ${adminName}? Detta går inte att ångra.`)) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting admin:', error);
-      alert('Failed to delete admin');
+      showToast(language === 'en' ? 'Failed to delete admin' : 'Kunde inte ta bort administratör', 'error');
     }
   };
 
   const handleDeleteEmployee = async (empId, empName) => {
-    if (!confirm(`Delete ${empName}? This cannot be undone.`)) return;
+    if (!confirm(language === 'en' ? `Delete ${empName}? This cannot be undone.` : `Radera ${empName}? Detta går inte att ångra.`)) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting employee:', error);
-      alert('Failed to delete employee');
+      showToast(language === 'en' ? 'Failed to delete employee' : 'Kunde inte ta bort anställd', 'error');
     }
   };
 
   const handleDeleteBranch = async (branchId, branchName) => {
-    if (!confirm(`Delete ${branchName}? This affects all employees.`)) return;
+    if (!confirm(language === 'en' ? `Delete ${branchName}? This affects all employees.` : `Radera ${branchName}? Detta påverkar alla anställda.`)) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting branch:', error);
-      alert('Failed to delete branch');
+      showToast(language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning', 'error');
     }
   };
 
   const handleDeleteJob = async (jobId, jobName) => {
-    if (!confirm(`Delete ${jobName}? This affects employees with this role.`)) return;
+    if (!confirm(language === 'en' ? `Delete ${jobName}? This affects employees with this role.` : `Radera ${jobName}? Detta påverkar anställda med denna roll.`)) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting job:', error);
-      alert('Failed to delete job role');
+      showToast(language === 'en' ? 'Failed to delete job role' : 'Kunde inte ta bort jobbroll', 'error');
     }
   };
 
   const handleDeleteTask = async (taskId, taskTitle) => {
-    if (!confirm(`Delete "${taskTitle}"?`)) return;
+    if (!confirm(language === 'en' ? `Delete "${taskTitle}"?` : `Radera "${taskTitle}"?`)) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error deleting task:', error);
-      alert('Failed to delete task');
+      showToast(language === 'en' ? 'Failed to delete task' : 'Kunde inte ta bort uppgift', 'error');
     }
   };
 
@@ -513,15 +731,16 @@ const handleRemoveBranch = async (branchId) => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error approving application:', error);
-      alert('Failed to approve');
+      showToast(language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna', 'error');
     }
   };
 
   const handleRejectApplication = async (appId) => {
-    const reason = prompt('Reason for rejection:');
+    const reason = prompt(language === 'en' ? 'Reason for rejection:' : 'Anledning till avslag:');
     if (reason === null) return;
     try {
       const token = localStorage.getItem('token');
@@ -533,15 +752,16 @@ const handleRemoveBranch = async (branchId) => {
         },
         body: JSON.stringify({ reason })
       });
+      showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
       fetchDashboardData();
     } catch (error) {
       console.error('Error rejecting application:', error);
-      alert('Failed to reject');
+      showToast(language === 'en' ? 'Failed to reject' : 'Kunde inte avslå', 'error');
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm('⚠️ WARNING: This will delete YOUR account only. Other admins can continue. Are you sure?')) return;
+    if (!confirm(language === 'en' ? '⚠️ WARNING: This will delete YOUR account only. Are you sure?' : '⚠️ VARNING: Detta raderar ENDAST ditt konto. Är du säker?')) return;
     try {
       const token = localStorage.getItem('token');
       await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', {
@@ -552,7 +772,7 @@ const handleRemoveBranch = async (branchId) => {
       onLogout();
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert('Failed to delete account');
+      showToast(language === 'en' ? 'Failed to delete account' : 'Kunde inte radera konto', 'error');
     }
   };
 
@@ -585,19 +805,24 @@ const handleRemoveBranch = async (branchId) => {
       let response = "";
       
       if (input.includes('create task') || input.includes('new task')) {
-        response = "To create a task:\n1. Go to Tasks tab\n2. Click Create Task\n3. Fill in title, date, time, job role\n4. Set max employees\n5. Click Create";
+        response = language === 'en' 
+          ? "To create a task:\n1. Go to Tasks tab\n2. Click Create Task\n3. Fill in title, date, time, job role\n4. Set max employees\n5. Click Create"
+          : "För att skapa en uppgift:\n1. Gå till fliken Uppgifter\n2. Klicka på Skapa uppgift\n3. Fyll i titel, datum, tid, jobbroll\n4. Ange max antal anställda\n5. Klicka på Skapa";
       } 
       else if (input.includes('add employee')) {
-        response = "To add an employee:\n1. Go to Employees tab\n2. Click Add Employee\n3. Enter name, email, password\n4. Select job role and branch\n5. Click Create";
+        response = language === 'en'
+          ? "To add an employee:\n1. Go to Staff tab\n2. Click Add Staff\n3. Enter name, email, password\n4. Select job role and branch\n5. Click Create"
+          : "För att lägga till en anställd:\n1. Gå till fliken Personal\n2. Klicka på Lägg till personal\n3. Ange namn, e-post, lösenord\n4. Välj jobbroll och avdelning\n5. Klicka på Skapa";
       }
-      else if (input.includes('add admin')) {
-        response = "To add an admin:\n1. Go to Admins tab\n2. Click Add Admin\n3. Enter details\n4. Click Create";
-      }
-      else if (input.includes('approve application')) {
-        response = "To approve applications:\n1. Go to Applications tab\n2. Click green checkmark to approve\n3. Click red X to reject (with reason)";
+      else if (input.includes('subscription') || input.includes('plan')) {
+        response = language === 'en'
+          ? `Your current plan: ${subscriptionData?.plan || 'Trial'}\nDays remaining: ${subscriptionData?.daysRemaining || 0}\nEmployee usage: ${Math.round(usageData.employees?.percentage || 0)}%\nBranch usage: ${Math.round(usageData.branches?.percentage || 0)}%\nAdmin usage: ${Math.round(usageData.admins?.percentage || 0)}%\n\nFor upgrades, please contact us at georgeglor@hotmail.com`
+          : `Din nuvarande plan: ${subscriptionData?.plan === 'trial' ? 'Prova på' : subscriptionData?.plan}\nDagar kvar: ${subscriptionData?.daysRemaining || 0}\nAnvändning anställda: ${Math.round(usageData.employees?.percentage || 0)}%\nAnvändning avdelningar: ${Math.round(usageData.branches?.percentage || 0)}%\nAnvändning administratörer: ${Math.round(usageData.admins?.percentage || 0)}%\n\nFör uppgraderingar, kontakta oss på georgeglor@hotmail.com`;
       }
       else {
-        response = "I can help with:\n• Creating tasks\n• Adding employees/admins\n• Managing branches\n• Approving applications\n• Generating reports\n• Resetting passwords\n\nWhat would you like to know?";
+        response = language === 'en'
+          ? "I can help with:\n• Creating tasks\n• Adding employees/admins\n• Managing branches\n• Approving applications\n• Subscription info\n• Resetting passwords\n\nWhat would you like to know?"
+          : "Jag kan hjälpa till med:\n• Skapa uppgifter\n• Lägga till anställda/administratörer\n• Hantera avdelningar\n• Godkänna ansökningar\n• Prenumerationsinfo\n• Återställa lösenord\n\nVad vill du veta?";
       }
       
       const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString() };
@@ -611,6 +836,20 @@ const handleRemoveBranch = async (branchId) => {
       setter(false);
     }
   };
+
+  if (subscriptionData?.status === 'expired' || subscriptionData?.status === 'paused') {
+    return (
+      <div style={styles.subscriptionBlockedContainer}>
+        <div style={styles.subscriptionBlockedCard}>
+          <i className="fas fa-exclamation-triangle" style={{ fontSize: '64px', color: '#ef4444', marginBottom: '20px' }}></i>
+          <h1 style={styles.subscriptionBlockedTitle}>
+            {subscriptionData?.status === 'expired' ? lang.subscriptionExpired : lang.subscriptionPaused}
+          </h1>
+          <button onClick={handleLogout} style={styles.subscriptionBlockedButton}>Logout</button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -642,115 +881,149 @@ const handleRemoveBranch = async (branchId) => {
           </div>
         </div>
         <div style={styles.headerButtons}>
-          <button onClick={() => setShowProfileModal(true)} style={styles.profileButton}>Profile</button>
-          <button onClick={handleLogout} style={styles.logoutButton}>Logout</button>
+          <div style={styles.languageContainer}>
+            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={styles.languageButton}>
+              <i className="fas fa-globe"></i> {language === 'en' ? 'EN' : 'SV'}
+            </button>
+            {showLanguageDropdown && (
+              <div style={styles.languageDropdown}>
+                <button onClick={() => changeLanguage('en')} style={styles.languageOption}>🇬🇧 English</button>
+                <button onClick={() => changeLanguage('sv')} style={styles.languageOption}>🇸🇪 Svenska</button>
+              </div>
+            )}
+          </div>
+          <button onClick={() => setShowProfileModal(true)} style={styles.profileButton}>{lang.profile}</button>
+          <button onClick={handleLogout} style={styles.logoutButton}>{lang.logout}</button>
         </div>
       </div>
 
       <div style={styles.statsGrid}>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-user-tie"></i></div><div style={styles.statValueSmall}>{stats.totalAdmins}</div><div style={styles.statLabelSmall}>Admins</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users"></i></div><div style={styles.statValueSmall}>{stats.totalEmployees}</div><div style={styles.statLabelSmall}>Employees</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-tasks"></i></div><div style={styles.statValueSmall}>{stats.totalTasks}</div><div style={styles.statLabelSmall}>Tasks</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-store"></i></div><div style={styles.statValueSmall}>{stats.totalBranches}</div><div style={styles.statLabelSmall}>Branches</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-briefcase"></i></div><div style={styles.statValueSmall}>{stats.totalJobDescriptions}</div><div style={styles.statLabelSmall}>Job Roles</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-clock"></i></div><div style={styles.statValueSmall}>{stats.pendingApplications}</div><div style={styles.statLabelSmall}>Pending</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-user-tie" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalAdmins}</div><div style={styles.statLabelSmall}>{lang.adminsLabel}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalEmployees}</div><div style={styles.statLabelSmall}>{lang.employees}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-tasks" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalTasks}</div><div style={styles.statLabelSmall}>{lang.tasks}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-store" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalBranches}</div><div style={styles.statLabelSmall}>{lang.branchesLabel}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-briefcase" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalJobDescriptions}</div><div style={styles.statLabelSmall}>{lang.roles}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-clock" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.pendingApplications}</div><div style={styles.statLabelSmall}>{lang.pendingRequests}</div></div>
       </div>
 
+      {subscriptionData && (
+        <div style={styles.subscriptionCard}>
+          <div style={styles.subscriptionHeader}>
+            <h3 style={styles.subscriptionTitle}>{lang.subscriptionOverview}</h3>
+            <a href="mailto:georgeglor@hotmail.com" style={styles.contactSalesButton}>{lang.contactSales}</a>
+          </div>
+          <div style={styles.subscriptionContent}>
+            <div style={styles.subscriptionPlan}>
+              <span style={styles.subscriptionPlanName}>{subscriptionData.plan?.toUpperCase() || 'TRIAL'}</span>
+              <span style={styles.subscriptionDays}>{subscriptionData.daysRemaining || 0} {lang.daysRemaining}</span>
+            </div>
+            <div style={styles.usageGrid}>
+              <div style={styles.usageItem}>
+                <div style={styles.usageHeader}>
+                  <span>{lang.employees}</span>
+                  <span>{usageData.employees?.current || 0}/{usageData.employees?.limit === Infinity ? '∞' : usageData.employees?.limit || 0}</span>
+                </div>
+                <div style={styles.progressBar}>
+                  <div style={{...styles.progressFill, width: `${Math.min(usageData.employees?.percentage || 0, 100)}%`, background: usageData.employees?.percentage > 90 ? '#ef4444' : '#10b981'}}></div>
+                </div>
+              </div>
+              <div style={styles.usageItem}>
+                <div style={styles.usageHeader}>
+                  <span>{lang.branchesLabel}</span>
+                  <span>{usageData.branches?.current || 0}/{usageData.branches?.limit === Infinity ? '∞' : usageData.branches?.limit || 0}</span>
+                </div>
+                <div style={styles.progressBar}>
+                  <div style={{...styles.progressFill, width: `${Math.min(usageData.branches?.percentage || 0, 100)}%`, background: usageData.branches?.percentage > 90 ? '#ef4444' : '#10b981'}}></div>
+                </div>
+              </div>
+              <div style={styles.usageItem}>
+                <div style={styles.usageHeader}>
+                  <span>{lang.adminsLabel}</span>
+                  <span>{usageData.admins?.current || 0}/{usageData.admins?.limit === Infinity ? '∞' : usageData.admins?.limit || 0}</span>
+                </div>
+                <div style={styles.progressBar}>
+                  <div style={{...styles.progressFill, width: `${Math.min(usageData.admins?.percentage || 0, 100)}%`, background: usageData.admins?.percentage > 90 ? '#ef4444' : '#10b981'}}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={styles.tabs}>
-        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent'}}>Home</button>
-        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent'}}>Admins</button>
-        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>Staff</button>
-        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent'}}>Branches</button>
-        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>Calendar</button>
-        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent'}}>Roles</button>
-        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent'}}>Tasks</button>
-        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent'}}>Requests</button>
-        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent'}}>Reports</button>
-        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent'}}>Settings</button>
+        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent'}}>{lang.dashboard}</button>
+        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent'}}>{lang.admins}</button>
+        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>{lang.staff}</button>
+        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent'}}>{lang.branches}</button>
+        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>{lang.calendar}</button>
+        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent'}}>{lang.roles}</button>
+        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent'}}>{lang.tasks}</button>
+        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent'}}>{lang.requests}</button>
+        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent'}}>{lang.reports}</button>
+        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent'}}>{lang.settings}</button>
       </div>
 
       <div style={styles.content}>
         {activeTab === 'dashboard' && (
           <div>
-            <h2 style={styles.sectionTitle}>Welcome, {user?.name}!</h2>
-            <p style={styles.sectionDesc}>You have full control over your organization. Manage everything directly or create admins to help.</p>
+            <h2 style={styles.sectionTitle}>{lang.welcome}, {user?.name}!</h2>
+            <p style={styles.sectionDesc}>{lang.welcome}</p>
             <div style={styles.welcomeCard}>
               <i className="fas fa-chart-line" style={{ fontSize: '32px', color: '#00d1ff', marginBottom: '12px' }}></i>
-              <h3 style={styles.welcomeTitle}>Quick Overview</h3>
-              <p style={styles.welcomeText}><strong>{stats.pendingApplications}</strong> pending requests | <strong>{stats.totalTasks}</strong> active tasks</p>
+              <h3 style={styles.welcomeTitle}>{lang.subscriptionOverview}</h3>
+              <p style={styles.welcomeText}><strong>{stats.pendingApplications}</strong> {lang.pendingRequests} | <strong>{stats.totalTasks}</strong> {lang.activeTasks}</p>
               <div style={styles.quickActions}>
-                <button onClick={() => handleTabChange('tasks')} style={styles.quickActionBtn}>+ Create Task</button>
-                <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.quickActionBtn}>+ Add Staff</button>
-                <button onClick={() => handleTabChange('applications')} style={styles.quickActionBtn}>Review Requests</button>
+                <button onClick={() => handleTabChange('tasks')} style={styles.quickActionBtn}>+ {lang.createTask}</button>
+                <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.quickActionBtn}>+ {lang.addStaff}</button>
+                <button onClick={() => handleTabChange('applications')} style={styles.quickActionBtn}>{lang.manage}</button>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'admins' && (
-            <div>
-              <div style={styles.sectionHeader}>
-                <h2 style={styles.sectionTitle}>Admin Management</h2>
-                <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ Add Admin</button>
-              </div>
-              <div style={styles.tableContainer}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr style={styles.tableHeaderRow}>
-                      <th style={styles.th}>Name</th>
-                      <th style={styles.th}>Email</th>
-                      <th style={styles.th}>Assigned Branches</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {admins.map(admin => (
-                      <tr key={admin._id} style={styles.tableRow}>
-                        <td style={styles.td}>{admin.name}</td>
-                        <td style={styles.td}>{admin.email}</td>
-                        <td style={styles.td}>
-                          <div>
-                            {(admin.assignedBranches || []).map(b => (
-                              <span key={b._id} style={styles.branchTag}>{b.name}</span>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                setSelectedAdminForBranch(admin);
-                                setShowBranchAssignmentModal(true);
-                              }} 
-                              style={styles.assignBranchButton}
-                            >
-                              Manage Branches
-                            </button>
-                          </div>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>
-                            {admin.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <div style={styles.actionButtons}>
-                            <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
-                            <button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <div>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>{lang.adminManagement}</h2>
+              <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ {lang.addAdmin}</button>
             </div>
-          )}
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Assigned Branches</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {admins.map(admin => (
+                    <tr key={admin._id} style={styles.tableRow}>
+                      <td style={styles.td}>{admin.name}</td>
+                      <td style={styles.td}>{admin.email}</td>
+                      <td style={styles.td}>
+                        <div>
+                          {(admin.assignedBranches || []).map(b => (
+                            <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                          ))}
+                          <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
+                        </div>
+                      </td>
+                      <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button><button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button></div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'employees' && (
           <div>
             <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Staff Management</h2>
-              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ Add Staff</button>
+              <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
+              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
             </div>
-            <input type="text" placeholder="Search staff..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
@@ -766,8 +1039,7 @@ const handleRemoveBranch = async (branchId) => {
                       <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
                       <td style={styles.td}>{emp.branch?.name || '-'}</td>
                       <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}><button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button></td>
-                    </tr>
+                    <td style={styles.td}><button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button></td></tr>
                   ))}
                 </tbody>
               </table>
@@ -778,8 +1050,8 @@ const handleRemoveBranch = async (branchId) => {
         {activeTab === 'branches' && (
           <div>
             <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Branches</h2>
-              <button onClick={() => setShowCreateBranchModal(true)} style={styles.addButton}>+ Add Branch</button>
+              <h2 style={styles.sectionTitle}>{lang.branchManagement}</h2>
+              <button onClick={() => setShowCreateBranchModal(true)} style={styles.addButton}>+ {lang.addBranch}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={styles.table}>
@@ -807,8 +1079,8 @@ const handleRemoveBranch = async (branchId) => {
         {activeTab === 'jobs' && (
           <div>
             <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Job Roles</h2>
-              <button onClick={() => setShowCreateJobModal(true)} style={styles.addButton}>+ Add Role</button>
+              <h2 style={styles.sectionTitle}>{lang.roleManagement}</h2>
+              <button onClick={() => setShowCreateJobModal(true)} style={styles.addButton}>+ {lang.addRole}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={styles.table}>
@@ -833,39 +1105,45 @@ const handleRemoveBranch = async (branchId) => {
         )}
 
         {activeTab === 'tasks' && (
-          <div>
-            <div style={styles.taskHeader}>
-              <h2 style={styles.sectionTitle}>Tasks</h2>
-              <button onClick={() => setShowCreateTaskModal(true)} style={styles.createTaskButton}>+ Create Task</button>
-            </div>
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Title</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Role</th><th style={styles.th}>Branch</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tasks.map(task => (
-                    <tr key={task._id} style={styles.tableRow}>
-                      <td style={styles.td}>{task.title}</td>
-                      <td style={styles.td}>{new Date(task.date).toLocaleDateString()}</td>
-                      <td style={styles.td}>{task.startTime} - {task.endTime}</td>
-                      <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
-                      <td style={styles.td}>{task.branch?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
-                      <td style={styles.td}><button onClick={() => handleDeleteTask(task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+  <div>
+    <div style={styles.taskHeader}>
+      <h2 style={styles.sectionTitle}>{lang.taskManagement}</h2>
+      <button onClick={() => setShowCreateTaskModal(true)} style={styles.createTaskButton}>+ {lang.createTask}</button>
+    </div>
+    <div style={styles.tableContainer}>
+      <table style={styles.table}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={styles.th}>Title</th>
+            <th style={styles.th}>Date</th>
+            <th style={styles.th}>Time</th>
+            <th style={styles.th}>Role</th>
+            <th style={styles.th}>Branch</th>
+            <th style={styles.th}>Status</th>
+            <th style={styles.th}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map(task => (
+            <tr key={task._id} style={styles.tableRow}>
+              <td style={styles.td}>{task.title}</td>
+              <td style={styles.td}>{new Date(task.date).toLocaleDateString()}</td>
+              <td style={styles.td}>{task.startTime} - {task.endTime}</td>
+              <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
+              <td style={styles.td}>{task.branch?.name || '-'}</td>
+              <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
+              <td style={styles.td}><button onClick={() => handleDeleteTask(task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
         {activeTab === 'applications' && (
           <div>
-            <h2 style={styles.sectionTitle}>Pending Requests</h2>
+            <h2 style={styles.sectionTitle}>{lang.applicationManagement}</h2>
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
@@ -891,35 +1169,59 @@ const handleRemoveBranch = async (branchId) => {
 
         {activeTab === 'reports' && (
           <div>
-            <h2 style={styles.sectionTitle}>Reports</h2>
+            <h2 style={styles.sectionTitle}>{lang.reportManagement}</h2>
             <div style={styles.reportsGrid}>
-              <div style={styles.reportCard}><i className="fas fa-chart-bar"></i><h3 style={{color: 'white'}}>Attendance</h3><button style={styles.reportButton}>Generate</button></div>
-              <div style={styles.reportCard}><i className="fas fa-clock"></i><h3 style={{color: 'white'}}>Hours Worked</h3><button style={styles.reportButton}>Generate</button></div>
-              <div style={styles.reportCard}><i className="fas fa-file-pdf"></i><h3 style={{color: 'white'}}>Export PDF</h3><button style={styles.reportButton}>Export</button></div>
+              <div style={styles.reportCard}>
+                <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.attendance}</h3>
+                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+              </div>
+              <div style={styles.reportCard}>
+                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
+                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+              </div>
+              <div style={styles.reportCard}>
+                <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
+                <button onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
+              </div>
+              <div style={styles.reportCard}>
+                <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
+                <button onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'settings' && (
           <div>
-            <h2 style={styles.sectionTitle}>Settings</h2>
+            <h2 style={styles.sectionTitle}>{lang.settingsManagement}</h2>
             <div style={styles.settingsCard}>
-              <h3>Organization Logo</h3>
+              <h3 style={{color: 'white'}}>Organization Logo</h3>
               {logoPreview && <img src={logoPreview} alt="Logo" style={styles.logoPreview} />}
               <input type="file" accept="image/*" onChange={handleLogoUpload} style={styles.fileInput} />
               <button style={styles.uploadButton}>Upload Logo</button>
             </div>
-            <div style={styles.settingsCard}><h3>Subscription</h3><p>Professional - $99/month</p><button onClick={() => setShowSubscriptionModal(true)} style={styles.upgradeButton}>Upgrade</button><button style={styles.invoiceButton}>Invoices</button></div>
-            <div style={styles.settingsCard}><h3>Audit Logs</h3><button style={styles.viewButton}>View Logs</button></div>
+            <div style={styles.settingsCard}>
+              <h3 style={{color: 'white'}}>Subscription</h3>
+              <p style={{color: 'white'}}>{lang.currentPlan}: {subscriptionData?.plan || 'Trial'}</p>
+              <a href="mailto:georgeglor@hotmail.com" style={styles.contactLink}>{lang.contactSales}</a>
+              <button style={styles.invoiceButton}>Invoices</button>
+            </div>
+            <div style={styles.settingsCard}>
+              <h3 style={{color: 'white'}}>Audit Logs</h3>
+              <button style={styles.viewButton}>View Logs</button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* All Modals - Keep existing modal code */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Add Admin</h2>
+            <h2 style={styles.modalTitle}>{lang.addAdmin}</h2>
             <form onSubmit={handleCreateAdmin}>
               <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
               <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
@@ -930,7 +1232,7 @@ const handleRemoveBranch = async (branchId) => {
               </select>
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateAdminModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create Admin</button>
+                <button type="submit" style={styles.submitButton}>Create</button>
               </div>
             </form>
           </div>
@@ -940,7 +1242,7 @@ const handleRemoveBranch = async (branchId) => {
       {showCreateEmployeeModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Add Staff</h2>
+            <h2 style={styles.modalTitle}>{lang.addStaff}</h2>
             <form onSubmit={handleCreateEmployee}>
               <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
               <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
@@ -955,7 +1257,7 @@ const handleRemoveBranch = async (branchId) => {
               </select>
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create Staff</button>
+                <button type="submit" style={styles.submitButton}>Create</button>
               </div>
             </form>
           </div>
@@ -965,13 +1267,13 @@ const handleRemoveBranch = async (branchId) => {
       {showCreateBranchModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateBranchModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Add Branch</h2>
+            <h2 style={styles.modalTitle}>{lang.addBranch}</h2>
             <form onSubmit={handleCreateBranch}>
               <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
               <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={styles.input} />
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateBranchModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create Branch</button>
+                <button type="submit" style={styles.submitButton}>Create</button>
               </div>
             </form>
           </div>
@@ -981,13 +1283,13 @@ const handleRemoveBranch = async (branchId) => {
       {showCreateJobModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateJobModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Add Job Role</h2>
+            <h2 style={styles.modalTitle}>{lang.addRole}</h2>
             <form onSubmit={handleCreateJob}>
-              <input type="text" placeholder="Role Name (e.g., Teacher, Nurse)" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
+              <input type="text" placeholder="Role Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
               <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={styles.textarea} rows="2" />
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateJobModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create Role</button>
+                <button type="submit" style={styles.submitButton}>Create</button>
               </div>
             </form>
           </div>
@@ -997,7 +1299,7 @@ const handleRemoveBranch = async (branchId) => {
       {showCreateTaskModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Create New Task</h2>
+            <h2 style={styles.modalTitle}>{lang.createTask}</h2>
             <form onSubmit={handleCreateTask}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Task Title *</label>
@@ -1043,11 +1345,11 @@ const handleRemoveBranch = async (branchId) => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Location</label>
-                <input type="text" placeholder="e.g., Room 101, Building A" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
+                <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
               </div>
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateTaskModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create Task</button>
+                <button type="submit" style={styles.submitButton}>{lang.createTask}</button>
               </div>
             </form>
           </div>
@@ -1068,86 +1370,40 @@ const handleRemoveBranch = async (branchId) => {
           </div>
         </div>
       )}
-      {/* Branch Assignment Modal */}
-            {showBranchAssignmentModal && (
-              <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
-                <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-                  <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
-                  <p>Select branches this admin can manage:</p>
-                  <div style={styles.branchListContainer}>
-                    {branches.map(branch => (
-                      <div key={branch._id} style={styles.branchCheckboxItem}>
-                        <label style={styles.checkboxLabel}>
-                          <input
-                            type="checkbox"
-                            checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
-                            onChange={async (e) => {
-                              const isChecked = e.target.checked;
-                              if (isChecked) {
-                                // Assign branch
-                                try {
-                                  const token = localStorage.getItem('token');
-                                  const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
-                                    method: 'PUT',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                      'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify({ branchId: branch._id })
-                                  });
-                                  
-                                  if (response.ok) {
-                                    // Update local state
-                                    setSelectedAdminForBranch(prev => ({
-                                      ...prev,
-                                      assignedBranches: [...(prev.assignedBranches || []), branch]
-                                    }));
-                                    // Refresh admin list
-                                    fetchDashboardData();
-                                  }
-                                } catch (error) {
-                                  console.error('Error assigning branch:', error);
-                                }
-                              } else {
-                                // Remove branch
-                                try {
-                                  const token = localStorage.getItem('token');
-                                  const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
-                                    method: 'PUT',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                      'Authorization': `Bearer ${token}`
-                                    },
-                                    body: JSON.stringify({ branchId: branch._id })
-                                  });
-                                  
-                                  if (response.ok) {
-                                    // Update local state
-                                    setSelectedAdminForBranch(prev => ({
-                                      ...prev,
-                                      assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branch._id)
-                                    }));
-                                    // Refresh admin list
-                                    fetchDashboardData();
-                                  }
-                                } catch (error) {
-                                  console.error('Error removing branch:', error);
-                                }
-                              }
-                            }}
-                            style={styles.checkbox}
-                          />
-                          {branch.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={styles.modalButtons}>
-                    <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
-                  </div>
+
+      {showBranchAssignmentModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
+          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
+            <p>Select branches this admin can manage:</p>
+            <div style={styles.branchListContainer}>
+              {branches.map(branch => (
+                <div key={branch._id} style={styles.branchCheckboxItem}>
+                  <label style={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={selectedAdminForBranch?.assignedBranches?.some(b => b._id === branch._id)}
+                      onChange={async (e) => {
+                        if (e.target.checked) {
+                          await handleAssignBranch(branch._id);
+                        } else {
+                          await handleRemoveBranch(branch._id);
+                        }
+                      }}
+                      style={styles.checkbox}
+                    />
+                    {branch.name}
+                  </label>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showChangeEmailModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -1169,10 +1425,10 @@ const handleRemoveBranch = async (branchId) => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Profile Settings</h2>
             <div style={styles.profileInfo}>
-              <p><strong>Name:</strong> {user?.name}</p>
-              <p><strong>Email:</strong> {user?.email}</p>
-              <p><strong>Role:</strong> Super Admin</p>
-              <p><strong>Organization:</strong> {user?.organization?.name}</p>
+              <p><strong style={{color: '#00d1ff'}}>Name:</strong> <span style={{color: 'white'}}>{user?.name}</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Email:</strong> <span style={{color: 'white'}}>{user?.email}</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Role:</strong> <span style={{color: 'white'}}>Super Admin</span></p>
+              <p><strong style={{color: '#00d1ff'}}>Organization:</strong> <span style={{color: 'white'}}>{user?.organization?.name}</span></p>
             </div>
             <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
             <h3 style={styles.subTitle}>Change Password</h3>
@@ -1200,20 +1456,6 @@ const handleRemoveBranch = async (branchId) => {
               <button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button>
               <button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete My Account</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSubscriptionModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowSubscriptionModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Upgrade Subscription</h2>
-            <p>Choose a plan that fits your needs</p>
-            <div style={styles.planOptions}>
-              <div style={styles.planCard}><h3>Professional</h3><div>$99/month</div><ul><li>✓ Up to 200 employees</li><li>✓ 5 branches</li><li>✓ Advanced reports</li><li>✓ Priority support</li></ul><button style={styles.planButton}>Current Plan</button></div>
-              <div style={styles.planCard}><h3>Enterprise</h3><div>$299/month</div><ul><li>✓ Unlimited employees</li><li>✓ Unlimited branches</li><li>✓ Custom reports</li><li>✓ 24/7 support</li><li>✓ API access</li></ul><button style={styles.planButton}>Upgrade</button></div>
-            </div>
-            <p style={styles.contactInfo}>Need a custom plan? <a href="mailto:georgeglor@hotmail.com">Contact us</a></p>
           </div>
         </div>
       )}
@@ -1250,54 +1492,27 @@ const handleRemoveBranch = async (branchId) => {
 };
 
 const styles = {
-  branchTag: {
-  display: 'inline-block',
-  background: 'rgba(0,209,255,0.2)',
-  padding: '2px 8px',
-  borderRadius: '12px',
-  fontSize: '10px',
-  marginRight: '4px',
-  marginBottom: '4px',
-  color: '#00d1ff',
-},
-assignBranchButton: {
-  background: 'rgba(59,130,246,0.2)',
-  border: '1px solid #3b82f6',
-  borderRadius: '6px',
-  padding: '2px 8px',
-  color: '#3b82f6',
-  cursor: 'pointer',
-  fontSize: '10px',
-  marginTop: '4px',
-},
-branchListContainer: {
-  maxHeight: '300px',
-  overflowY: 'auto',
-  marginBottom: '20px',
-},
-branchCheckboxItem: {
-  padding: '8px',
-  borderBottom: '1px solid rgba(255,255,255,0.1)',
-},
-checkboxLabel: {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  color: 'white',
-  cursor: 'pointer',
-},
-checkbox: {
-  width: '16px',
-  height: '16px',
-  cursor: 'pointer',
-},
-noBranchText: {
-  color: 'rgba(255,255,255,0.5)',
-  fontSize: '11px',
-},
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
+  subscriptionBlockedContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  subscriptionBlockedCard: { background: '#1e293b', borderRadius: '20px', padding: '40px', textAlign: 'center', maxWidth: '500px' },
+  subscriptionBlockedTitle: { fontSize: '24px', color: 'white', marginBottom: '20px' },
+  subscriptionBlockedButton: { padding: '12px 24px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  subscriptionCard: { background: 'rgba(0,209,255,0.1)', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(0,209,255,0.2)' },
+  subscriptionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' },
+  subscriptionTitle: { fontSize: '16px', fontWeight: '600', color: '#00d1ff', margin: 0 },
+  contactSalesButton: { padding: '6px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', textDecoration: 'none' },
+  contactLink: { padding: '6px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', textDecoration: 'none', display: 'inline-block', marginRight: '8px' },
+  subscriptionContent: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  subscriptionPlan: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  subscriptionPlanName: { fontSize: '14px', fontWeight: 'bold', color: 'white' },
+  subscriptionDays: { fontSize: '12px', color: 'rgba(255,255,255,0.7)' },
+  usageGrid: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  usageItem: { width: '100%' },
+  usageHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginBottom: '4px' },
+  progressBar: { height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: '3px', transition: 'width 0.3s ease' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
   logoSection: { display: 'flex', alignItems: 'center', gap: '12px' },
   orgLogo: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' },
@@ -1306,12 +1521,16 @@ noBranchText: {
   title: { fontSize: '22px', fontWeight: 'bold', color: 'white', margin: 0 },
   userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', color: '#00d1ff' },
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginTop: '2px' },
-  headerButtons: { display: 'flex', gap: '8px' },
+  headerButtons: { display: 'flex', gap: '8px', alignItems: 'center' },
+  languageContainer: { position: 'relative' },
+  languageButton: { padding: '6px 12px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' },
+  languageDropdown: { position: 'absolute', top: '35px', right: '0', background: '#1e293b', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, minWidth: '120px' },
+  languageOption: { padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '12px' },
   profileButton: { padding: '6px 14px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   logoutButton: { padding: '6px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' },
   statCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '10px', textAlign: 'center' },
-  statIconSmall: { fontSize: '18px', color: '#00d1ff', marginBottom: '4px' },
+  statIconSmall: { fontSize: '18px', marginBottom: '4px' },
   statValueSmall: { fontSize: '20px', fontWeight: 'bold', color: 'white' },
   statLabelSmall: { fontSize: '10px', color: 'rgba(255,255,255,0.6)' },
   tabs: { display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' },
@@ -1336,13 +1555,12 @@ noBranchText: {
   deleteButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
   approveButton: { background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '6px', padding: '4px 8px', color: '#10b981', cursor: 'pointer', fontSize: '12px' },
   rejectButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
-  reportsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' },
-  reportCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', textAlign: 'center' },
-  reportButton: { marginTop: '10px', padding: '5px 10px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '10px' },
+  reportsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginTop: '20px' },
+  reportCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' },
+  reportButton: { marginTop: '12px', padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' },
   settingsCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '12px' },
   fileInput: { margin: '10px 0', padding: '6px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', width: '100%', fontSize: '11px' },
   uploadButton: { padding: '6px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  upgradeButton: { padding: '6px 12px', background: '#10b981', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', marginRight: '6px', fontSize: '11px' },
   invoiceButton: { padding: '6px 12px', background: '#8b5cf6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   viewButton: { padding: '6px 12px', background: '#3b82f6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
@@ -1365,28 +1583,30 @@ noBranchText: {
   dangerZone: { marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' },
   warningText: { fontSize: '11px', color: '#f87171', marginTop: '8px' },
   profileInfo: { background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px' },
-  planOptions: { display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' },
-  planCard: { flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', textAlign: 'center' },
-  planButton: { marginTop: '12px', padding: '6px 12px', background: '#00d1ff', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  contactInfo: { textAlign: 'center', marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' },
   logoPreview: { width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', marginBottom: '10px' },
   welcomeCard: { background: 'rgba(0,209,255,0.1)', borderRadius: '12px', padding: '16px', textAlign: 'center', marginTop: '12px' },
   welcomeTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '6px' },
   welcomeText: { fontSize: '12px', color: 'rgba(255,255,255,0.7)' },
   quickActions: { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' },
   quickActionBtn: { padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  branchTag: { display: 'inline-block', background: 'rgba(0,209,255,0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', marginRight: '4px', marginBottom: '4px', color: '#00d1ff' },
+  assignBranchButton: { background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '2px 8px', color: '#3b82f6', cursor: 'pointer', fontSize: '10px', marginTop: '4px' },
+  branchListContainer: { maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' },
+  branchCheckboxItem: { padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'pointer' },
+  checkbox: { width: '16px', height: '16px', cursor: 'pointer' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', zIndex: 1000 },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '280px', height: '400px', background: '#0f172a', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '10px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' },
-  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px' },
-  chatMessages: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' },
+  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '300px', height: '450px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' },
+  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
+  chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
   chatMessage: { display: 'flex' },
-  messageBubble: { maxWidth: '85%', padding: '6px 10px', borderRadius: '12px', color: 'white', fontSize: '11px', lineHeight: '1.4' },
-  messageTime: { fontSize: '8px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' },
-  typingIndicator: { padding: '6px 10px', background: '#1e293b', borderRadius: '12px', width: '50px', fontSize: '10px' },
-  chatInputContainer: { padding: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '6px' },
-  chatInput: { flex: 1, padding: '6px 10px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '11px' },
-  chatSend: { padding: '6px 10px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' }
+  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', lineHeight: '1.4' },
+  messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
+  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '60px', fontSize: '11px' },
+  chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
+  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '12px' },
+  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' }
 };
 
 export default SuperAdminDashboard;

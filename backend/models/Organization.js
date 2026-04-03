@@ -35,7 +35,7 @@ const OrganizationSchema = new mongoose.Schema({
   subscription: {
     plan: {
       type: String,
-      enum: ['trial', 'basic', 'professional', 'enterprise'],
+      enum: ['trial', 'basic', 'standard', 'professional', 'business', 'enterprise', 'unlimited'],
       default: 'trial'
     },
     status: {
@@ -64,5 +64,119 @@ const OrganizationSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Plan definitions with SEK pricing
+OrganizationSchema.statics.PLAN_DEFINITIONS = {
+  trial: {
+    name: 'Trial',
+    price: 0,
+    maxEmployees: 10,
+    maxBranches: 2,
+    maxEmailsPerMonth: 50,
+    maxAdmins: 1,
+    reportLevel: 'basic',
+    exportReports: false,
+    customReports: false,
+    apiAccess: false,
+    prioritySupport: false,
+    trialDays: 14
+  },
+  basic: {
+    name: 'Basic',
+    price: 500,
+    maxEmployees: 20,
+    maxBranches: 3,
+    maxEmailsPerMonth: 100,
+    maxAdmins: 2,
+    reportLevel: 'basic',
+    exportReports: false,
+    customReports: false,
+    apiAccess: false,
+    prioritySupport: false
+  },
+  standard: {
+    name: 'Standard',
+    price: 1000,
+    maxEmployees: 50,
+    maxBranches: 5,
+    maxEmailsPerMonth: 250,
+    maxAdmins: 3,
+    reportLevel: 'standard',
+    exportReports: false,
+    customReports: false,
+    apiAccess: false,
+    prioritySupport: false
+  },
+  professional: {
+    name: 'Professional',
+    price: 1750,
+    maxEmployees: 100,
+    maxBranches: 10,
+    maxEmailsPerMonth: 500,
+    maxAdmins: 5,
+    reportLevel: 'advanced',
+    exportReports: false,
+    customReports: false,
+    apiAccess: false,
+    prioritySupport: false
+  },
+  business: {
+    name: 'Business',
+    price: 2500,
+    maxEmployees: 200,
+    maxBranches: 20,
+    maxEmailsPerMonth: 1000,
+    maxAdmins: 10,
+    reportLevel: 'advanced',
+    exportReports: true,
+    customReports: false,
+    apiAccess: false,
+    prioritySupport: false
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: 5000,
+    maxEmployees: 500,
+    maxBranches: 50,
+    maxEmailsPerMonth: 2500,
+    maxAdmins: 20,
+    reportLevel: 'premium',
+    exportReports: true,
+    customReports: true,
+    apiAccess: true,
+    prioritySupport: false
+  },
+  unlimited: {
+    name: 'Unlimited',
+    price: 15000,
+    maxEmployees: Infinity,
+    maxBranches: Infinity,
+    maxEmailsPerMonth: Infinity,
+    maxAdmins: Infinity,
+    reportLevel: 'unlimited',
+    exportReports: true,
+    customReports: true,
+    apiAccess: true,
+    prioritySupport: true
+  }
+};
+
+// Get plan features
+OrganizationSchema.methods.getPlanFeatures = function() {
+  const plan = this.constructor.PLAN_DEFINITIONS[this.subscription?.plan || 'trial'];
+  return plan || this.constructor.PLAN_DEFINITIONS.trial;
+};
+
+// Check if organization is within limits
+OrganizationSchema.methods.isWithinLimits = async function(type, currentCount) {
+  const features = this.getPlanFeatures();
+  const limits = {
+    employees: features.maxEmployees,
+    branches: features.maxBranches,
+    admins: features.maxAdmins
+  };
+  const limit = limits[type];
+  return limit === Infinity || currentCount <= limit;
+};
 
 module.exports = mongoose.model('Organization', OrganizationSchema);
