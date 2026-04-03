@@ -411,31 +411,45 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleCreateAdmin = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, role: 'admin' })
-      });
-      
-      if (response.ok) {
-        showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
-        setShowCreateAdminModal(false);
-        setFormData({});
-        fetchDashboardData();
-      } else {
-        showToast(language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör', 'error');
-      }
-    } catch (error) {
-      console.error('Error creating admin:', error);
-      showToast(language === 'en' ? 'Error creating admin' : 'Fel vid skapande av administratör', 'error');
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    
+    const adminData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: 'admin',
+      branch: formData.branch || null
+    };
+    
+    console.log('Creating admin with data:', adminData);
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(adminData)
+    });
+    
+    const data = await response.json();
+    console.log('Response:', data);
+    
+    if (response.ok) {
+      showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
+      setShowCreateAdminModal(false);
+      setFormData({});
+      fetchDashboardData();
+    } else {
+      showToast(data.message || (language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör'), 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error creating admin:', error);
+    showToast(language === 'en' ? 'Error creating admin' : 'Fel vid skapande av administratör', 'error');
+  }
+};
 
   const handleAssignBranch = async (branchId) => {
     try {
@@ -507,112 +521,120 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleCreateEmployee = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, role: 'employee' })
-      });
-      
-      if (response.ok) {
-        showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
-        setShowCreateEmployeeModal(false);
-        setFormData({});
-        fetchDashboardData();
-      } else {
-        showToast(language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd', 'error');
-      }
-    } catch (error) {
-      console.error('Error creating employee:', error);
-      showToast(language === 'en' ? 'Error creating employee' : 'Fel vid skapande av anställd', 'error');
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Make sure we're sending the correct data structure
+    const employeeData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: 'employee',
+      jobDescription: formData.jobDescription, // This should be an ObjectId string
+      branch: formData.branch || null
+    };
+    
+    console.log('Creating employee with data:', employeeData);
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(employeeData)
+    });
+    
+    const data = await response.json();
+    console.log('Response:', data);
+    
+    if (response.ok) {
+      showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
+      setShowCreateEmployeeModal(false);
+      setFormData({});
+      fetchDashboardData();
+    } else {
+      showToast(data.message || (language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd'), 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error creating employee:', error);
+    showToast(language === 'en' ? 'Error creating employee' : 'Fel vid skapande av anställd', 'error');
+  }
+};
 
   const handleCreateBranch = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (response.ok) {
-        showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
-        setShowCreateBranchModal(false);
-        setFormData({});
-        fetchDashboardData();
-      } else {
-        showToast(language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning', 'error');
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    
+    const branchData = {
+      name: formData.name,
+      address: {
+        city: formData.city || '',
+        street: formData.street || '',
+        postalCode: formData.postalCode || '',
+        country: formData.country || 'Sweden'
       }
-    } catch (error) {
-      console.error('Error creating branch:', error);
-      showToast(language === 'en' ? 'Error creating branch' : 'Fel vid skapande av avdelning', 'error');
+    };
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(branchData)
+    });
+    
+    if (response.ok) {
+      showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
+      setShowCreateBranchModal(false);
+      setFormData({});
+      fetchDashboardData();
+    } else {
+      const data = await response.json();
+      showToast(data.message || (language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning'), 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error creating branch:', error);
+    showToast(language === 'en' ? 'Error creating branch' : 'Fel vid skapande av avdelning', 'error');
+  }
+};
 
   const handleCreateJob = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (response.ok) {
-        showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
-        setShowCreateJobModal(false);
-        setFormData({});
-        fetchDashboardData();
-      } else {
-        showToast(language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll', 'error');
-      }
-    } catch (error) {
-      console.error('Error creating job:', error);
-      showToast(language === 'en' ? 'Error creating job role' : 'Fel vid skapande av jobbroll', 'error');
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    
+    const jobData = {
+      name: formData.name,
+      description: formData.description || ''
+    };
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(jobData)
+    });
+    
+    if (response.ok) {
+      showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
+      setShowCreateJobModal(false);
+      setFormData({});
+      fetchDashboardData();
+    } else {
+      const data = await response.json();
+      showToast(data.message || (language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll'), 'error');
     }
-  };
-
-  const handleCreateTask = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (response.ok) {
-        showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
-        setShowCreateTaskModal(false);
-        setFormData({});
-        fetchDashboardData();
-      } else {
-        showToast(language === 'en' ? 'Failed to create task' : 'Kunde inte skapa uppgift', 'error');
-      }
-    } catch (error) {
-      console.error('Error creating task:', error);
-      showToast(language === 'en' ? 'Error creating task' : 'Fel vid skapande av uppgift', 'error');
-    }
-  };
+  } catch (error) {
+    console.error('Error creating job:', error);
+    showToast(language === 'en' ? 'Error creating job role' : 'Fel vid skapande av jobbroll', 'error');
+  }
+};
 
   const handleResetUserPassword = async () => {
     if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
