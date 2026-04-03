@@ -107,6 +107,28 @@ exports.applyForTask = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+// @desc    Get all applications (for Super Admin)
+// @route   GET /api/applications
+// @access  Private/SuperAdmin/Master
+exports.getAllApplications = async (req, res) => {
+  try {
+    const query = { organization: req.user.organization };
+    
+    const applications = await Application.find(query)
+      .populate('employee', 'name email')
+      .populate('task', 'title date startTime endTime branch')
+      .sort({ appliedAt: -1 });
+    
+    res.json({
+      success: true,
+      count: applications.length,
+      data: applications
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 // @desc    Get my applications (employee)
 // @route   GET /api/applications/my-applications

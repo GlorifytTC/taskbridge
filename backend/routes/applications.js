@@ -20,5 +20,5 @@ router.get('/my-applications', authorize('employee'), getMyApplications);
 router.get('/pending', authorize('admin', 'superadmin'), getPendingApplications);
 router.put('/:id/approve', authorize('admin', 'superadmin'), approveApplication);
 router.put('/:id/reject', authorize('admin', 'superadmin'), rejectApplication);
-
+router.get('/', protect, authorize('superadmin', 'master'), getAllApplications);
 module.exports = router;

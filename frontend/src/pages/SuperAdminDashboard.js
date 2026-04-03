@@ -1164,30 +1164,52 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 )}
 
         {activeTab === 'applications' && (
-          <div>
-            <h2 style={styles.sectionTitle}>{lang.applicationManagement}</h2>
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Staff</th><th style={styles.th}>Task</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.map(app => (
-                    <tr key={app._id} style={styles.tableRow}>
-                      <td style={styles.td}>{app.employee?.name}</td>
-                      <td style={styles.td}>{app.task?.title}</td>
-                      <td style={styles.td}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
-                      <td style={styles.td}>{app.task?.startTime} - {app.task?.endTime}</td>
-                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button><button onClick={() => handleRejectApplication(app._id)} style={styles.rejectButton}>✗</button></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+  <div>
+    <h2 style={styles.sectionTitle}>All Applications</h2>
+    <div style={styles.tableContainer}>
+      <table style={styles.table}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={styles.th}>Employee</th>
+            <th style={styles.th}>Task</th>
+            <th style={styles.th}>Date</th>
+            <th style={styles.th}>Time</th>
+            <th style={styles.th}>Status</th>
+            <th style={styles.th}>Applied Date</th>
+            <th style={styles.th}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {applications.map(app => (
+            <tr key={app._id} style={styles.tableRow}>
+              <td style={styles.td}>{app.employee?.name}</td>
+              <td style={styles.td}>{app.task?.title}</td>
+              <td style={styles.td}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
+              <td style={styles.td}>{app.task?.startTime} - {app.task?.endTime}</td>
+              <td style={styles.td}>
+                <span style={{...styles.statusBadge, background: 
+                  app.status === 'approved' ? '#10b981' : 
+                  app.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                }}>
+                  {app.status}
+                </span>
+               </td>
+              <td style={styles.td}>{new Date(app.appliedAt).toLocaleDateString()}</td>
+              <td style={styles.td}>
+                {app.status === 'pending' && (
+                  <div style={styles.actionButtons}>
+                    <button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button>
+                    <button onClick={() => handleRejectApplication(app._id)} style={styles.rejectButton}>✗</button>
+                  </div>
+                )}
+              </td>
+             </tr>
+          ))}
+        </tbody>
+       </table>
+    </div>
+  </div>
+)}
 
         {activeTab === 'reports' && (
           <div>

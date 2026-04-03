@@ -174,9 +174,9 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       });
       const tasksData = await tasksRes.json();
       
-      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
+      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
         headers: { 'Authorization': `Bearer ${token}` }
-      });
+        });
       const appsData = await appsRes.json();
       
       const allApps = appsData.data || [];
