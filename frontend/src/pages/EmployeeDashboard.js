@@ -142,22 +142,19 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     }]);
   };
 
-  useEffect(() => {
+  // Add this useEffect to listen for changes
+useEffect(() => {
+  fetchEmployeeData();
+  const savedLogo = localStorage.getItem('organizationLogo');
+  if (savedLogo) setLogoPreview(savedLogo);
+  
+  // Refresh every 10 seconds to catch approvals
+  const interval = setInterval(() => {
     fetchEmployeeData();
-    const savedLogo = localStorage.getItem('organizationLogo');
-    if (savedLogo) setLogoPreview(savedLogo);
-    setChatMessages([{
-      text: language === 'en' 
-        ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" 
-        : "Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
-      sender: 'ai',
-      time: new Date().toLocaleTimeString()
-    }]);
-    const interval = setInterval(() => {
-      fetchEmployeeData();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  }, 10000);
+  
+  return () => clearInterval(interval);
+}, [currentDate]);
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -323,8 +320,8 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const getApprovedTasksForDate = (date) => {
-    return approvedShifts.filter(app => isSameDay(new Date(app.task?.date), date));
-  };
+  return approvedShifts.filter(app => isSameDay(new Date(app.task?.date), date));
+};
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);

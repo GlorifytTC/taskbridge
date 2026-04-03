@@ -200,6 +200,10 @@ exports.approveApplication = async (req, res) => {
     
     const task = await Task.findById(application.task._id);
     
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+    
     // Check if task still has capacity
     if (task.currentEmployees >= task.maxEmployees) {
       return res.status(400).json({ message: 'Task is already full' });
@@ -211,7 +215,7 @@ exports.approveApplication = async (req, res) => {
     application.reviewedAt = Date.now();
     await application.save();
     
-    // Update task current employees count
+    // IMPORTANT: Increment task's current employees count
     task.currentEmployees = (task.currentEmployees || 0) + 1;
     
     if (task.currentEmployees >= task.maxEmployees) {
@@ -219,42 +223,21 @@ exports.approveApplication = async (req, res) => {
     }
     await task.save();
     
-    // Notify employee
+    console.log(`✅ Application approved. Task ${task.title} now has ${task.currentEmployees}/${task.maxEmployees} employees`);
+    
+    // Create notification for employee
     await Notification.create({
       user: application.employee._id,
       organization: req.user.organization,
-      type: 'application_status_changed',
-      title: 'Application Approved',
-      message: `Your application for ${task.title} has been approved`,
-      data: { applicationId: application._id, taskId: task._id }
-    });
-    
-    // Send email
-    await sendEmail({
-      to: application.employee.email,
-      subject: 'Shift Application Approved',
-      html: `
-        <h1>Application Approved</h1>
-        <p>Your application for ${task.title} on ${new Date(task.date).toLocaleDateString()} has been approved.</p>
-        <p>Time: ${task.startTime} - ${task.endTime}</p>
-        <a href="${process.env.FRONTEND_URL}/calendar">View Calendar</a>
-      `
-    });
-    
-    // Create audit log
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'approve',
-      entityType: 'application',
-      entityId: application._id,
-      changes: { status: 'approved' },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
+      type: 'application_approved',
+      title: 'Shift Approved',
+      message: `Your application for ${task.title} on ${new Date(task.date).toLocaleDateString()} has been approved!`,
+      data: { taskId: task._id, applicationId: application._id }
     });
     
     res.json({
       success: true,
+      message: 'Application approved successfully',
       data: {
         application,
         task: {
@@ -263,6 +246,25 @@ exports.approveApplication = async (req, res) => {
         }
       }
     });
+    
+  } catch (error) {
+    console.error('Error approving application:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+    
+    res.json({
+      success: true,
+      message: 'Application approved successfully',
+      data: {
+        application,
+        task: {
+          currentEmployees: task.currentEmployees,
+          status: task.status
+        }
+      }
+    });
+    
   } catch (error) {
     console.error('Error approving application:', error);
     res.status(500).json({ message: 'Server error: ' + error.message });

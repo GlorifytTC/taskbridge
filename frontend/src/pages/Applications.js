@@ -51,11 +51,12 @@ const Applications = () => {
         if (tabValue === 0) {
           response = await api.get('/applications/pending');
         } else {
-          response = await api.get('/applications/my-applications');
+          response = await api.get('/applications');
         }
       }
       setApplications(response.data.data);
     } catch (error) {
+      console.error('Failed to fetch applications:', error);
       toast.error('Failed to fetch applications');
     } finally {
       setLoading(false);
@@ -74,11 +75,19 @@ const Applications = () => {
 
   const handleApprove = async (appId) => {
     try {
-      await api.put(`/applications/${appId}/approve`);
-      toast.success('Application approved');
-      fetchApplications();
+      const response = await api.put(`/applications/${appId}/approve`);
+      if (response.data.success) {
+        toast.success('Application approved successfully!');
+        // Refresh all data
+        fetchApplications();
+        // Also refresh tasks if needed
+        window.dispatchEvent(new Event('applicationUpdated'));
+      } else {
+        toast.error(response.data.message || 'Failed to approve');
+      }
     } catch (error) {
-      toast.error('Failed to approve application');
+      console.error('Approve error:', error);
+      toast.error(error.response?.data?.message || 'Failed to approve application');
     }
   };
 
@@ -186,6 +195,7 @@ const Applications = () => {
                       size="small"
                       color="success"
                       onClick={() => handleApprove(app._id)}
+                      title="Approve Application"
                     >
                       <CheckCircle />
                     </IconButton>
@@ -196,6 +206,7 @@ const Applications = () => {
                         setSelectedApp(app);
                         setOpenDialog(true);
                       }}
+                      title="Reject Application"
                     >
                       <Cancel />
                     </IconButton>
@@ -206,37 +217,6 @@ const Applications = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Available Tasks for Employees */}
-      {user.role === 'employee' && (
-        <Box mt={4}>
-          <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>
-            Available Tasks
-          </Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Task Title</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Time</TableCell>
-                  <TableCell>Location</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {/* This would need a separate API call for available tasks */}
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Available tasks would appear here
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
 
       {/* Reject Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
