@@ -162,65 +162,85 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         };
 
         const fetchEmployeeData = async () => {
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            
-            const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
-            headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const tasksData = await tasksRes.json();
-            
-            // FIXED: Use my-applications endpoint for employees
-            const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
-            headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const appsData = await appsRes.json();
-            
-            const allApps = appsData.data || [];
-            setApplications(allApps);
-            
-            const appliedTaskIds = allApps.map(app => app.task);
-            
-            const available = (tasksData.data || []).filter(task => 
-            task.status === 'open' && !appliedTaskIds.includes(task._id)
-            );
-            setAvailableTasks(available);
-            
-            const approved = allApps.filter(app => app.status === 'approved');
-            setApprovedShifts(approved);
-            
-            const pending = allApps.filter(app => app.status === 'pending').length;
-            setNotificationCount(pending);
-            
-            const newNotifications = [];
-            const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
-            if (hasNewTasks) {
-            newNotifications.push({
-                id: 'new-tasks',
-                title: language === 'en' ? 'New Tasks Available' : 'Nya Uppgifter Tillgängliga',
-                message: `${available.length} ${language === 'en' ? 'new task' : 'ny uppgift'}${available.length > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'available for you' : 'tillgängliga för dig'}`,
-                time: new Date().toLocaleTimeString(),
-                read: false
-            });
-            }
-            if (pending > 0 && !localStorage.getItem('notified_pending')) {
-            newNotifications.push({
-                id: 'pending-apps',
-                title: language === 'en' ? 'Applications Pending' : 'Väntande Ansökningar',
-                message: `${language === 'en' ? 'You have' : 'Du har'} ${pending} ${language === 'en' ? 'application' : 'ansökan'}${pending > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'awaiting review' : 'som väntar på granskning'}`,
-                time: new Date().toLocaleTimeString(),
-                read: false
-            });
-            }
-            setNotifications(newNotifications);
-            
-        } catch (error) {
-            console.error('Error fetching employee data:', error);
-        } finally {
-            setLoading(false);
-        }
-        };
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Fetch applications for the employee
+    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const appsData = await appsRes.json();
+    
+    const allApps = appsData.data || [];
+    
+    // For each application, fetch the full task details
+    const appsWithTasks = await Promise.all(allApps.map(async (app) => {
+      if (app.task && typeof app.task === 'object' && app.task._id) {
+        // Task is already populated
+        return app;
+      } else if (app.task) {
+        // Fetch full task details
+        const taskRes = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${app.task}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const taskData = await taskRes.json();
+        return { ...app, task: taskData.data };
+      }
+      return app;
+    }));
+    
+    setApplications(appsWithTasks);
+    
+    const appliedTaskIds = appsWithTasks.map(app => app.task?._id || app.task);
+    
+    // Fetch available tasks
+    const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const tasksData = await tasksRes.json();
+    
+    const available = (tasksData.data || []).filter(task => 
+      task.status === 'open' && !appliedTaskIds.includes(task._id)
+    );
+    setAvailableTasks(available);
+    
+    // Approved shifts - tasks that are approved
+    const approved = appsWithTasks.filter(app => app.status === 'approved');
+    setApprovedShifts(approved);
+    
+    const pending = appsWithTasks.filter(app => app.status === 'pending').length;
+    setNotificationCount(pending);
+    
+    // Notifications logic...
+    const newNotifications = [];
+    const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
+    if (hasNewTasks) {
+      newNotifications.push({
+        id: 'new-tasks',
+        title: language === 'en' ? 'New Tasks Available' : 'Nya Uppgifter Tillgängliga',
+        message: `${available.length} ${language === 'en' ? 'new task' : 'ny uppgift'}${available.length > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'available for you' : 'tillgängliga för dig'}`,
+        time: new Date().toLocaleTimeString(),
+        read: false
+      });
+    }
+    if (pending > 0 && !localStorage.getItem('notified_pending')) {
+      newNotifications.push({
+        id: 'pending-apps',
+        title: language === 'en' ? 'Applications Pending' : 'Väntande Ansökningar',
+        message: `${language === 'en' ? 'You have' : 'Du har'} ${pending} ${language === 'en' ? 'application' : 'ansökan'}${pending > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'awaiting review' : 'som väntar på granskning'}`,
+        time: new Date().toLocaleTimeString(),
+        read: false
+      });
+    }
+    setNotifications(newNotifications);
+    
+  } catch (error) {
+    console.error('Error fetching employee data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleApplyForTask = async (taskId) => {
     const alreadyApplied = applications.some(app => app.task === taskId);
@@ -321,7 +341,11 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const getApprovedTasksForDate = (date) => {
-  return approvedShifts.filter(app => isSameDay(new Date(app.task?.date), date));
+  return approvedShifts.filter(app => {
+    if (!app.task) return false;
+    const taskDate = new Date(app.task.date);
+    return isSameDay(taskDate, date);
+  });
 };
 
   const handleTaskClick = (task) => {
@@ -375,43 +399,46 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const renderDayCell = (day) => {
-    const dayTasks = getApprovedTasksForDate(day);
-    const isToday = isSameDay(day, new Date());
-    const isCurrentMonth = isSameMonth(day, currentDate);
-    
-    return (
-      <div
-        key={day.toISOString()}
-        onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0].task)}
-        style={{
-          ...styles.dayCell,
-          background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
-          border: isToday ? '1px solid #00d1ff' : '1px solid rgba(255,255,255,0.1)',
-          opacity: isCurrentMonth ? 1 : 0.5,
-          cursor: dayTasks.length > 0 ? 'pointer' : 'default',
-        }}
-      >
-        <div style={styles.dayNumber}>{format(day, 'd')}</div>
-        <div style={styles.dayTasks}>
-          {dayTasks.slice(0, 2).map(app => (
+  const dayTasks = getApprovedTasksForDate(day);
+  const isToday = isSameDay(day, new Date());
+  const isCurrentMonth = isSameMonth(day, currentDate);
+  
+  return (
+    <div
+      key={day.toISOString()}
+      onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0].task)}
+      style={{
+        ...styles.dayCell,
+        background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
+        border: isToday ? '1px solid #00d1ff' : '1px solid rgba(255,255,255,0.1)',
+        opacity: isCurrentMonth ? 1 : 0.5,
+        cursor: dayTasks.length > 0 ? 'pointer' : 'default',
+      }}
+    >
+      <div style={styles.dayNumber}>{format(day, 'd')}</div>
+      <div style={styles.dayTasks}>
+        {dayTasks.slice(0, 2).map(app => {
+          const task = app.task;
+          return (
             <div
               key={app._id}
               style={{
                 ...styles.taskDot,
                 backgroundColor: '#10b981'
               }}
-              title={app.task?.title}
+              title={task?.title}
             >
-              {app.task?.title?.length > 20 ? app.task.title.substring(0, 20) + '...' : app.task?.title}
+              {task?.title?.length > 20 ? task.title.substring(0, 20) + '...' : task?.title}
             </div>
-          ))}
-          {dayTasks.length > 2 && (
-            <div style={styles.moreTasks}>+{dayTasks.length - 2} more</div>
-          )}
-        </div>
+          );
+        })}
+        {dayTasks.length > 2 && (
+          <div style={styles.moreTasks}>+{dayTasks.length - 2} more</div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   if (loading) {
     return (
