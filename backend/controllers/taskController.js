@@ -200,7 +200,33 @@ exports.getTask = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
+// @desc    Debug - check task employee count
+// @route   GET /api/tasks/debug/:id
+// @access  Private/Admin
+exports.debugTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id)
+      .populate('branch', 'name')
+      .populate('jobDescription', 'name');
+    
+    const applications = await Application.find({ task: req.params.id, status: 'approved' })
+      .populate('employee', 'name email');
+    
+    res.json({
+      task: {
+        id: task._id,
+        title: task.title,
+        currentEmployees: task.currentEmployees,
+        maxEmployees: task.maxEmployees,
+        status: task.status
+      },
+      approvedApplications: applications,
+      count: applications.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 // @desc    Update task
 // @route   PUT /api/tasks/:id
