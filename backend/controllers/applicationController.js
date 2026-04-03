@@ -198,18 +198,20 @@ exports.approveApplication = async (req, res) => {
       return res.status(404).json({ message: 'Application not found' });
     }
     
+    const task = await Task.findById(application.task._id);
+    
     // Check if task still has capacity
-    if (application.task.currentEmployees >= application.task.maxEmployees) {
+    if (task.currentEmployees >= task.maxEmployees) {
       return res.status(400).json({ message: 'Task is already full' });
     }
     
+    // Update application status
     application.status = 'approved';
     application.reviewedBy = req.user.id;
     application.reviewedAt = Date.now();
     await application.save();
     
-    // IMPORTANT: Update task current employees count
-    const task = await Task.findById(application.task._id);
+    // Update task current employees count
     task.currentEmployees = (task.currentEmployees || 0) + 1;
     
     if (task.currentEmployees >= task.maxEmployees) {
@@ -223,8 +225,8 @@ exports.approveApplication = async (req, res) => {
       organization: req.user.organization,
       type: 'application_status_changed',
       title: 'Application Approved',
-      message: `Your application for ${application.task.title} has been approved`,
-      data: { applicationId: application._id, taskId: application.task._id }
+      message: `Your application for ${task.title} has been approved`,
+      data: { applicationId: application._id, taskId: task._id }
     });
     
     // Send email
@@ -233,8 +235,8 @@ exports.approveApplication = async (req, res) => {
       subject: 'Shift Application Approved',
       html: `
         <h1>Application Approved</h1>
-        <p>Your application for ${application.task.title} on ${new Date(application.task.date).toLocaleDateString()} has been approved.</p>
-        <p>Time: ${application.task.startTime} - ${application.task.endTime}</p>
+        <p>Your application for ${task.title} on ${new Date(task.date).toLocaleDateString()} has been approved.</p>
+        <p>Time: ${task.startTime} - ${task.endTime}</p>
         <a href="${process.env.FRONTEND_URL}/calendar">View Calendar</a>
       `
     });
@@ -253,7 +255,13 @@ exports.approveApplication = async (req, res) => {
     
     res.json({
       success: true,
-      data: application
+      data: {
+        application,
+        task: {
+          currentEmployees: task.currentEmployees,
+          status: task.status
+        }
+      }
     });
   } catch (error) {
     console.error('Error approving application:', error);
@@ -281,14 +289,8 @@ exports.rejectApplication = async (req, res) => {
     application.reviewNotes = reason || '';
     await application.save();
     
-    // Update task current employees count
-    if (application.task.currentEmployees > 0) {
-      application.task.currentEmployees -= 1;
-      if (application.task.status === 'filled') {
-        application.task.status = 'open';
-      }
-      await application.task.save();
-    }
+    // Note: When rejecting, we DON'T decrement currentEmployees
+    // because the employee was never counted as assigned
     
     // Notify employee
     await Notification.create({
@@ -317,7 +319,7 @@ exports.rejectApplication = async (req, res) => {
       data: application
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error rejecting application:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
