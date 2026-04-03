@@ -747,19 +747,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleApproveApplication = async (appId) => {
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/approve`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/approve`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
       showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
+      // Refresh all data
       fetchDashboardData();
-    } catch (error) {
-      console.error('Error approving application:', error);
+      fetchSubscriptionData();
+    } else {
       showToast(language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error approving application:', error);
+    showToast(language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna', 'error');
+  }
+};
+
 
   const handleRejectApplication = async (appId) => {
     const reason = prompt(language === 'en' ? 'Reason for rejection:' : 'Anledning till avslag:');

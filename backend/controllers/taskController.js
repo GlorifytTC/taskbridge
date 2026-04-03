@@ -164,7 +164,7 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// @desc    Get single task
+// @desc    Get single task with applications
 // @route   GET /api/tasks/:id
 // @access  Private
 exports.getTask = async (req, res) => {
@@ -183,8 +183,8 @@ exports.getTask = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
-    // Get applications for this task
-    const applications = await Application.find({ task: task._id })
+    // Get applications for this task with employee details
+    const applications = await Application.find({ task: task._id, status: 'approved' })
       .populate('employee', 'name email')
       .populate('reviewedBy', 'name');
     
@@ -200,6 +200,7 @@ exports.getTask = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // @desc    Update task
 // @route   PUT /api/tasks/:id

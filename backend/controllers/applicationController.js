@@ -199,7 +199,7 @@ exports.approveApplication = async (req, res) => {
     }
     
     // Check if task still has capacity
-    if (application.task.currentEmployees > application.task.maxEmployees) {
+    if (application.task.currentEmployees >= application.task.maxEmployees) {
       return res.status(400).json({ message: 'Task is already full' });
     }
     
@@ -208,14 +208,14 @@ exports.approveApplication = async (req, res) => {
     application.reviewedAt = Date.now();
     await application.save();
     
-    // Update task current employees count if not already counted
-    if (application.task.currentEmployees <= application.task.maxEmployees) {
-      application.task.currentEmployees += 1;
-      if (application.task.currentEmployees >= application.task.maxEmployees) {
-        application.task.status = 'filled';
-      }
-      await application.task.save();
+    // IMPORTANT: Update task current employees count
+    const task = await Task.findById(application.task._id);
+    task.currentEmployees = (task.currentEmployees || 0) + 1;
+    
+    if (task.currentEmployees >= task.maxEmployees) {
+      task.status = 'filled';
     }
+    await task.save();
     
     // Notify employee
     await Notification.create({
@@ -256,8 +256,8 @@ exports.approveApplication = async (req, res) => {
       data: application
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error approving application:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
