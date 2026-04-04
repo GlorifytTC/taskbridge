@@ -119,32 +119,22 @@ exports.getAllApplications = async (req, res) => {
     
     // If admin, only show applications for their assigned branches
     if (req.user.role === 'admin') {
-      console.log('Admin role detected, filtering by assigned branches');
-      
       if (req.user.assignedBranches && req.user.assignedBranches.length > 0) {
-        console.log('Assigned branches:', req.user.assignedBranches);
-        
         const tasks = await Task.find({ branch: { $in: req.user.assignedBranches } });
         const taskIds = tasks.map(t => t._id);
-        console.log('Found tasks for admin:', taskIds.length);
-        
         query.task = { $in: taskIds };
       } else {
-        console.log('No assigned branches for admin, returning empty');
-        return res.json({
-          success: true,
-          count: 0,
-          data: []
-        });
+        return res.json({ success: true, count: 0, data: [] });
       }
     }
     
     const applications = await Application.find(query)
-      .populate('employee', 'name email')
-      .populate('task', 'title date startTime endTime branch location')
+      .populate('employee', 'name email')  // This populates employee data
+      .populate('task', 'title date startTime endTime branch location maxEmployees currentEmployees')
+      .populate('reviewedBy', 'name')
       .sort({ appliedAt: -1 });
     
-    console.log(`Found ${applications.length} applications`);
+    console.log(`Found ${applications.length} applications with populated data`);
     
     res.json({
       success: true,

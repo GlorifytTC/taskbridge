@@ -27,66 +27,67 @@ const SmartCalendar = ({ user, onNavigate }) => {
   }, [currentDate, viewMode]);
 
   const fetchCalendarData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      let startDate, endDate;
-      if (viewMode === 'month') {
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-      } else if (viewMode === 'week') {
-        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-      } else {
-        startDate = currentDate;
-        endDate = currentDate;
-      }
-      
-      let tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-      
-      if (user?.role === 'admin') {
-        const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const adminData = await adminRes.json();
-        const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-        
-        if (assignedBranchIds.length > 0) {
-          tasksUrl += `&branches=${assignedBranchIds.join(',')}`;
-        }
-      }
-      
-      // Fetch tasks
-      const tasksRes = await fetch(tasksUrl, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const tasksData = await tasksRes.json();
-      setTasks(tasksData.data || []);
-      
-      // Fetch ALL applications for the organization (for admin/superadmin to see assigned workers)
-      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
-        const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const appsData = await appsRes.json();
-        console.log('Fetched applications:', appsData.data);
-        setApplications(appsData.data || []);
-      }
-      
-      // Fetch employees for names
-      const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const employeesData = await employeesRes.json();
-      setEmployees(employeesData.data || []);
-      
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    let startDate, endDate;
+    if (viewMode === 'month') {
+      startDate = startOfMonth(currentDate);
+      endDate = endOfMonth(currentDate);
+    } else if (viewMode === 'week') {
+      startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+      endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+    } else {
+      startDate = currentDate;
+      endDate = currentDate;
     }
-  };
+    
+    let tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+    
+    if (user?.role === 'admin') {
+      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const adminData = await adminRes.json();
+      const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+      
+      if (assignedBranchIds.length > 0) {
+        tasksUrl += `&branches=${assignedBranchIds.join(',')}`;
+      }
+    }
+    
+    // Fetch tasks
+    const tasksRes = await fetch(tasksUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const tasksData = await tasksRes.json();
+    setTasks(tasksData.data || []);
+    
+    // Fetch ALL applications for the organization with populated employee data
+    if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
+      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const appsData = await appsRes.json();
+      console.log('Fetched applications with employees:', appsData.data);
+      setApplications(appsData.data || []);
+    }
+    
+    // Fetch all employees for name lookup
+    const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const employeesData = await employeesRes.json();
+    console.log('Fetched employees:', employeesData.data);
+    setEmployees(employeesData.data || []);
+    
+  } catch (error) {
+    console.error('Error fetching calendar data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getTasksForDate = (date) => {
     return tasks.filter(task => isSameDay(new Date(task.date), date));
