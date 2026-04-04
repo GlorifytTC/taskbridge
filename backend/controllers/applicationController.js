@@ -108,12 +108,19 @@ exports.applyForTask = async (req, res) => {
   }
 };
 
-// @desc    Get all applications (for Super Admin/Master)
+// @desc    Get all applications (for Super Admin/Master/Admin)
 // @route   GET /api/applications
-// @access  Private/SuperAdmin/Master
+// @access  Private/SuperAdmin/Master/Admin
 exports.getAllApplications = async (req, res) => {
   try {
     const query = { organization: req.user.organization };
+    
+    // If admin, only show applications for their assigned branches
+    if (req.user.role === 'admin' && req.user.assignedBranches && req.user.assignedBranches.length > 0) {
+      const tasks = await Task.find({ branch: { $in: req.user.assignedBranches } });
+      const taskIds = tasks.map(t => t._id);
+      query.task = { $in: taskIds };
+    }
     
     const applications = await Application.find(query)
       .populate('employee', 'name email')
