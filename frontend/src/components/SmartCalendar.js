@@ -103,25 +103,33 @@ const SmartCalendar = ({ user, onNavigate }) => {
     return approvedApps;
   };
 
-  const getEmployeeName = (employeeId) => {
-  // First try to find from applications data (already populated)
-  for (const app of applications) {
-    if (app.employee && app.employee._id === employeeId) {
-      return app.employee.name;
+  const getEmployeeName = (employeeData) => {
+  // If employeeData is already an object with name
+  if (employeeData && typeof employeeData === 'object' && employeeData.name) {
+    return employeeData.name;
+  }
+  
+  // If employeeData is an ID string
+  if (employeeData && typeof employeeData === 'string') {
+    // First try from applications data
+    for (const app of applications) {
+      if (app.employee && app.employee._id === employeeData) {
+        return app.employee.name;
+      }
+      if (app.employee === employeeData && app.employeeData) {
+        return app.employeeData.name;
+      }
     }
-    if (app.employee === employeeId && app.employeeData) {
-      return app.employeeData.name;
+    
+    // Then try from employees array
+    const employee = employees.find(e => e._id === employeeData);
+    if (employee && employee.name) {
+      return employee.name;
     }
   }
   
-  // Then try from employees array
-  const employee = employees.find(e => e._id === employeeId);
-  if (employee && employee.name) {
-    return employee.name;
-  }
-  
-  console.log('Employee not found for ID:', employeeId);
-  return 'Loading...';
+  console.log('Employee not found for data:', employeeData);
+  return 'Unknown';
 };
 
   const getTaskStatusColor = (task) => {
@@ -436,28 +444,37 @@ const SmartCalendar = ({ user, onNavigate }) => {
             )}
 
             <div style={styles.workersSection}>
-              <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
-              <div style={styles.workersList}>
-                {getApplicationsForTask(selectedTask._id).length === 0 ? (
-                  <p style={styles.noWorkers}>No workers assigned yet</p>
-                ) : (
-                  getApplicationsForTask(selectedTask._id).map(app => {
-                    const employeeName = getEmployeeName(app.employee);
-                    return (
-                      <div key={app._id} style={styles.workerCard}>
-                        <div style={styles.workerInfo}>
-                          <div style={styles.workerName}>{employeeName}</div>
-                          <div style={styles.workerStatus}>✅ Approved</div>
-                        </div>
-                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
-                          <button onClick={() => handleRemoveEmployee(app.employee, app._id)} style={styles.removeButton}>Remove</button>
+                    <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
+                    <div style={styles.workersList}>
+                        {getApplicationsForTask(selectedTask._id).length === 0 ? (
+                        <p style={styles.noWorkers}>No workers assigned yet</p>
+                        ) : (
+                        getApplicationsForTask(selectedTask._id).map(app => {
+                            // Get employee name - the employee is already populated in the application
+                            let employeeName = 'Unknown';
+                            if (app.employee) {
+                            if (typeof app.employee === 'object' && app.employee.name) {
+                                employeeName = app.employee.name;
+                            } else if (typeof app.employee === 'string') {
+                                employeeName = getEmployeeName(app.employee);
+                            }
+                            }
+                            
+                            return (
+                            <div key={app._id} style={styles.workerCard}>
+                                <div style={styles.workerInfo}>
+                                <div style={styles.workerName}>{employeeName}</div>
+                                <div style={styles.workerStatus}>✅ Approved</div>
+                                </div>
+                                {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
+                                <button onClick={() => handleRemoveEmployee(app.employee._id || app.employee, app._id)} style={styles.removeButton}>Remove</button>
+                                )}
+                            </div>
+                            );
+                        })
                         )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+                    </div>
+                    </div>
           </div>
         </div>
       )}
