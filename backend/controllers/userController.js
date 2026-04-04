@@ -235,42 +235,83 @@ exports.createUser = async (req, res) => {
 
 // @desc    Delete user
 // @route   DELETE /api/users/:id
-// @access  Private/Admin
+// @access  Private/Admin/SuperAdmin/Master
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    console.log('🗑️ Delete user request received');
+    console.log('User ID to delete:', req.params.id);
+    console.log('Requesting user role:', req.user.role);
+    console.log('Requesting user ID:', req.user.id);
     
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const userToDelete = await User.findById(req.params.id);
+    
+    if (!userToDelete) {
+      console.log('❌ User not found');
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
     
-    // Check authorization
-    if (user.organization.toString() !== req.user.organization.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+    console.log('User found:', userToDelete.email, 'Role:', userToDelete.role);
+    
+    // Allow deletion based on role
+    let allowed = false;
+    
+    if (req.user.role === 'master') {
+      allowed = true;
+      console.log('✅ Master user - allowed');
+    } else if (req.user.role === 'superadmin') {
+      if (userToDelete.role !== 'superadmin') {
+        allowed = true;
+        console.log('✅ SuperAdmin - allowed (not deleting superadmin)');
+      } else {
+        console.log('❌ SuperAdmin cannot delete another superadmin');
+      }
+    } else if (req.user.role === 'admin') {
+      if (userToDelete.role === 'employee') {
+        allowed = true;
+        console.log('✅ Admin - allowed (deleting employee)');
+      } else {
+        console.log('❌ Admin can only delete employees');
+      }
     }
     
-    // Anonymize user data
-    user.name = `Deleted User ${user._id}`;
-    user.email = `deleted_${user._id}@deleted.com`;
-    user.isActive = false;
-    user.deletedAt = Date.now();
-    await user.save();
+    if (!allowed) {
+      console.log('❌ Not authorized to delete this user');
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Not authorized to delete this user' 
+      });
+    }
     
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'delete',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { deleted: true },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
+    // Cannot delete yourself
+    if (userToDelete._id.toString() === req.user.id) {
+      console.log('❌ Cannot delete yourself');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete your own account' 
+      });
+    }
+    
+    // Soft delete - anonymize data
+    userToDelete.name = `Deleted User ${userToDelete._id}`;
+    userToDelete.email = `deleted_${userToDelete._id}@deleted.com`;
+    userToDelete.isActive = false;
+    userToDelete.deletedAt = Date.now();
+    userToDelete.personalDataDeleted = true;
+    await userToDelete.save();
+    
+    console.log('✅ User deleted successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'User deleted successfully' 
     });
     
-    res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error deleting user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 

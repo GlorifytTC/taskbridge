@@ -34,7 +34,7 @@ const UserSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch'
   },
-  assignedBranches: [{     
+  assignedBranches: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch'
   }],
@@ -65,15 +65,19 @@ const UserSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// NO PRE-SAVE MIDDLEWARE - We'll hash passwords manually
+// Encrypt password using bcrypt - ADD THIS BACK
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
 
-// Method to compare password
+// Match user entered password to hashed password
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
-assignedBranches: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Branch'
-}],
 
 module.exports = mongoose.model('User', UserSchema);

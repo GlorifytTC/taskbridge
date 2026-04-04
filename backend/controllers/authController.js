@@ -150,7 +150,9 @@ exports.getMe = async (req, res) => {
       .populate('organization', 'name logo settings')
       .populate('branch', 'name address')
       .populate('jobDescription', 'name')
-      .populate('assignedBranches', 'name');  // ADD THIS LINE
+      .populate('assignedBranches', 'name');
+    
+    console.log('User assigned branches:', user.assignedBranches);
     
     res.json({
       success: true,
