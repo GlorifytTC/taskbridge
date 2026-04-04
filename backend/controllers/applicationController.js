@@ -129,12 +129,19 @@ exports.getAllApplications = async (req, res) => {
     }
     
     const applications = await Application.find(query)
-      .populate('employee', 'name email')  // This populates employee data
-      .populate('task', 'title date startTime endTime branch location maxEmployees currentEmployees')
+      .populate({
+        path: 'employee',
+        select: 'name email role'
+      })
+      .populate({
+        path: 'task',
+        select: 'title date startTime endTime branch location maxEmployees currentEmployees status'
+      })
       .populate('reviewedBy', 'name')
       .sort({ appliedAt: -1 });
     
-    console.log(`Found ${applications.length} applications with populated data`);
+    console.log(`Found ${applications.length} applications`);
+    console.log('First application employee:', applications[0]?.employee);
     
     res.json({
       success: true,

@@ -64,22 +64,21 @@ const SmartCalendar = ({ user, onNavigate }) => {
     const tasksData = await tasksRes.json();
     setTasks(tasksData.data || []);
     
-    // Fetch ALL applications for the organization with populated employee data
+    // Fetch applications with populated employee data
     if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
       const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const appsData = await appsRes.json();
-      console.log('Fetched applications with employees:', appsData.data);
+      console.log('Applications with populated data:', JSON.stringify(appsData.data, null, 2));
       setApplications(appsData.data || []);
     }
     
-    // Fetch all employees for name lookup
+    // Fetch employees as fallback
     const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const employeesData = await employeesRes.json();
-    console.log('Fetched employees:', employeesData.data);
     setEmployees(employeesData.data || []);
     
   } catch (error) {
@@ -105,9 +104,25 @@ const SmartCalendar = ({ user, onNavigate }) => {
   };
 
   const getEmployeeName = (employeeId) => {
-    const employee = employees.find(e => e._id === employeeId);
-    return employee ? employee.name : 'Unknown';
-  };
+  // First try to find from applications data (already populated)
+  for (const app of applications) {
+    if (app.employee && app.employee._id === employeeId) {
+      return app.employee.name;
+    }
+    if (app.employee === employeeId && app.employeeData) {
+      return app.employeeData.name;
+    }
+  }
+  
+  // Then try from employees array
+  const employee = employees.find(e => e._id === employeeId);
+  if (employee && employee.name) {
+    return employee.name;
+  }
+  
+  console.log('Employee not found for ID:', employeeId);
+  return 'Loading...';
+};
 
   const getTaskStatusColor = (task) => {
     const currentDateObj = new Date();
