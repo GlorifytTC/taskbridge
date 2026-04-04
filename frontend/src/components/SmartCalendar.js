@@ -15,7 +15,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('month');
 
-  // Determine which dashboard to return to based on user role
   const getDashboardRoute = () => {
     if (user?.role === 'master') return 'master';
     if (user?.role === 'superadmin') return 'superadmin';
@@ -28,70 +27,68 @@ const SmartCalendar = ({ user, onNavigate }) => {
   }, [currentDate, viewMode]);
 
   const fetchCalendarData = async () => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    console.log('=== CALENDAR DEBUG ===');
-    console.log('User role:', user?.role);
-    
-    let startDate, endDate;
-    if (viewMode === 'month') {
-      startDate = startOfMonth(currentDate);
-      endDate = endOfMonth(currentDate);
-    } else if (viewMode === 'week') {
-      startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-      endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-    } else {
-      startDate = currentDate;
-      endDate = currentDate;
-    }
-    
-    let url = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-    
-    // If user is admin, filter by assigned branches
-    if (user?.role === 'admin') {
-      console.log('Fetching admin assigned branches...');
-      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const adminData = await adminRes.json();
-      console.log('Admin data:', adminData);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      console.log('=== CALENDAR DEBUG ===');
+      console.log('User role:', user?.role);
       
-      const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-      console.log('Assigned branch IDs:', assignedBranchIds);
-      
-      if (assignedBranchIds.length > 0) {
-        url += `&branches=${assignedBranchIds.join(',')}`;
+      let startDate, endDate;
+      if (viewMode === 'month') {
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+      } else if (viewMode === 'week') {
+        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+      } else {
+        startDate = currentDate;
+        endDate = currentDate;
       }
-    }
-    
-    console.log('Fetching tasks from URL:', url);
-    
-    const tasksRes = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const tasksData = await tasksRes.json();
-    console.log('Tasks data received:', tasksData);
-    console.log('Number of tasks:', tasksData.data?.length || 0);
-    
-    setTasks(tasksData.data || []);
-    
-    // Fetch applications for the calendar (to show worker counts)
-    if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
-      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      
+      let url = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      
+      if (user?.role === 'admin') {
+        console.log('Fetching admin assigned branches...');
+        const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const adminData = await adminRes.json();
+        console.log('Admin data:', adminData);
+        
+        const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+        console.log('Assigned branch IDs:', assignedBranchIds);
+        
+        if (assignedBranchIds.length > 0) {
+          url += `&branches=${assignedBranchIds.join(',')}`;
+        }
+      }
+      
+      console.log('Fetching tasks from URL:', url);
+      
+      const [tasksRes, appsRes, employeesRes] = await Promise.all([
+        fetch(url, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      
+      const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
+      const employeesData = await employeesRes.json();
+      
+      console.log('Tasks data:', tasksData);
       console.log('Applications data:', appsData);
+      console.log('Employees data:', employeesData);
+      
+      setTasks(tasksData.data || []);
       setApplications(appsData.data || []);
+      setEmployees(employeesData.data || []);
+      
+    } catch (error) {
+      console.error('Error fetching calendar data:', error);
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (error) {
-    console.error('Error fetching calendar data:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const getTasksForDate = (date) => {
     return tasks.filter(task => isSameDay(new Date(task.date), date));
@@ -107,20 +104,20 @@ const SmartCalendar = ({ user, onNavigate }) => {
   };
 
   const getTaskStatusColor = (task) => {
-    const currentDate = new Date();
+    const currentDateObj = new Date();
     const taskDate = new Date(task.date);
     
-    if (taskDate < currentDate) return '#6b7280';
+    if (taskDate < currentDateObj) return '#6b7280';
     if (task.status === 'cancelled') return '#ef4444';
     if (task.status === 'filled' || task.currentEmployees >= task.maxEmployees) return '#f59e0b';
     return '#10b981';
   };
 
   const getTaskStatusText = (task) => {
-    const currentDate = new Date();
+    const currentDateObj = new Date();
     const taskDate = new Date(task.date);
     
-    if (taskDate < currentDate) return 'Past';
+    if (taskDate < currentDateObj) return 'Past';
     if (task.status === 'cancelled') return 'Cancelled';
     if (task.status === 'filled' || task.currentEmployees >= task.maxEmployees) return 'Full';
     return 'Available';
@@ -162,6 +159,8 @@ const SmartCalendar = ({ user, onNavigate }) => {
         alert('Task updated successfully!');
         setEditingTask(false);
         fetchCalendarData();
+      } else {
+        alert('Failed to update task');
       }
     } catch (error) {
       console.error('Error updating task:', error);
@@ -235,12 +234,13 @@ const SmartCalendar = ({ user, onNavigate }) => {
     return (
       <div
         key={day.toISOString()}
-        onClick={() => handleDayClick(day, dayTasks)}
+        onClick={() => dayTasks.length > 0 && handleDayClick(day, dayTasks)}
         style={{
           ...styles.dayCell,
           background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
           border: isToday ? '1px solid #00d1ff' : '1px solid rgba(255,255,255,0.1)',
-          opacity: isCurrentMonth ? 1 : 0.5
+          opacity: isCurrentMonth ? 1 : 0.5,
+          cursor: dayTasks.length > 0 ? 'pointer' : 'default',
         }}
       >
         <div style={styles.dayNumber}>{format(day, 'd')}</div>
@@ -279,14 +279,12 @@ const SmartCalendar = ({ user, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      {/* Back Button - Returns to correct dashboard based on role */}
       <div style={styles.backButtonContainer}>
         <button onClick={() => onNavigate(getDashboardRoute())} style={styles.backButton}>
           ← Back to Dashboard
         </button>
       </div>
 
-      {/* Calendar Header */}
       <div style={styles.calendarHeader}>
         <div style={styles.headerLeft}>
           <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
@@ -300,19 +298,16 @@ const SmartCalendar = ({ user, onNavigate }) => {
         </div>
       </div>
 
-      {/* Weekday Headers */}
       <div style={styles.weekHeaders}>
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
           <div key={day} style={styles.weekDay}>{day}</div>
         ))}
       </div>
 
-      {/* Calendar Grid */}
       <div style={styles.calendarGrid}>
         {getDays().map(day => renderDayCell(day))}
       </div>
 
-      {/* Legend */}
       <div style={styles.legend}>
         <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> Available</div>
         <div><span style={{...styles.legendDot, backgroundColor: '#f59e0b'}}></span> Full</div>
@@ -320,14 +315,11 @@ const SmartCalendar = ({ user, onNavigate }) => {
         <div><span style={{...styles.legendDot, backgroundColor: '#6b7280'}}></span> Past</div>
       </div>
 
-      {/* Day Tasks Modal */}
       {showDayModal && selectedDay && (
         <div style={styles.modalOverlay} onClick={() => setShowDayModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>
-                {format(selectedDay, 'EEEE, MMMM d, yyyy')}
-              </h2>
+              <h2 style={styles.modalTitle}>{format(selectedDay, 'EEEE, MMMM d, yyyy')}</h2>
               <button onClick={() => setShowDayModal(false)} style={styles.closeButton}>✕</button>
             </div>
             <div style={styles.tasksList}>
@@ -335,11 +327,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
                 <p style={styles.noTasks}>No tasks scheduled for this day</p>
               ) : (
                 getTasksForDate(selectedDay).map(task => (
-                  <div
-                    key={task._id}
-                    onClick={() => handleTaskClick(task)}
-                    style={styles.taskCard}
-                  >
+                  <div key={task._id} onClick={() => handleTaskClick(task)} style={styles.taskCard}>
                     <div style={styles.taskCardHeader}>
                       <h3 style={styles.taskTitle}>{task.title}</h3>
                       <span style={{...styles.taskStatusBadge, backgroundColor: getTaskStatusColor(task)}}>
@@ -351,9 +339,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
                       <span>👥 {task.currentEmployees}/{task.maxEmployees}</span>
                       <span>📍 {task.location || 'No location'}</span>
                     </div>
-                    <div style={styles.taskMeta}>
-                      {task.jobDescription?.name} • {task.branch?.name}
-                    </div>
+                    <div style={styles.taskMeta}>{task.jobDescription?.name} • {task.branch?.name}</div>
                   </div>
                 ))
               )}
@@ -362,7 +348,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
         </div>
       )}
 
-      {/* Task Details Modal */}
       {showTaskModal && selectedTask && (
         <div style={styles.modalOverlay} onClick={() => setShowTaskModal(false)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
@@ -371,7 +356,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
               <button onClick={() => setShowTaskModal(false)} style={styles.closeButton}>✕</button>
             </div>
             
-            {/* Task Info */}
             <div style={styles.taskInfoCard}>
               <div style={styles.taskInfoRow}>
                 <span><strong>Date:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
@@ -394,7 +378,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
               )}
             </div>
 
-            {/* Edit Section (Admin/Super Admin only) */}
             {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
               <div style={styles.editSection}>
                 <div style={styles.editHeader}>
@@ -408,49 +391,14 @@ const SmartCalendar = ({ user, onNavigate }) => {
                 
                 {editingTask ? (
                   <div style={styles.editForm}>
-                    <input
-                      type="text"
-                      placeholder="Task Title"
-                      value={editFormData.title}
-                      onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
-                      style={styles.input}
-                    />
-                    <textarea
-                      placeholder="Description"
-                      value={editFormData.description}
-                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
-                      style={styles.textarea}
-                      rows="2"
-                    />
+                    <input type="text" placeholder="Task Title" value={editFormData.title} onChange={(e) => setEditFormData({...editFormData, title: e.target.value})} style={styles.input} />
+                    <textarea placeholder="Description" value={editFormData.description} onChange={(e) => setEditFormData({...editFormData, description: e.target.value})} style={styles.textarea} rows="2" />
                     <div style={styles.timeRow}>
-                      <input
-                        type="time"
-                        value={editFormData.startTime}
-                        onChange={(e) => setEditFormData({...editFormData, startTime: e.target.value})}
-                        style={{...styles.input, flex: 1}}
-                      />
-                      <input
-                        type="time"
-                        value={editFormData.endTime}
-                        onChange={(e) => setEditFormData({...editFormData, endTime: e.target.value})}
-                        style={{...styles.input, flex: 1}}
-                      />
+                      <input type="time" value={editFormData.startTime} onChange={(e) => setEditFormData({...editFormData, startTime: e.target.value})} style={{...styles.input, flex: 1}} />
+                      <input type="time" value={editFormData.endTime} onChange={(e) => setEditFormData({...editFormData, endTime: e.target.value})} style={{...styles.input, flex: 1}} />
                     </div>
-                    <input
-                      type="number"
-                      placeholder="Max Employees"
-                      value={editFormData.maxEmployees}
-                      onChange={(e) => setEditFormData({...editFormData, maxEmployees: parseInt(e.target.value)})}
-                      style={styles.input}
-                      min="1"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Location"
-                      value={editFormData.location}
-                      onChange={(e) => setEditFormData({...editFormData, location: e.target.value})}
-                      style={styles.input}
-                    />
+                    <input type="number" placeholder="Max Employees" value={editFormData.maxEmployees} onChange={(e) => setEditFormData({...editFormData, maxEmployees: parseInt(e.target.value)})} style={styles.input} min="1" />
+                    <input type="text" placeholder="Location" value={editFormData.location} onChange={(e) => setEditFormData({...editFormData, location: e.target.value})} style={styles.input} />
                     <div style={styles.editButtons}>
                       <button onClick={handleUpdateTask} style={styles.saveButton}>Save Changes</button>
                       <button onClick={handleCancelTask} style={styles.cancelTaskButton}>Cancel Task</button>
@@ -466,7 +414,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
               </div>
             )}
 
-            {/* Workers List */}
             <div style={styles.workersSection}>
               <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
               <div style={styles.workersList}>
@@ -480,13 +427,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
                         <div style={styles.workerStatus}>✅ Approved</div>
                       </div>
                       {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
-                        <button
-                          onClick={() => handleRemoveEmployee(app.employee, app._id)}
-                          style={styles.removeButton}
-                          title="Remove from shift"
-                        >
-                          Remove
-                        </button>
+                        <button onClick={() => handleRemoveEmployee(app.employee, app._id)} style={styles.removeButton}>Remove</button>
                       )}
                     </div>
                   ))
@@ -501,416 +442,66 @@ const SmartCalendar = ({ user, onNavigate }) => {
 };
 
 const styles = {
-  container: {
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
-    minHeight: '100vh',
-    padding: '20px',
-    fontFamily: 'Inter, sans-serif',
-  },
-  backButtonContainer: {
-    marginBottom: '20px',
-  },
-  backButton: {
-    padding: '8px 16px',
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '8px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  loadingContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
-  },
-  loadingSpinner: {
-    width: '40px',
-    height: '40px',
-    border: '3px solid rgba(0,209,255,0.3)',
-    borderRadius: '50%',
-    borderTopColor: '#00d1ff',
-    animation: 'spin 1s linear infinite',
-  },
-  calendarHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  navButton: {
-    padding: '8px 16px',
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '8px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  monthTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#ffffff',
-    margin: 0,
-  },
-  viewButtons: {
-    display: 'flex',
-    gap: '8px',
-  },
-  viewButton: {
-    padding: '6px 14px',
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '20px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '12px',
-  },
-  weekHeaders: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '8px',
-    marginBottom: '8px',
-  },
-  weekDay: {
-    textAlign: 'center',
-    padding: '8px',
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-  calendarGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '8px',
-  },
-  dayCell: {
-    minHeight: '100px',
-    padding: '8px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  dayNumber: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#ffffff',
-    marginBottom: '8px',
-  },
-  dayTasks: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  taskDot: {
-    fontSize: '10px',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    color: '#ffffff',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-  },
-  moreTasks: {
-    fontSize: '10px',
-    color: 'rgba(255,255,255,0.5)',
-    padding: '2px 4px',
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0,0,0,0.8)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  modal: {
-    background: '#1e293b',
-    borderRadius: '16px',
-    padding: '24px',
-    maxWidth: '500px',
-    width: '90%',
-    maxHeight: '80vh',
-    overflowY: 'auto',
-  },
-  modalLarge: {
-    background: '#1e293b',
-    borderRadius: '16px',
-    padding: '24px',
-    maxWidth: '600px',
-    width: '90%',
-    maxHeight: '85vh',
-    overflowY: 'auto',
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-  },
-  modalTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#ffffff',
-    margin: 0,
-  },
-  closeButton: {
-    background: 'none',
-    border: 'none',
-    color: '#ffffff',
-    fontSize: '20px',
-    cursor: 'pointer',
-    padding: '4px 8px',
-  },
-  tasksList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  taskCard: {
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '12px',
-    padding: '12px',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  taskCardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
-  },
-  taskTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff',
-    margin: 0,
-  },
-  taskDetails: {
-    display: 'flex',
-    gap: '16px',
-    fontSize: '11px',
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: '6px',
-    flexWrap: 'wrap',
-  },
-  taskMeta: {
-    fontSize: '11px',
-    color: '#00d1ff',
-  },
-  taskStatusBadge: {
-    padding: '2px 8px',
-    borderRadius: '12px',
-    fontSize: '10px',
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  noTasks: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.5)',
-    padding: '40px',
-  },
-  taskInfoCard: {
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '12px',
-    padding: '16px',
-    marginBottom: '20px',
-  },
-  taskInfoRow: {
-    display: 'flex',
-    gap: '20px',
-    marginBottom: '8px',
-    fontSize: '13px',
-    color: '#ffffff',
-    flexWrap: 'wrap',
-  },
-  taskDescription: {
-    fontSize: '13px',
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: '8px',
-  },
-  editSection: {
-    background: 'rgba(255,255,255,0.03)',
-    borderRadius: '12px',
-    padding: '16px',
-    marginBottom: '20px',
-  },
-  editHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '12px',
-  },
-  editTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff',
-    margin: 0,
-  },
-  editButton: {
-    padding: '4px 12px',
-    background: '#3b82f6',
-    border: 'none',
-    borderRadius: '6px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '11px',
-  },
-  cancelEditButton: {
-    padding: '4px 12px',
-    background: '#6b7280',
-    border: 'none',
-    borderRadius: '6px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '11px',
-  },
-  editForm: {
-    marginTop: '12px',
-  },
-  input: {
-    width: '100%',
-    padding: '8px 12px',
-    marginBottom: '10px',
-    background: '#0f172a',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '8px',
-    color: '#ffffff',
-    fontSize: '12px',
-    boxSizing: 'border-box',
-  },
-  textarea: {
-    width: '100%',
-    padding: '8px 12px',
-    marginBottom: '10px',
-    background: '#0f172a',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '8px',
-    color: '#ffffff',
-    fontFamily: 'inherit',
-    fontSize: '12px',
-    resize: 'vertical',
-    boxSizing: 'border-box',
-  },
-  timeRow: {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '10px',
-  },
-  editButtons: {
-    display: 'flex',
-    gap: '10px',
-    marginTop: '12px',
-  },
-  saveButton: {
-    flex: 1,
-    padding: '8px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '8px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '12px',
-  },
-  cancelTaskButton: {
-    flex: 1,
-    padding: '8px',
-    background: '#ef4444',
-    border: 'none',
-    borderRadius: '8px',
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: '12px',
-  },
-  taskQuickInfo: {
-    marginTop: '8px',
-    fontSize: '12px',
-    color: 'rgba(255,255,255,0.8)',
-  },
-  workersSection: {
-    marginTop: '20px',
-  },
-  workersTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: '12px',
-  },
-  workersList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  workerCard: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '10px',
-    padding: '10px 12px',
-  },
-  workerInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  workerName: {
-    color: '#ffffff',
-    fontSize: '13px',
-    fontWeight: '500',
-  },
-  workerStatus: {
-    fontSize: '11px',
-    color: '#10b981',
-    background: 'rgba(16,185,129,0.2)',
-    padding: '2px 8px',
-    borderRadius: '12px',
-  },
-  removeButton: {
-    background: 'rgba(239,68,68,0.2)',
-    border: '1px solid #ef4444',
-    borderRadius: '6px',
-    padding: '4px 10px',
-    color: '#ef4444',
-    cursor: 'pointer',
-    fontSize: '11px',
-  },
-  noWorkers: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.5)',
-    padding: '20px',
-  },
-  legend: {
-    display: 'flex',
-    gap: '20px',
-    marginTop: '20px',
-    paddingTop: '16px',
-    borderTop: '1px solid rgba(255,255,255,0.1)',
-    fontSize: '11px',
-    color: 'rgba(255,255,255,0.7)',
-    flexWrap: 'wrap',
-  },
-  legendDot: {
-    display: 'inline-block',
-    width: '10px',
-    height: '10px',
-    borderRadius: '2px',
-    marginRight: '6px',
-  },
+  container: { background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', minHeight: '100vh', padding: '20px', fontFamily: 'Inter, sans-serif' },
+  backButtonContainer: { marginBottom: '20px' },
+  backButton: { padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '14px' },
+  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+  loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
+  calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
+  navButton: { padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '16px' },
+  monthTitle: { fontSize: '20px', fontWeight: '600', color: '#ffffff', margin: 0 },
+  viewButtons: { display: 'flex', gap: '8px' },
+  viewButton: { padding: '6px 14px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: '#ffffff', cursor: 'pointer', fontSize: '12px' },
+  weekHeaders: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '8px' },
+  weekDay: { textAlign: 'center', padding: '8px', color: 'rgba(255,255,255,0.8)', fontSize: '12px', fontWeight: '500' },
+  calendarGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' },
+  dayCell: { minHeight: '100px', padding: '8px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
+  dayNumber: { fontSize: '14px', fontWeight: '500', color: '#ffffff', marginBottom: '8px' },
+  dayTasks: { display: 'flex', flexDirection: 'column', gap: '4px' },
+  taskDot: { fontSize: '10px', padding: '2px 6px', borderRadius: '4px', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' },
+  moreTasks: { fontSize: '10px', color: 'rgba(255,255,255,0.5)', padding: '2px 4px' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '500px', width: '90%', maxHeight: '80vh', overflowY: 'auto' },
+  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  modalTitle: { fontSize: '20px', fontWeight: '600', color: '#ffffff', margin: 0 },
+  closeButton: { background: 'none', border: 'none', color: '#ffffff', fontSize: '20px', cursor: 'pointer', padding: '4px 8px' },
+  tasksList: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  taskCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', cursor: 'pointer', transition: 'all 0.2s' },
+  taskCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
+  taskTitle: { fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: 0 },
+  taskDetails: { display: 'flex', gap: '16px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', flexWrap: 'wrap' },
+  taskMeta: { fontSize: '11px', color: '#00d1ff' },
+  taskStatusBadge: { padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '600', color: '#ffffff' },
+  noTasks: { textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '40px' },
+  taskInfoCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', marginBottom: '20px' },
+  taskInfoRow: { display: 'flex', gap: '20px', marginBottom: '8px', fontSize: '13px', color: '#ffffff', flexWrap: 'wrap' },
+  taskDescription: { fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginTop: '8px' },
+  editSection: { background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', marginBottom: '20px' },
+  editHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
+  editTitle: { fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: 0 },
+  editButton: { padding: '4px 12px', background: '#3b82f6', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: 'pointer', fontSize: '11px' },
+  cancelEditButton: { padding: '4px 12px', background: '#6b7280', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: 'pointer', fontSize: '11px' },
+  editForm: { marginTop: '12px' },
+  input: { width: '100%', padding: '8px 12px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', fontSize: '12px', boxSizing: 'border-box' },
+  textarea: { width: '100%', padding: '8px 12px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', fontFamily: 'inherit', fontSize: '12px', resize: 'vertical', boxSizing: 'border-box' },
+  timeRow: { display: 'flex', gap: '10px', marginBottom: '10px' },
+  editButtons: { display: 'flex', gap: '10px', marginTop: '12px' },
+  saveButton: { flex: 1, padding: '8px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '12px' },
+  cancelTaskButton: { flex: 1, padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '12px' },
+  taskQuickInfo: { marginTop: '8px', fontSize: '12px', color: 'rgba(255,255,255,0.8)' },
+  workersSection: { marginTop: '20px' },
+  workersTitle: { fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' },
+  workersList: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  workerCard: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px 12px' },
+  workerInfo: { display: 'flex', alignItems: 'center', gap: '12px' },
+  workerName: { color: '#ffffff', fontSize: '13px', fontWeight: '500' },
+  workerStatus: { fontSize: '11px', color: '#10b981', background: 'rgba(16,185,129,0.2)', padding: '2px 8px', borderRadius: '12px' },
+  removeButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 10px', color: '#ef4444', cursor: 'pointer', fontSize: '11px' },
+  noWorkers: { textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '20px' },
+  legend: { display: 'flex', gap: '20px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', color: 'rgba(255,255,255,0.7)', flexWrap: 'wrap' },
+  legendDot: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', marginRight: '6px' },
 };
 
 export default SmartCalendar;
