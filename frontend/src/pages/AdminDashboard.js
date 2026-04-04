@@ -56,72 +56,53 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   }, []);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const adminData = await adminRes.json();
-      const fetchedAssignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-      setAssignedBranchIds(fetchedAssignedBranchIds);
-      
-      if (fetchedAssignedBranchIds.length === 0) {
-        setTasks([]);
-        setEmployees([]);
-        setApplications([]);
-        setStats({
-          totalEmployees: 0,
-          totalTasks: 0,
-          pendingApplications: 0,
-          approvedShifts: 0
-        });
-        setLoading(false);
-        return;
-      }
-      
-      const [tasksRes, employeesRes, appsRes, jobsRes, branchesRes] = await Promise.all([
-        fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks?branches=${fetchedAssignedBranchIds.join(',')}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`https://taskbridge-production-9d91.up.railway.app/api/users?role=employee&branches=${fetchedAssignedBranchIds.join(',')}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/pending?branches=${fetchedAssignedBranchIds.join(',')}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
-      
-      const tasksData = await tasksRes.json();
-      const employeesData = await employeesRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      const branchesData = await branchesRes.json();
-      
-      setTasks(tasksData.data || []);
-      setEmployees(employeesData.data || []);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setBranches(branchesData.data || []);
-      setStats({
-        totalEmployees: employeesData.data?.length || 0,
-        totalTasks: tasksData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        approvedShifts: 0
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    console.log('=== ADMIN DASHBOARD DEBUG ===');
+    
+    const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const adminData = await adminRes.json();
+    console.log('Admin user data:', adminData);
+    
+    const fetchedAssignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+    console.log('Assigned branch IDs:', fetchedAssignedBranchIds);
+    setAssignedBranchIds(fetchedAssignedBranchIds);
+    
+    if (fetchedAssignedBranchIds.length === 0) {
+      console.log('No branches assigned, showing empty data');
+      setTasks([]);
+      setEmployees([]);
+      setApplications([]);
       setLoading(false);
+      return;
     }
-  };
+    
+    const tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?branches=${fetchedAssignedBranchIds.join(',')}`;
+    console.log('Fetching tasks from:', tasksUrl);
+    
+    const tasksRes = await fetch(tasksUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const tasksData = await tasksRes.json();
+    console.log('Tasks data:', tasksData);
+    console.log('Number of tasks:', tasksData.data?.length || 0);
+    
+    setTasks(tasksData.data || []);
+    setStats({
+      totalEmployees: employeesData.data?.length || 0,
+      totalTasks: tasksData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      approvedShifts: 0
+    });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {

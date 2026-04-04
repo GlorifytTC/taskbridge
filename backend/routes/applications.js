@@ -22,7 +22,7 @@ router.get('/pending', authorize('admin', 'superadmin'), getPendingApplications)
 router.put('/:id/approve', authorize('admin', 'superadmin'), approveApplication);
 router.put('/:id/reject', authorize('admin', 'superadmin'), rejectApplication);
 
-// Super Admin/Master routes
-router.get('/', protect, authorize('superadmin', 'master'), getAllApplications);
+// Super Admin/Master/Admin routes - FIXED: Added 'admin' to authorize
+router.get('/', protect, authorize('superadmin', 'master', 'admin'), getAllApplications);
 
 module.exports = router;

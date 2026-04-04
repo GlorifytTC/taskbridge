@@ -31,6 +31,8 @@ const SmartCalendar = ({ user, onNavigate }) => {
   setLoading(true);
   try {
     const token = localStorage.getItem('token');
+    console.log('=== CALENDAR DEBUG ===');
+    console.log('User role:', user?.role);
     
     let startDate, endDate;
     if (viewMode === 'month') {
@@ -48,30 +50,42 @@ const SmartCalendar = ({ user, onNavigate }) => {
     
     // If user is admin, filter by assigned branches
     if (user?.role === 'admin') {
+      console.log('Fetching admin assigned branches...');
       const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const adminData = await adminRes.json();
+      console.log('Admin data:', adminData);
+      
       const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+      console.log('Assigned branch IDs:', assignedBranchIds);
       
       if (assignedBranchIds.length > 0) {
         url += `&branches=${assignedBranchIds.join(',')}`;
       }
     }
     
+    console.log('Fetching tasks from URL:', url);
+    
     const tasksRes = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const tasksData = await tasksRes.json();
-    
-    // Also fetch applications to show approved workers
-    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const appsData = await appsRes.json();
-    setApplications(appsData.data || []);
+    console.log('Tasks data received:', tasksData);
+    console.log('Number of tasks:', tasksData.data?.length || 0);
     
     setTasks(tasksData.data || []);
+    
+    // Fetch applications for the calendar (to show worker counts)
+    if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
+      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const appsData = await appsRes.json();
+      console.log('Applications data:', appsData);
+      setApplications(appsData.data || []);
+    }
+    
   } catch (error) {
     console.error('Error fetching calendar data:', error);
   } finally {
