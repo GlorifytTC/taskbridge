@@ -314,19 +314,20 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteEmployee = async (empId, empName) => {
-    if (!confirm(`Delete ${empName}? This cannot be undone.`)) return;
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      alert('Failed to delete employee');
-    }
-  };
+  if (!confirm(`Delete ${empName}? This cannot be undone.`)) return;
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    alert('Employee deleted successfully!');
+    fetchDashboardData();
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    alert('Failed to delete employee');
+  }
+};
 
   const handleDeleteTask = async (taskId, taskTitle) => {
     if (!confirm(`Delete "${taskTitle}"?`)) return;

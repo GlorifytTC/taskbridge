@@ -683,20 +683,20 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteEmployee = async (empId, empName) => {
-    if (!confirm(language === 'en' ? `Delete ${empName}? This cannot be undone.` : `Radera ${empName}? Detta går inte att ångra.`)) return;
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      showToast(language === 'en' ? 'Failed to delete employee' : 'Kunde inte ta bort anställd', 'error');
-    }
-  };
+  if (!confirm(language === 'en' ? `Delete ${empName}? This cannot be undone.` : `Radera ${empName}? Detta går inte att ångra.`)) return;
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
+    fetchDashboardData();
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    showToast(language === 'en' ? 'Failed to delete employee' : 'Kunde inte ta bort anställd', 'error');
+  }
+};
 
   const handleDeleteBranch = async (branchId, branchName) => {
     if (!confirm(language === 'en' ? `Delete ${branchName}? This affects all employees.` : `Radera ${branchName}? Detta påverkar alla anställda.`)) return;
@@ -1048,37 +1048,43 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'employees' && (
-          <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
-              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
-            </div>
-            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Job Role</th><th style={styles.th}>Branch</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
-                    <tr key={emp._id} style={styles.tableRow}>
-                      <td style={styles.td}>{emp.name}</td>
-                      <td style={styles.td}>{emp.email}</td>
-                      <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
-                      <td style={styles.td}>{emp.branch?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td style={styles.td}>
-                    <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
-                    <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton}>🗑️</button>
-                  </td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+  <div>
+    <div style={styles.sectionHeader}>
+      <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
+      <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
+    </div>
+    <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+    <div style={styles.tableContainer}>
+      <table style={styles.table}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={styles.th}>Name</th>
+            <th style={styles.th}>Email</th>
+            <th style={styles.th}>Job Role</th>
+            <th style={styles.th}>Branch</th>
+            <th style={styles.th}>Status</th>
+            <th style={styles.th}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
+            <tr key={emp._id} style={styles.tableRow}>
+              <td style={styles.td}>{emp.name}</td>
+              <td style={styles.td}>{emp.email}</td>
+              <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
+              <td style={styles.td}>{emp.branch?.name || '-'}</td>
+              <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+              <td style={styles.td}>
+                <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton} title="Reset Password">🔑</button>
+                <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
         {activeTab === 'branches' && (
           <div>
