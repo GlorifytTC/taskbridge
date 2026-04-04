@@ -543,7 +543,7 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
               <td style={styles.td}>
                 <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
                 <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton}>🗑️</button>
-              </td>
+                </td>
             </tr>
           ))}
         </tbody>
