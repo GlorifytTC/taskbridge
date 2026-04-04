@@ -32,13 +32,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
   try {
     const token = localStorage.getItem('token');
     
-    // Get admin's assigned branches
-    const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const adminData = await adminRes.json();
-    const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-    
     let startDate, endDate;
     if (viewMode === 'month') {
       startDate = startOfMonth(currentDate);
@@ -51,12 +44,32 @@ const SmartCalendar = ({ user, onNavigate }) => {
       endDate = currentDate;
     }
     
-    // Fetch only tasks from assigned branches
-    const tasksRes = await fetch(
-      `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&branches=${assignedBranchIds.join(',')}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
+    let url = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+    
+    // If user is admin, filter by assigned branches
+    if (user?.role === 'admin') {
+      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const adminData = await adminRes.json();
+      const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+      
+      if (assignedBranchIds.length > 0) {
+        url += `&branches=${assignedBranchIds.join(',')}`;
+      }
+    }
+    
+    const tasksRes = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     const tasksData = await tasksRes.json();
+    
+    // Also fetch applications to show approved workers
+    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const appsData = await appsRes.json();
+    setApplications(appsData.data || []);
     
     setTasks(tasksData.data || []);
   } catch (error) {

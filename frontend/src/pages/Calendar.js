@@ -19,54 +19,57 @@ const Calendar = ({ onBack }) => {
   }, []);
 
   const fetchEvents = async () => {
-    try {
-      let tasksData;
+  try {
+    let tasksData;
+    const token = localStorage.getItem('token');
+    
+    if (user.role === 'employee') {
+      const response = await api.get('/applications/my-applications');
+      tasksData = response.data.data
+        .filter(app => app.status === 'approved')
+        .map(app => app.task);
+    } else if (user.role === 'admin') {
+      // Get admin's assigned branches
+      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const adminData = await adminRes.json();
+      const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
       
-      if (user.role === 'employee') {
-        // Employee: only see their approved shifts
-        const response = await api.get('/applications/my-applications');
-        tasksData = response.data.data
-          .filter(app => app.status === 'approved')
-          .map(app => app.task);
-      } else if (user.role === 'admin') {
-        // Admin: only see tasks from their assigned branches
-        const adminRes = await api.get('/auth/me');
-        const assignedBranchIds = adminRes.data.user.assignedBranches?.map(b => b._id) || [];
-        
-        if (assignedBranchIds.length > 0) {
-          const response = await api.get(`/tasks?branches=${assignedBranchIds.join(',')}`);
-          tasksData = response.data.data;
-        } else {
-          tasksData = [];
-        }
-      } else {
-        // Super Admin / Master: see all tasks
-        const response = await api.get('/tasks');
+      if (assignedBranchIds.length > 0) {
+        const response = await api.get(`/tasks?branches=${assignedBranchIds.join(',')}`);
         tasksData = response.data.data;
+      } else {
+        tasksData = [];
       }
-
-      const formattedEvents = tasksData.map(task => ({
-        id: task._id,
-        title: task.title,
-        start: new Date(`${moment(task.date).format('YYYY-MM-DD')}T${task.startTime}`),
-        end: new Date(`${moment(task.date).format('YYYY-MM-DD')}T${task.endTime}`),
-        allDay: false,
-        status: task.status,
-        location: task.location,
-        description: task.description,
-        branch: task.branch?.name,
-        jobRole: task.jobDescription?.name,
-        currentEmployees: task.currentEmployees,
-        maxEmployees: task.maxEmployees
-      }));
-
-      setEvents(formattedEvents);
-    } catch (error) {
-      console.error('Failed to fetch events', error);
-    } finally {
-      setLoading(false);
+    } else {
+      // Super Admin / Master: see all tasks
+      const response = await api.get('/tasks');
+      tasksData = response.data.data;
     }
-  };
+
+    const formattedEvents = tasksData.map(task => ({
+      id: task._id,
+      title: task.title,
+      start: new Date(`${moment(task.date).format('YYYY-MM-DD')}T${task.startTime}`),
+      end: new Date(`${moment(task.date).format('YYYY-MM-DD')}T${task.endTime}`),
+      allDay: false,
+      status: task.status,
+      location: task.location,
+      description: task.description,
+      branch: task.branch?.name,
+      jobRole: task.jobDescription?.name,
+      currentEmployees: task.currentEmployees,
+      maxEmployees: task.maxEmployees
+    }));
+
+    setEvents(formattedEvents);
+  } catch (error) {
+    console.error('Failed to fetch events', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const eventStyleGetter = (event) => {
     let backgroundColor = '#4F46E5';
