@@ -30,8 +30,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      console.log('=== CALENDAR DEBUG ===');
-      console.log('User role:', user?.role);
       
       let startDate, endDate;
       if (viewMode === 'month') {
@@ -45,42 +43,42 @@ const SmartCalendar = ({ user, onNavigate }) => {
         endDate = currentDate;
       }
       
-      let url = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      let tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
       
       if (user?.role === 'admin') {
-        console.log('Fetching admin assigned branches...');
         const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const adminData = await adminRes.json();
-        console.log('Admin data:', adminData);
-        
         const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-        console.log('Assigned branch IDs:', assignedBranchIds);
         
         if (assignedBranchIds.length > 0) {
-          url += `&branches=${assignedBranchIds.join(',')}`;
+          tasksUrl += `&branches=${assignedBranchIds.join(',')}`;
         }
       }
       
-      console.log('Fetching tasks from URL:', url);
-      
-      const [tasksRes, appsRes, employeesRes] = await Promise.all([
-        fetch(url, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
+      // Fetch tasks
+      const tasksRes = await fetch(tasksUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const employeesData = await employeesRes.json();
-      
-      console.log('Tasks data:', tasksData);
-      console.log('Applications data:', appsData);
-      console.log('Employees data:', employeesData);
-      
       setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
+      
+      // Fetch ALL applications for the organization (for admin/superadmin to see assigned workers)
+      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
+        const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const appsData = await appsRes.json();
+        console.log('Fetched applications:', appsData.data);
+        setApplications(appsData.data || []);
+      }
+      
+      // Fetch employees for names
+      const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const employeesData = await employeesRes.json();
       setEmployees(employeesData.data || []);
       
     } catch (error) {
@@ -95,7 +93,14 @@ const SmartCalendar = ({ user, onNavigate }) => {
   };
 
   const getApplicationsForTask = (taskId) => {
-    return applications.filter(app => app.task === taskId && app.status === 'approved');
+    // Filter applications that match the task ID and are approved
+    const approvedApps = applications.filter(app => {
+      const taskMatch = app.task === taskId || app.task?._id === taskId;
+      const isApproved = app.status === 'approved';
+      return taskMatch && isApproved;
+    });
+    console.log(`Applications for task ${taskId}:`, approvedApps);
+    return approvedApps;
   };
 
   const getEmployeeName = (employeeId) => {
@@ -420,17 +425,20 @@ const SmartCalendar = ({ user, onNavigate }) => {
                 {getApplicationsForTask(selectedTask._id).length === 0 ? (
                   <p style={styles.noWorkers}>No workers assigned yet</p>
                 ) : (
-                  getApplicationsForTask(selectedTask._id).map(app => (
-                    <div key={app._id} style={styles.workerCard}>
-                      <div style={styles.workerInfo}>
-                        <div style={styles.workerName}>{getEmployeeName(app.employee)}</div>
-                        <div style={styles.workerStatus}>✅ Approved</div>
+                  getApplicationsForTask(selectedTask._id).map(app => {
+                    const employeeName = getEmployeeName(app.employee);
+                    return (
+                      <div key={app._id} style={styles.workerCard}>
+                        <div style={styles.workerInfo}>
+                          <div style={styles.workerName}>{employeeName}</div>
+                          <div style={styles.workerStatus}>✅ Approved</div>
+                        </div>
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
+                          <button onClick={() => handleRemoveEmployee(app.employee, app._id)} style={styles.removeButton}>Remove</button>
+                        )}
                       </div>
-                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
-                        <button onClick={() => handleRemoveEmployee(app.employee, app._id)} style={styles.removeButton}>Remove</button>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
