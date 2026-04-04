@@ -133,10 +133,13 @@ exports.getTasks = async (req, res) => {
       // If admin has assigned branches, only show tasks from those branches
       if (req.user.assignedBranches && req.user.assignedBranches.length > 0) {
         query.branch = { $in: req.user.assignedBranches };
-      } else if (req.query.branches) {
-        const branches = req.query.branches.split(',');
-        query.branch = { $in: branches };
       }
+    }
+    
+    // Branch filter from query params (for Super Admin filtering by branch)
+    if (req.query.branches) {
+      const branches = req.query.branches.split(',');
+      query.branch = { $in: branches };
     }
     
     // Date filter

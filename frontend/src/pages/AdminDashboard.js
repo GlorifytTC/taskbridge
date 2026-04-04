@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const AdminDashboard = ({ user, onLogout, onNavigate }) => {
+  const [assignedBranchIds, setAssignedBranchIds] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
@@ -31,12 +32,17 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [tasks, setTasks] = useState([]);
   const [applications, setApplications] = useState([]);
   const [jobDescriptions, setJobDescriptions] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [formData, setFormData] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+
+  const showMessage = (text, type = 'success') => {
+    alert(text);
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -50,54 +56,72 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   }, []);
 
   const fetchDashboardData = async () => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Get admin's assigned branches
-    const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const adminData = await adminRes.json();
-    const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
-    
-    // Fetch only tasks from assigned branches
-    const tasksRes = await fetch(
-      `https://taskbridge-production-9d91.up.railway.app/api/tasks?branches=${assignedBranchIds.join(',')}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-    
-    // Fetch only employees from assigned branches
-    const employeesRes = await fetch(
-      `https://taskbridge-production-9d91.up.railway.app/api/users?role=employee&branches=${assignedBranchIds.join(',')}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-    
-    // Fetch applications for tasks in assigned branches
-    const appsRes = await fetch(
-      `https://taskbridge-production-9d91.up.railway.app/api/applications/pending?branches=${assignedBranchIds.join(',')}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-    
-    const tasksData = await tasksRes.json();
-    const employeesData = await employeesRes.json();
-    const appsData = await appsRes.json();
-    
-    setTasks(tasksData.data || []);
-    setEmployees(employeesData.data || []);
-    setApplications(appsData.data || []);
-    setStats({
-      totalEmployees: employeesData.data?.length || 0,
-      totalTasks: tasksData.data?.length || 0,
-      pendingApplications: appsData.data?.length || 0,
-      approvedShifts: 0
-    });
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const adminData = await adminRes.json();
+      const fetchedAssignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+      setAssignedBranchIds(fetchedAssignedBranchIds);
+      
+      if (fetchedAssignedBranchIds.length === 0) {
+        setTasks([]);
+        setEmployees([]);
+        setApplications([]);
+        setStats({
+          totalEmployees: 0,
+          totalTasks: 0,
+          pendingApplications: 0,
+          approvedShifts: 0
+        });
+        setLoading(false);
+        return;
+      }
+      
+      const [tasksRes, employeesRes, appsRes, jobsRes, branchesRes] = await Promise.all([
+        fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks?branches=${fetchedAssignedBranchIds.join(',')}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`https://taskbridge-production-9d91.up.railway.app/api/users?role=employee&branches=${fetchedAssignedBranchIds.join(',')}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/pending?branches=${fetchedAssignedBranchIds.join(',')}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+      
+      const tasksData = await tasksRes.json();
+      const employeesData = await employeesRes.json();
+      const appsData = await appsRes.json();
+      const jobsData = await jobsRes.json();
+      const branchesData = await branchesRes.json();
+      
+      setTasks(tasksData.data || []);
+      setEmployees(employeesData.data || []);
+      setApplications(appsData.data || []);
+      setJobDescriptions(jobsData.data || []);
+      setBranches(branchesData.data || []);
+      setStats({
+        totalEmployees: employeesData.data?.length || 0,
+        totalTasks: tasksData.data?.length || 0,
+        pendingApplications: appsData.data?.length || 0,
+        approvedShifts: 0
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
@@ -197,6 +221,12 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      
+      if (!assignedBranchIds.includes(formData.branch)) {
+        showMessage('You can only create tasks in your assigned branches', 'error');
+        return;
+      }
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
         method: 'POST',
         headers: {
@@ -207,16 +237,16 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
       });
       
       if (response.ok) {
-        alert('Task created successfully!');
+        showMessage('Task created successfully!', 'success');
         setShowCreateTaskModal(false);
         setFormData({});
         fetchDashboardData();
       } else {
-        alert('Failed to create task');
+        showMessage('Failed to create task', 'error');
       }
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Error creating task');
+      showMessage('Error creating task', 'error');
     }
   };
 
@@ -393,7 +423,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      {/* Header with Organization Logo */}
       <div style={styles.header}>
         <div style={styles.logoSection}>
           {logoPreview ? (
@@ -419,7 +448,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users"></i></div><div style={styles.statValueSmall}>{stats.totalEmployees}</div><div style={styles.statLabelSmall}>Employees</div></div>
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-tasks"></i></div><div style={styles.statValueSmall}>{stats.totalTasks}</div><div style={styles.statLabelSmall}>Tasks</div></div>
@@ -427,7 +455,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-check-circle"></i></div><div style={styles.statValueSmall}>{stats.approvedShifts}</div><div style={styles.statLabelSmall}>Approved Shifts</div></div>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent'}}>Home</button>
         <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>Staff</button>
@@ -437,7 +464,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent'}}>Reports</button>
       </div>
 
-      {/* Content */}
       <div style={styles.content}>
         {activeTab === 'dashboard' && (
           <div>
@@ -457,37 +483,41 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'employees' && (
-          <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Staff Management</h2>
-              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ Add Staff</button>
-            </div>
-            <input type="text" placeholder="Search staff..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Job Role</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                  {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
-                    <tr key={emp._id} style={styles.tableRow}>
-                      <td style={styles.td}>{emp.name}</td>
-                      <td style={styles.td}>{emp.email}</td>
-                      <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}>
-                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
-                        <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton}>🗑️</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+  <div>
+    <div style={styles.sectionHeader}>
+      <h2 style={styles.sectionTitle}>Staff Management</h2>
+      <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ Add Staff</button>
+    </div>
+    <input type="text" placeholder="Search staff..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+    <div style={styles.tableContainer}>
+      <table style={styles.table}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={styles.th}>Name</th>
+            <th style={styles.th}>Email</th>
+            <th style={styles.th}>Job Role</th>
+            <th style={styles.th}>Status</th>
+            <th style={styles.th}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
+            <tr key={emp._id} style={styles.tableRow}>
+              <td style={styles.td}>{emp.name}</td>
+              <td style={styles.td}>{emp.email}</td>
+              <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
+              <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+              <td style={styles.td}>
+                <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button>
+                <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton}>🗑️</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
         {activeTab === 'tasks' && (
           <div>
@@ -500,7 +530,7 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Title</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Role</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
-                    </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {tasks.map(task => (
@@ -527,7 +557,7 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <thead>
                   <tr style={styles.tableHeaderRow}>
                     <th style={styles.th}>Staff</th><th style={styles.th}>Task</th><th style={styles.th}>Date</th><th style={styles.th}>Time</th><th style={styles.th}>Actions</th>
-                    </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
@@ -560,7 +590,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
       </div>
 
-      {/* Create Employee Modal */}
       {showCreateEmployeeModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -582,14 +611,13 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      {/* Create Task Modal */}
       {showCreateTaskModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
           <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Create New Task</h2>
             <form onSubmit={handleCreateTask}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Task Title</label>
+                <label style={styles.label}>Task Title *</label>
                 <input type="text" placeholder="e.g., Morning Shift" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} style={styles.input} required />
               </div>
               <div style={styles.formGroup}>
@@ -598,21 +626,30 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
               </div>
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Date</label>
+                  <label style={styles.label}>Date *</label>
                   <input type="date" value={formData.date || ''} onChange={(e) => setFormData({...formData, date: e.target.value})} style={styles.input} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Start Time</label>
+                  <label style={styles.label}>Start Time *</label>
                   <input type="time" value={formData.startTime || ''} onChange={(e) => setFormData({...formData, startTime: e.target.value})} style={styles.input} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>End Time</label>
+                  <label style={styles.label}>End Time *</label>
                   <input type="time" value={formData.endTime || ''} onChange={(e) => setFormData({...formData, endTime: e.target.value})} style={styles.input} required />
                 </div>
               </div>
+              
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Branch *</label>
+                <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required>
+                  <option value="">Select Branch</option>
+                  {branches.filter(b => assignedBranchIds.includes(b._id)).map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+                </select>
+              </div>
+              
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Job Role</label>
+                  <label style={styles.label}>Job Role *</label>
                   <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
                     <option value="">Select Role</option>
                     {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
@@ -623,10 +660,12 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
                   <input type="number" placeholder="1" value={formData.maxEmployees || 1} onChange={(e) => setFormData({...formData, maxEmployees: parseInt(e.target.value)})} style={styles.input} min="1" />
                 </div>
               </div>
+              
               <div style={styles.formGroup}>
                 <label style={styles.label}>Location</label>
                 <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
               </div>
+              
               <div style={styles.modalButtons}>
                 <button type="button" onClick={() => setShowCreateTaskModal(false)} style={styles.cancelButton}>Cancel</button>
                 <button type="submit" style={styles.submitButton}>Create Task</button>
@@ -636,7 +675,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      {/* Profile Modal */}
       {showProfileModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -688,7 +726,6 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      {/* AI Chat Button */}
       <button style={styles.chatButton} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
