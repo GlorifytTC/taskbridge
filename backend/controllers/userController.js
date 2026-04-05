@@ -237,6 +237,9 @@ exports.createUser = async (req, res) => {
 // @access  Private/Admin/SuperAdmin
 exports.deleteUser = async (req, res) => {
   try {
+    console.log('Delete user request for ID:', req.params.id);
+    console.log('User role:', req.user.role);
+    
     const user = await User.findById(req.params.id);
     
     if (!user) {
@@ -246,6 +249,8 @@ exports.deleteUser = async (req, res) => {
       });
     }
     
+    console.log('Found user to delete:', user.name, user.email);
+    
     // Check if user is trying to delete themselves
     if (user._id.toString() === req.user.id.toString()) {
       return res.status(400).json({ 
@@ -254,7 +259,7 @@ exports.deleteUser = async (req, res) => {
       });
     }
     
-    // SuperAdmin can delete anyone in their org
+    // SuperAdmin can delete anyone
     // Admin can only delete employees (not other admins)
     if (req.user.role === 'admin' && user.role === 'admin') {
       return res.status(403).json({ 
@@ -263,35 +268,62 @@ exports.deleteUser = async (req, res) => {
       });
     }
     
-    // Delete ALL related data
-    await Application.deleteMany({ employee: user._id });
-    await Notification.deleteMany({ user: user._id });
-    await AuditLog.deleteMany({ user: user._id });
+    // Delete ALL related data (wrap in try-catch to avoid breaking)
+    try {
+      await Application.deleteMany({ employee: user._id });
+      console.log('Deleted applications for user');
+    } catch (err) {
+      console.log('No applications to delete or error:', err.message);
+    }
+    
+    try {
+      await Notification.deleteMany({ user: user._id });
+      console.log('Deleted notifications for user');
+    } catch (err) {
+      console.log('No notifications to delete or error:', err.message);
+    }
+    
+    try {
+      await AuditLog.deleteMany({ user: user._id });
+      console.log('Deleted audit logs for user');
+    } catch (err) {
+      console.log('No audit logs to delete or error:', err.message);
+    }
     
     // Remove user from tasks (set createdBy to null)
-    await Task.updateMany(
-      { createdBy: user._id },
-      { createdBy: null }
-    );
+    try {
+      await Task.updateMany(
+        { createdBy: user._id },
+        { createdBy: null }
+      );
+      console.log('Updated tasks created by user');
+    } catch (err) {
+      console.log('No tasks to update or error:', err.message);
+    }
     
     // HARD DELETE - completely remove from database
     await user.deleteOne();
+    console.log('User hard deleted from database');
     
-    // Log the deletion (using the user data we saved)
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'delete',
-      entityType: 'user',
-      entityId: req.params.id,
-      changes: { 
-        deleted: true,
-        userName: user.name,
-        userEmail: user.email
-      },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Log the deletion (but don't let this fail the whole operation)
+    try {
+      await AuditLog.create({
+        user: req.user.id,
+        organization: req.user.organization,
+        action: 'delete',
+        entityType: 'user',
+        entityId: req.params.id,
+        changes: { 
+          deleted: true,
+          userName: user.name,
+          userEmail: user.email
+        },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      });
+    } catch (err) {
+      console.log('Could not create audit log:', err.message);
+    }
     
     res.json({ 
       success: true, 
@@ -302,7 +334,8 @@ exports.deleteUser = async (req, res) => {
     console.error('Error deleting user:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Server error: ' + error.message 
+      message: 'Server error: ' + error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
