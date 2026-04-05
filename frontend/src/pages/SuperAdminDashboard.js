@@ -735,13 +735,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
     
     // Proceed with deletion
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
-      method: 'DELETE',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
+  method: 'DELETE',
+  headers: { 'Authorization': `Bearer ${token}` }
+});
     
     const data = await response.json();
     

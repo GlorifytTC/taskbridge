@@ -170,89 +170,37 @@ exports.deleteBranch = async (req, res) => {
     const branch = await Branch.findById(req.params.id);
     
     if (!branch) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Branch not found' 
-      });
+      return res.status(404).json({ message: 'Branch not found' });
     }
     
+    // Allow force delete with query parameter
     const forceDelete = req.query.force === 'true';
     
     // Check for employees
-    const employees = await User.find({ 
-      branch: branch._id,
-      role: 'employee' 
-    });
-    
+    const employees = await User.find({ branch: branch._id, role: 'employee' });
     const tasks = await Task.find({ branch: branch._id });
     
     if ((employees.length > 0 || tasks.length > 0) && !forceDelete) {
       return res.status(400).json({ 
-        success: false, 
-        message: `Cannot delete branch: ${employees.length} employee(s) and ${tasks.length} task(s) are assigned. Use ?force=true to delete everything.`,
-        employees: employees.length,
-        tasks: tasks.length
+        message: `Cannot delete: ${employees.length} employees and ${tasks.length} tasks assigned. Use ?force=true` 
       });
     }
     
-    // FORCE DELETE - remove all related data
+    // Force delete - remove related data
     if (forceDelete) {
-      // Delete all employees in this branch
-      for (const employee of employees) {
-        await Application.deleteMany({ employee: employee._id });
-        await Notification.deleteMany({ user: employee._id });
-        await employee.deleteOne();
-      }
-      
-      // Delete all tasks in this branch
-      for (const task of tasks) {
-        await Application.deleteMany({ task: task._id });
-        await task.deleteOne();
-      }
+      await User.deleteMany({ branch: branch._id });
+      await Task.deleteMany({ branch: branch._id });
+      await Application.deleteMany({ task: { $in: tasks.map(t => t._id) } });
     }
     
-    // Remove branch from admins' assignments
-    await User.updateMany(
-      { assignedBranches: branch._id },
-      { $pull: { assignedBranches: branch._id } }
-    );
-    
-    // Delete the branch
     await branch.deleteOne();
-    
-    // Create audit log
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'delete',
-      entityType: 'branch',
-      entityId: branch._id,
-      changes: { 
-        deleted: true,
-        branchName: branch.name,
-        forceDelete: forceDelete,
-        deletedEmployees: employees.length,
-        deletedTasks: tasks.length
-      },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
-    res.json({ 
-      success: true, 
-      message: `Branch deleted successfully${forceDelete ? ' with all employees and tasks' : ''}`,
-      deletedEmployees: employees.length,
-      deletedTasks: tasks.length
-    });
+    res.json({ message: 'Branch deleted successfully' });
     
   } catch (error) {
-    console.error('Error deleting branch:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // @desc    Assign admin to branch
 // @route   POST /api/branches/:id/assign-admin
