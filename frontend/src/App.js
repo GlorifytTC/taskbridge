@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
 
 
+
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
