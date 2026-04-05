@@ -3,23 +3,22 @@ const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 
 
-// @desc    Get all users
-// @route   GET /api/users
-// @access  Private/Admin
 exports.getUsers = async (req, res) => {
   try {
-    const query = { organization: req.user.organization };
+    const query = { 
+      organization: req.user.organization,
+      // Only show users that are NOT deleted
+      deletedAt: { $eq: null }  // This excludes soft-deleted users
+    };
     
-    if (req.user.role === 'admin') {
-      query.role = 'employee';
+    // Add role filter
+    if (req.query.role) {
+      query.role = req.query.role;
     }
     
     const users = await User.find(query)
-      .select('-password')
       .populate('branch', 'name')
-      .populate('jobDescription', 'name')
-      .populate('assignedBranches', 'name')
-      .sort({ createdAt: -1 });
+      .populate('jobDescription', 'name');
     
     res.json({
       success: true,
@@ -235,45 +234,50 @@ exports.createUser = async (req, res) => {
 
 // @desc    Delete user (HARD DELETE - completely remove)
 // @route   DELETE /api/users/:id
-// @access  Private/Admin
+// @access  Private/Admin/SuperAdmin
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
     }
     
-    // Check authorization
-    if (user.organization.toString() !== req.user.organization.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-    
-    // Don't allow deleting yourself
+    // Check if user is trying to delete themselves
     if (user._id.toString() === req.user.id.toString()) {
-      return res.status(400).json({ message: 'Cannot delete your own account' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot delete your own account' 
+      });
     }
     
-    // Delete ALL related data before deleting user
-    // 1. Delete user's applications to tasks
+    // SuperAdmin can delete anyone in their org
+    // Admin can only delete employees (not other admins)
+    if (req.user.role === 'admin' && user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Admins cannot delete other admins' 
+      });
+    }
+    
+    // Delete ALL related data
     await Application.deleteMany({ employee: user._id });
-    
-    // 2. Delete user's notifications
     await Notification.deleteMany({ user: user._id });
-    
-    // 3. Delete user's audit logs
     await AuditLog.deleteMany({ user: user._id });
     
-    // 4. Remove user from any tasks (if assigned as createdBy)
+    // Remove user from tasks (set createdBy to null)
     await Task.updateMany(
       { createdBy: user._id },
       { createdBy: null }
     );
     
-    // 5. HARD DELETE the user (this actually removes them from database)
+    // HARD DELETE - completely remove from database
     await user.deleteOne();
     
-    // Create audit log for the deletion (use the user data we saved)
+    // Log the deletion (using the user data we saved)
     await AuditLog.create({
       user: req.user.id,
       organization: req.user.organization,
@@ -295,8 +299,11 @@ exports.deleteUser = async (req, res) => {
     });
     
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error deleting user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
