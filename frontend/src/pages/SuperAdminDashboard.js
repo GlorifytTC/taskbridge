@@ -709,12 +709,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 };
 
   const handleDeleteBranch = async (branchId, branchName) => {
-  if (!confirm(language === 'en' ? `Delete ${branchName}? This will delete all employees and tasks in this branch.` : `Radera ${branchName}? Detta raderar alla anställda och uppgifter i denna avdelning.`)) return;
+  if (!confirm(`Delete ${branchName}? This will delete all employees and tasks in this branch.`)) return;
   
   try {
     const token = localStorage.getItem('token');
     
-    // Delete directly with force=true
     const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
@@ -723,14 +722,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     const data = await response.json();
     
     if (response.ok) {
-      showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
+      alert('Branch deleted successfully!');
       fetchDashboardData();
     } else {
-      showToast(data.message || (language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning'), 'error');
+      alert(data.message || 'Failed to delete branch');
     }
   } catch (error) {
     console.error('Error deleting branch:', error);
-    showToast(language === 'en' ? 'Error deleting branch' : 'Fel vid borttagning av avdelning', 'error');
+    alert('Error deleting branch');
   }
 };
 

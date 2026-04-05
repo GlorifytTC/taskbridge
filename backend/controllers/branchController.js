@@ -1,5 +1,8 @@
 const Branch = require('../models/Branch');
 const User = require('../models/User');
+const Task = require('../models/Task');
+const Application = require('../models/Application');
+const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 
 // @desc    Create branch
@@ -162,42 +165,78 @@ exports.checkBranchRelations = async (req, res) => {
   }
 };
 
-// @desc    Delete branch (with force option)
-// @route   DELETE /api/branches/:id?force=true
+// @desc    Delete branch
+// @route   DELETE /api/branches/:id
 // @access  Private/Admin/SuperAdmin
 exports.deleteBranch = async (req, res) => {
   try {
     const branch = await Branch.findById(req.params.id);
     
     if (!branch) {
-      return res.status(404).json({ message: 'Branch not found' });
-    }
-    
-    // Allow force delete with query parameter
-    const forceDelete = req.query.force === 'true';
-    
-    // Check for employees
-    const employees = await User.find({ branch: branch._id, role: 'employee' });
-    const tasks = await Task.find({ branch: branch._id });
-    
-    if ((employees.length > 0 || tasks.length > 0) && !forceDelete) {
-      return res.status(400).json({ 
-        message: `Cannot delete: ${employees.length} employees and ${tasks.length} tasks assigned. Use ?force=true` 
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Branch not found' 
       });
     }
     
-    // Force delete - remove related data
-    if (forceDelete) {
-      await User.deleteMany({ branch: branch._id });
-      await Task.deleteMany({ branch: branch._id });
-      await Application.deleteMany({ task: { $in: tasks.map(t => t._id) } });
+    // Force delete if ?force=true is in the URL
+    const forceDelete = req.query.force === 'true';
+    
+    // Check for employees in this branch
+    const employees = await User.find({ 
+      branch: branch._id,
+      role: 'employee' 
+    });
+    
+    // Check for tasks in this branch  
+    const tasks = await Task.find({ branch: branch._id });
+    
+    // If there are employees or tasks and not force delete, block deletion
+    if ((employees.length > 0 || tasks.length > 0) && !forceDelete) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete branch: ${employees.length} employee(s) and ${tasks.length} task(s) assigned. Use ?force=true to delete everything.`
+      });
     }
     
+    // FORCE DELETE - remove all related data
+    if (forceDelete) {
+      // Delete all applications for tasks in this branch
+      for (const task of tasks) {
+        await Application.deleteMany({ task: task._id });
+      }
+      
+      // Delete all tasks in this branch
+      await Task.deleteMany({ branch: branch._id });
+      
+      // Delete all employees in this branch
+      for (const employee of employees) {
+        await Application.deleteMany({ employee: employee._id });
+        await Notification.deleteMany({ user: employee._id });
+        await employee.deleteOne();
+      }
+    }
+    
+    // Remove branch from any admins' assignedBranches
+    await User.updateMany(
+      { assignedBranches: branch._id },
+      { $pull: { assignedBranches: branch._id } }
+    );
+    
+    // Delete the branch
     await branch.deleteOne();
-    res.json({ message: 'Branch deleted successfully' });
+    
+    res.json({ 
+      success: true, 
+      message: 'Branch deleted successfully' 
+    });
     
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error deleting branch:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
