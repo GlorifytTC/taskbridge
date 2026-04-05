@@ -90,26 +90,18 @@ function getPlanPrice(plan, months) {
 
 
 
-// @desc    Get all users for an organization
-// @route   GET /api/organizations/:id/users
-// @access  Private/Master
+// In your user controller, when fetching users
 exports.getOrganizationUsers = async (req, res) => {
   try {
-    const User = require('../models/User');
-    const users = await User.find({ organization: req.params.id })
-      .select('-password')
-      .sort({ createdAt: -1 });
+    const users = await User.find({ 
+      organization: req.params.orgId,
+      // Only get users that are NOT soft-deleted
+      deletedAt: { $eq: null }  // Add this line!
+    });
     
-    res.json({
-      success: true,
-      users: users
-    });
+    res.json({ success: true, data: users });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

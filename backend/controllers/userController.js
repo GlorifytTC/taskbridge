@@ -233,85 +233,70 @@ exports.createUser = async (req, res) => {
 };
 
 
-// @desc    Delete user
+// @desc    Delete user (HARD DELETE - completely remove)
 // @route   DELETE /api/users/:id
-// @access  Private/Admin/SuperAdmin/Master
+// @access  Private/Admin
 exports.deleteUser = async (req, res) => {
   try {
-    console.log('🗑️ Delete user request received');
-    console.log('User ID to delete:', req.params.id);
-    console.log('Requesting user role:', req.user.role);
-    console.log('Requesting user ID:', req.user.id);
+    const user = await User.findById(req.params.id);
     
-    const userToDelete = await User.findById(req.params.id);
-    
-    if (!userToDelete) {
-      console.log('❌ User not found');
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
     
-    console.log('User found:', userToDelete.email, 'Role:', userToDelete.role);
-    
-    // Allow deletion based on role
-    let allowed = false;
-    
-    if (req.user.role === 'master') {
-      allowed = true;
-      console.log('✅ Master user - allowed');
-    } else if (req.user.role === 'superadmin') {
-      if (userToDelete.role !== 'superadmin') {
-        allowed = true;
-        console.log('✅ SuperAdmin - allowed (not deleting superadmin)');
-      } else {
-        console.log('❌ SuperAdmin cannot delete another superadmin');
-      }
-    } else if (req.user.role === 'admin') {
-      if (userToDelete.role === 'employee') {
-        allowed = true;
-        console.log('✅ Admin - allowed (deleting employee)');
-      } else {
-        console.log('❌ Admin can only delete employees');
-      }
+    // Check authorization
+    if (user.organization.toString() !== req.user.organization.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
     }
     
-    if (!allowed) {
-      console.log('❌ Not authorized to delete this user');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Not authorized to delete this user' 
-      });
+    // Don't allow deleting yourself
+    if (user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ message: 'Cannot delete your own account' });
     }
     
-    // Cannot delete yourself
-    if (userToDelete._id.toString() === req.user.id) {
-      console.log('❌ Cannot delete yourself');
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot delete your own account' 
-      });
-    }
+    // Delete ALL related data before deleting user
+    // 1. Delete user's applications to tasks
+    await Application.deleteMany({ employee: user._id });
     
-    // Soft delete - anonymize data
-    userToDelete.name = `Deleted User ${userToDelete._id}`;
-    userToDelete.email = `deleted_${userToDelete._id}@deleted.com`;
-    userToDelete.isActive = false;
-    userToDelete.deletedAt = Date.now();
-    userToDelete.personalDataDeleted = true;
-    await userToDelete.save();
+    // 2. Delete user's notifications
+    await Notification.deleteMany({ user: user._id });
     
-    console.log('✅ User deleted successfully');
+    // 3. Delete user's audit logs
+    await AuditLog.deleteMany({ user: user._id });
+    
+    // 4. Remove user from any tasks (if assigned as createdBy)
+    await Task.updateMany(
+      { createdBy: user._id },
+      { createdBy: null }
+    );
+    
+    // 5. HARD DELETE the user (this actually removes them from database)
+    await user.deleteOne();
+    
+    // Create audit log for the deletion (use the user data we saved)
+    await AuditLog.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      action: 'delete',
+      entityType: 'user',
+      entityId: req.params.id,
+      changes: { 
+        deleted: true,
+        userName: user.name,
+        userEmail: user.email
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     
     res.json({ 
       success: true, 
-      message: 'User deleted successfully' 
+      message: 'User permanently deleted from the system' 
     });
     
   } catch (error) {
-    console.error('❌ Error deleting user:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
