@@ -7,7 +7,7 @@ const {
   getBranch,
   updateBranch,
   deleteBranch,
-  assignAdmin
+  assignAdmin,
   checkBranchRelations  
 } = require('../controllers/branchController');
 
