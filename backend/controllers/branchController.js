@@ -135,46 +135,87 @@ exports.updateBranch = async (req, res) => {
   }
 };
 
-// @desc    Delete branch
+// @desc    Delete branch (HARD DELETE - completely remove)
 // @route   DELETE /api/branches/:id
-// @access  Private/SuperAdmin
+// @access  Private/Admin/SuperAdmin
 exports.deleteBranch = async (req, res) => {
   try {
     const branch = await Branch.findById(req.params.id);
     
     if (!branch) {
-      return res.status(404).json({ message: 'Branch not found' });
-    }
-    
-    // Check if branch has employees
-    const employees = await User.countDocuments({
-      branch: branch._id,
-      isActive: true
-    });
-    
-    if (employees > 0) {
-      return res.status(400).json({ 
-        message: 'Cannot delete branch with active employees. Transfer employees first.' 
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Branch not found' 
       });
     }
     
+    // Check if branch has employees assigned
+    const employeesInBranch = await User.find({ 
+      branch: branch._id,
+      role: 'employee'
+    });
+    
+    if (employeesInBranch.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete branch: ${employeesInBranch.length} employees are assigned to this branch. Please reassign or delete them first.` 
+      });
+    }
+    
+    // Check if branch has tasks
+    const tasksInBranch = await Task.find({ branch: branch._id });
+    
+    if (tasksInBranch.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete branch: ${tasksInBranch.length} tasks are assigned to this branch. Please delete or reassign them first.` 
+      });
+    }
+    
+    // Check if admins are assigned to this branch
+    const adminsWithBranch = await User.find({ 
+      assignedBranches: branch._id
+    });
+    
+    if (adminsWithBranch.length > 0) {
+      // Remove branch from admin's assigned branches
+      await User.updateMany(
+        { assignedBranches: branch._id },
+        { $pull: { assignedBranches: branch._id } }
+      );
+      console.log(`Removed branch from ${adminsWithBranch.length} admins`);
+    }
+    
+    // HARD DELETE the branch
     await branch.deleteOne();
     
+    // Create audit log
     await AuditLog.create({
       user: req.user.id,
       organization: req.user.organization,
       action: 'delete',
       entityType: 'branch',
-      entityId: branch._id,
-      changes: { deleted: true },
+      entityId: req.params.id,
+      changes: { 
+        deleted: true,
+        branchName: branch.name,
+        branchAddress: branch.address
+      },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
     
-    res.json({ message: 'Branch deleted successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Branch permanently deleted from the system' 
+    });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error deleting branch:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
