@@ -714,47 +714,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   try {
     const token = localStorage.getItem('token');
     
-    // First, check if branch has employees or tasks
-    const checkResponse = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}/check`, {
-      method: 'GET',
+    // Delete directly with force=true
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
+      method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
-    const checkData = await checkResponse.json();
-    
-    if (checkData.hasEmployees || checkData.hasTasks) {
-      const forceConfirm = confirm(
-        `⚠️ This branch has:\n` +
-        `• ${checkData.employeeCount} employees\n` +
-        `• ${checkData.taskCount} tasks\n\n` +
-        `These will be PERMANENTLY DELETED!\n\n` +
-        `Are you ABSOLUTELY sure?`
-      );
-      
-      if (!forceConfirm) return;
-    }
-    
-    // Proceed with deletion
-    await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
-  method: 'DELETE',
-  headers: { 'Authorization': `Bearer ${token}` }
-});
     
     const data = await response.json();
     
     if (response.ok) {
       showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
-      fetchDashboardData(); // Refresh the list
+      fetchDashboardData();
     } else {
-      // Show the actual error message from backend
       showToast(data.message || (language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning'), 'error');
-      console.error('Delete failed:', data);
     }
   } catch (error) {
     console.error('Error deleting branch:', error);
-    showToast(language === 'en' ? 'Error deleting branch: ' + error.message : 'Fel vid borttagning av avdelning: ' + error.message, 'error');
+    showToast(language === 'en' ? 'Error deleting branch' : 'Fel vid borttagning av avdelning', 'error');
   }
 };
+
+
 
   const handleDeleteJob = async (jobId, jobName) => {
     if (!confirm(language === 'en' ? `Delete ${jobName}? This affects employees with this role.` : `Radera ${jobName}? Detta påverkar anställda med denna roll.`)) return;

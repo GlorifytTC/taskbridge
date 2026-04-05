@@ -8,6 +8,7 @@ const {
   updateBranch,
   deleteBranch,
   assignAdmin
+  checkBranchRelations  
 } = require('../controllers/branchController');
 
 // All routes require authentication
