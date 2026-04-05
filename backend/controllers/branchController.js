@@ -134,9 +134,36 @@ exports.updateBranch = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+// @desc    Check if branch has related data
+// @route   GET /api/branches/:id/check
+// @access  Private/Admin/SuperAdmin
+exports.checkBranchRelations = async (req, res) => {
+  try {
+    const branchId = req.params.id;
+    
+    const employeeCount = await User.countDocuments({ 
+      branch: branchId, 
+      role: 'employee' 
+    });
+    
+    const taskCount = await Task.countDocuments({ 
+      branch: branchId 
+    });
+    
+    res.json({
+      success: true,
+      hasEmployees: employeeCount > 0,
+      hasTasks: taskCount > 0,
+      employeeCount,
+      taskCount
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
-// @desc    Delete branch (HARD DELETE - completely remove)
-// @route   DELETE /api/branches/:id
+// @desc    Delete branch (with force option)
+// @route   DELETE /api/branches/:id?force=true
 // @access  Private/Admin/SuperAdmin
 exports.deleteBranch = async (req, res) => {
   try {
@@ -149,44 +176,48 @@ exports.deleteBranch = async (req, res) => {
       });
     }
     
-    // Check if branch has employees assigned
-    const employeesInBranch = await User.find({ 
+    const forceDelete = req.query.force === 'true';
+    
+    // Check for employees
+    const employees = await User.find({ 
       branch: branch._id,
-      role: 'employee'
+      role: 'employee' 
     });
     
-    if (employeesInBranch.length > 0) {
+    const tasks = await Task.find({ branch: branch._id });
+    
+    if ((employees.length > 0 || tasks.length > 0) && !forceDelete) {
       return res.status(400).json({ 
         success: false, 
-        message: `Cannot delete branch: ${employeesInBranch.length} employees are assigned to this branch. Please reassign or delete them first.` 
+        message: `Cannot delete branch: ${employees.length} employee(s) and ${tasks.length} task(s) are assigned. Use ?force=true to delete everything.`,
+        employees: employees.length,
+        tasks: tasks.length
       });
     }
     
-    // Check if branch has tasks
-    const tasksInBranch = await Task.find({ branch: branch._id });
-    
-    if (tasksInBranch.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot delete branch: ${tasksInBranch.length} tasks are assigned to this branch. Please delete or reassign them first.` 
-      });
+    // FORCE DELETE - remove all related data
+    if (forceDelete) {
+      // Delete all employees in this branch
+      for (const employee of employees) {
+        await Application.deleteMany({ employee: employee._id });
+        await Notification.deleteMany({ user: employee._id });
+        await employee.deleteOne();
+      }
+      
+      // Delete all tasks in this branch
+      for (const task of tasks) {
+        await Application.deleteMany({ task: task._id });
+        await task.deleteOne();
+      }
     }
     
-    // Check if admins are assigned to this branch
-    const adminsWithBranch = await User.find({ 
-      assignedBranches: branch._id
-    });
+    // Remove branch from admins' assignments
+    await User.updateMany(
+      { assignedBranches: branch._id },
+      { $pull: { assignedBranches: branch._id } }
+    );
     
-    if (adminsWithBranch.length > 0) {
-      // Remove branch from admin's assigned branches
-      await User.updateMany(
-        { assignedBranches: branch._id },
-        { $pull: { assignedBranches: branch._id } }
-      );
-      console.log(`Removed branch from ${adminsWithBranch.length} admins`);
-    }
-    
-    // HARD DELETE the branch
+    // Delete the branch
     await branch.deleteOne();
     
     // Create audit log
@@ -195,11 +226,13 @@ exports.deleteBranch = async (req, res) => {
       organization: req.user.organization,
       action: 'delete',
       entityType: 'branch',
-      entityId: req.params.id,
+      entityId: branch._id,
       changes: { 
         deleted: true,
         branchName: branch.name,
-        branchAddress: branch.address
+        forceDelete: forceDelete,
+        deletedEmployees: employees.length,
+        deletedTasks: tasks.length
       },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
@@ -207,7 +240,9 @@ exports.deleteBranch = async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: 'Branch permanently deleted from the system' 
+      message: `Branch deleted successfully${forceDelete ? ' with all employees and tasks' : ''}`,
+      deletedEmployees: employees.length,
+      deletedTasks: tasks.length
     });
     
   } catch (error) {

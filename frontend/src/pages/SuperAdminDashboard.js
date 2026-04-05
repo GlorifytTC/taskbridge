@@ -709,20 +709,55 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 };
 
   const handleDeleteBranch = async (branchId, branchName) => {
-    if (!confirm(language === 'en' ? `Delete ${branchName}? This affects all employees.` : `Radera ${branchName}? Detta påverkar alla anställda.`)) return;
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Error deleting branch:', error);
-      showToast(language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning', 'error');
+  if (!confirm(language === 'en' ? `Delete ${branchName}? This will delete all employees and tasks in this branch.` : `Radera ${branchName}? Detta raderar alla anställda och uppgifter i denna avdelning.`)) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    
+    // First, check if branch has employees or tasks
+    const checkResponse = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}/check`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    const checkData = await checkResponse.json();
+    
+    if (checkData.hasEmployees || checkData.hasTasks) {
+      const forceConfirm = confirm(
+        `⚠️ This branch has:\n` +
+        `• ${checkData.employeeCount} employees\n` +
+        `• ${checkData.taskCount} tasks\n\n` +
+        `These will be PERMANENTLY DELETED!\n\n` +
+        `Are you ABSOLUTELY sure?`
+      );
+      
+      if (!forceConfirm) return;
     }
-  };
+    
+    // Proceed with deletion
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
+      method: 'DELETE',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
+      fetchDashboardData(); // Refresh the list
+    } else {
+      // Show the actual error message from backend
+      showToast(data.message || (language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning'), 'error');
+      console.error('Delete failed:', data);
+    }
+  } catch (error) {
+    console.error('Error deleting branch:', error);
+    showToast(language === 'en' ? 'Error deleting branch: ' + error.message : 'Fel vid borttagning av avdelning: ' + error.message, 'error');
+  }
+};
 
   const handleDeleteJob = async (jobId, jobName) => {
     if (!confirm(language === 'en' ? `Delete ${jobName}? This affects employees with this role.` : `Radera ${jobName}? Detta påverkar anställda med denna roll.`)) return;

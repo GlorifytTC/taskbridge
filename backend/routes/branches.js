@@ -20,7 +20,7 @@ router.route('/')
 router.route('/:id')
   .get(getBranch)
   .put(authorize('admin', 'superadmin'), updateBranch)
-  .delete(authorize('superadmin'), deleteBranch);
+  .delete(authorize('admin', 'superadmin'), deleteBranch);
 
 router.post('/:id/assign-admin', authorize('superadmin'), assignAdmin);
 
