@@ -59,10 +59,42 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [reportData, setReportData] = useState(null);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  
+  // Custom confirmation modal states
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    itemName: '',
+    itemId: null,
+    type: ''
+  });
+  
+  // Audit log modal
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Show custom confirmation modal instead of browser confirm
+  const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm(itemId, itemName);
+        setConfirmationModal({ ...confirmationModal, isOpen: false });
+      },
+      itemId,
+      itemName,
+      type
+    });
   };
 
   const t = {
@@ -120,7 +152,19 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       language: 'Language',
       swedish: 'Swedish',
       english: 'English',
-      currentPlan: 'Current Plan'
+      currentPlan: 'Current Plan',
+      auditLogs: 'Audit Logs',
+      confirmDelete: 'Confirm Delete',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      areYouSure: 'Are you sure?',
+      viewAudit: 'View Audit Logs',
+      close: 'Close',
+      action: 'Action',
+      entityType: 'Entity Type',
+      user: 'User',
+      timestamp: 'Timestamp',
+      changes: 'Changes'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -176,7 +220,19 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       language: 'Språk',
       swedish: 'Svenska',
       english: 'Engelska',
-      currentPlan: 'Nuvarande plan'
+      currentPlan: 'Nuvarande plan',
+      auditLogs: 'Granskningsloggar',
+      confirmDelete: 'Bekräfta radering',
+      cancel: 'Avbryt',
+      delete: 'Radera',
+      areYouSure: 'Är du säker?',
+      viewAudit: 'Visa granskningsloggar',
+      close: 'Stäng',
+      action: 'Åtgärd',
+      entityType: 'Enhetstyp',
+      user: 'Användare',
+      timestamp: 'Tidpunkt',
+      changes: 'Ändringar'
     }
   };
 
@@ -205,6 +261,24 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchAuditLogs = async () => {
+    setLoadingAudit(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/audit-logs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAuditLogs(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
 
   const fetchSubscriptionData = async () => {
     try {
@@ -703,12 +777,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteAdmin = async (adminId, adminName) => {
-    const confirmMsg = language === 'en' 
-      ? `Delete ${adminName}? This cannot be undone.` 
-      : `Radera ${adminName}? Detta går inte att ångra.`;
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
@@ -731,12 +799,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteEmployee = async (empId, empName) => {
-    const confirmMsg = language === 'en'
-      ? `Delete ${empName}? This cannot be undone.`
-      : `Radera ${empName}? Detta går inte att ångra.`;
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
@@ -762,22 +824,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteBranch = async (branchId, branchName) => {
-    const employeesInBranch = employees.filter(e => e.branch?._id === branchId).length;
-    const adminsWithBranch = admins.filter(a => a.assignedBranches?.some(b => b._id === branchId)).length;
-    
-    let warningMsg = '';
-    if (employeesInBranch > 0 || adminsWithBranch > 0) {
-      warningMsg = language === 'en'
-        ? `\n\n⚠️ WARNING: This branch has:\n• ${employeesInBranch} employees\n• ${adminsWithBranch} admins assigned\n\nThese will be PERMANENTLY DELETED or unassigned!`
-        : `\n\n⚠️ VARNING: Denna avdelning har:\n• ${employeesInBranch} anställda\n• ${adminsWithBranch} administratörer tilldelade\n\nDessa kommer att RADERAS PERMANENT eller avassocieras!`;
-    }
-    
-    const confirmMsg = language === 'en'
-      ? `Delete branch "${branchName}"? This will delete all employees and tasks in this branch.${warningMsg}\n\nThis cannot be undone!`
-      : `Radera avdelning "${branchName}"? Detta raderar alla anställda och uppgifter i denna avdelning.${warningMsg}\n\nDetta går inte att ångra!`;
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       
@@ -814,12 +860,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       return;
     }
     
-    const confirmMsg = language === 'en'
-      ? `Delete job role "${jobName}"? This cannot be undone.`
-      : `Radera jobbroll "${jobName}"? Detta går inte att ångra.`;
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
@@ -842,12 +882,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteTask = async (taskId, taskTitle) => {
-    const confirmMsg = language === 'en'
-      ? `Delete task "${taskTitle}"? This cannot be undone.`
-      : `Radera uppgift "${taskTitle}"? Detta går inte att ångra.`;
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
@@ -919,12 +953,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmMsg = language === 'en'
-      ? '⚠️ WARNING: This will delete YOUR account only. Are you sure?'
-      : '⚠️ VARNING: Detta raderar ENDAST ditt konto. Är du säker?';
-    
-    if (!window.confirm(confirmMsg)) return;
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', {
@@ -1003,6 +1031,55 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
+  // Show delete confirmation modal
+  const confirmDelete = (type, id, name) => {
+    let title = '';
+    let message = '';
+    
+    switch(type) {
+      case 'admin':
+        title = lang.confirmDelete;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete admin "${name}"?` : `Radera administratör "${name}"?`} ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        break;
+      case 'employee':
+        title = lang.confirmDelete;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete employee "${name}"?` : `Radera anställd "${name}"?`} ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        break;
+      case 'branch':
+        const employeeCount = employees.filter(e => e.branch?._id === id).length;
+        title = lang.confirmDelete;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}\n\n${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}\n\n${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        break;
+      case 'job':
+        title = lang.confirmDelete;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete job role "${name}"?` : `Radera jobbroll "${name}"?`} ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        break;
+      case 'task':
+        title = lang.confirmDelete;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete task "${name}"?` : `Radera uppgift "${name}"?`} ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        break;
+      default:
+        return;
+    }
+    
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        if (type === 'admin') handleDeleteAdmin(id, name);
+        if (type === 'employee') handleDeleteEmployee(id, name);
+        if (type === 'branch') handleDeleteBranch(id, name);
+        if (type === 'job') handleDeleteJob(id, name);
+        if (type === 'task') handleDeleteTask(id, name);
+        setConfirmationModal({ ...confirmationModal, isOpen: false });
+      },
+      itemId: id,
+      itemName: name,
+      type
+    });
+  };
+
   if (subscriptionData?.status === 'expired' || subscriptionData?.status === 'paused') {
     return (
       <div style={styles.subscriptionBlockedContainer}>
@@ -1027,12 +1104,36 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   return (
     <div style={styles.container}>
+      {/* Toast Notification */}
       {toastMessage && (
         <div style={{
           ...styles.toast,
           background: toastMessage.type === 'success' ? '#10b981' : '#ef4444'
         }}>
           {toastMessage.message}
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmationModal.isOpen && (
+        <div style={styles.modalOverlay} onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}>
+          <div style={styles.confirmationModal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.confirmationHeader}>
+              <h3 style={styles.confirmationTitle}>{confirmationModal.title}</h3>
+              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.confirmationClose}>×</button>
+            </div>
+            <div style={styles.confirmationBody}>
+              <p style={styles.confirmationMessage}>{confirmationModal.message}</p>
+            </div>
+            <div style={styles.confirmationFooter}>
+              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.cancelButton}>
+                {lang.cancel}
+              </button>
+              <button onClick={confirmationModal.onConfirm} style={styles.confirmDeleteButton}>
+                {lang.delete}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1183,7 +1284,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         </div>
                       </td>
                       <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button><button onClick={() => handleDeleteAdmin(admin._id, admin.name)} style={styles.deleteButton}>🗑️</button></div></td>
+                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button><button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={styles.deleteButton}>🗑️</button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1221,7 +1322,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
                       <td style={styles.td}>
                         <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton} title="Reset Password">🔑</button>
-                        <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
+                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -1251,7 +1352,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       <td style={styles.td}>{branch.address?.city || '-'}</td>
                       <td style={styles.td}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={styles.td}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
-                      <td style={styles.td}><button onClick={() => handleDeleteBranch(branch._id, branch.name)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={styles.td}><button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={styles.deleteButton}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1279,7 +1380,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       <td style={styles.td}>{job.name}</td>
                       <td style={styles.td}>{job.description || '-'}</td>
                       <td style={styles.td}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
-                      <td style={styles.td}><button onClick={() => handleDeleteJob(job._id, job.name)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={styles.td}><button onClick={() => confirmDelete('job', job._id, job.name)} style={styles.deleteButton}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1316,7 +1417,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
                       <td style={styles.td}>{task.branch?.name || '-'}</td>
                       <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
-                      <td style={styles.td}><button onClick={() => handleDeleteTask(task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={styles.td}><button onClick={() => confirmDelete('task', task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1417,14 +1518,54 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <button style={styles.invoiceButton}>Invoices</button>
             </div>
             <div style={styles.settingsCard}>
-              <h3 style={{color: 'white'}}>Audit Logs</h3>
-              <button style={styles.viewButton}>View Logs</button>
+              <h3 style={{color: 'white'}}>{lang.auditLogs}</h3>
+              <button onClick={() => { fetchAuditLogs(); setShowAuditModal(true); }} style={styles.viewButton}>{lang.viewAudit}</button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Modals */}
+      {/* Audit Log Modal */}
+      {showAuditModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
+          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>{lang.auditLogs}</h2>
+            {loadingAudit ? (
+              <div style={styles.loadingSpinner}></div>
+            ) : (
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHeaderRow}>
+                      <th style={styles.th}>{lang.action}</th>
+                      <th style={styles.th}>{lang.entityType}</th>
+                      <th style={styles.th}>{lang.user}</th>
+                      <th style={styles.th}>{lang.timestamp}</th>
+                      <th style={styles.th}>{lang.changes}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.slice(0, 50).map(log => (
+                      <tr key={log._id} style={styles.tableRow}>
+                        <td style={styles.td}>{log.action}</td>
+                        <td style={styles.td}>{log.entityType}</td>
+                        <td style={styles.td}>{log.user?.name || 'System'}</td>
+                        <td style={styles.td}>{new Date(log.createdAt).toLocaleString()}</td>
+                        <td style={styles.td}><pre style={{margin: 0, fontSize: '10px'}}>{JSON.stringify(log.changes, null, 2)}</pre></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowAuditModal(false)} style={styles.cancelButton}>{lang.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All other modals remain the same as original... */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -1774,6 +1915,13 @@ const styles = {
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
   modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  confirmationModal: { background: '#1e293b', borderRadius: '16px', maxWidth: '400px', width: '90%', overflow: 'hidden' },
+  confirmationHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  confirmationTitle: { fontSize: '18px', fontWeight: '600', color: '#ef4444', margin: 0 },
+  confirmationClose: { background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' },
+  confirmationBody: { padding: '20px' },
+  confirmationMessage: { color: 'white', fontSize: '14px', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-line' },
+  confirmationFooter: { display: 'flex', gap: '12px', padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.1)' },
   modalTitle: { fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '20px' },
   subTitle: { fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
   label: { color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', display: 'block' },
