@@ -58,6 +58,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   });
   const [reportData, setReportData] = useState(null);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const t = {
     en: {
@@ -113,7 +119,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       settingsManagement: 'Settings Management',
       language: 'Language',
       swedish: 'Swedish',
-      english: 'English'
+      english: 'English',
+      currentPlan: 'Current Plan'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -168,7 +175,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       settingsManagement: 'Inställningshantering',
       language: 'Språk',
       swedish: 'Svenska',
-      english: 'Engelska'
+      english: 'Engelska',
+      currentPlan: 'Nuvarande plan'
     }
   };
 
@@ -178,18 +186,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setLanguage(langCode);
     localStorage.setItem('taskbridge_language', langCode);
     setShowLanguageDropdown(false);
-  };
-
-  const showToast = (message, type = 'success') => {
-    const toastDiv = document.createElement('div');
-    toastDiv.textContent = message;
-    toastDiv.style.cssText = `
-      position: fixed; bottom: 20px; right: 20px; background: ${type === 'success' ? '#10b981' : '#ef4444'};
-      color: white; padding: 12px 20px; border-radius: 8px; z-index: 2000; font-size: 14px;
-      animation: fadeInOut 3s ease; font-family: Inter, sans-serif;
-    `;
-    document.body.appendChild(toastDiv);
-    setTimeout(() => toastDiv.remove(), 3000);
+    showToast(langCode === 'en' ? 'Language changed to English' : 'Språk ändrat till Svenska', 'success');
   };
 
   useEffect(() => {
@@ -338,6 +335,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       });
     } catch (error) {
       console.error('Error fetching data:', error);
+      showToast(language === 'en' ? 'Failed to load data' : 'Kunde inte ladda data', 'error');
     } finally {
       setLoading(false);
     }
@@ -368,7 +366,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           setShowProfileModal(false);
           setProfileData({ ...profileData, currentPassword: '', newPassword: '', confirmPassword: '' });
         } else {
-          showToast(language === 'en' ? 'Failed to change password' : 'Kunde inte ändra lösenord', 'error');
+          const data = await response.json();
+          showToast(data.message || (language === 'en' ? 'Failed to change password' : 'Kunde inte ändra lösenord'), 'error');
         }
       }
     } catch (error) {
@@ -411,45 +410,42 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleCreateAdmin = async (e) => {
-  e.preventDefault();
-  try {
-    const token = localStorage.getItem('token');
-    
-    const adminData = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: 'admin',
-      branch: formData.branch || null
-    };
-    
-    console.log('Creating admin with data:', adminData);
-    
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(adminData)
-    });
-    
-    const data = await response.json();
-    console.log('Response:', data);
-    
-    if (response.ok) {
-      showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
-      setShowCreateAdminModal(false);
-      setFormData({});
-      fetchDashboardData();
-    } else {
-      showToast(data.message || (language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör'), 'error');
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      const adminData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'admin',
+        branch: formData.branch || null
+      };
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(adminData)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
+        setShowCreateAdminModal(false);
+        setFormData({});
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör'), 'error');
+      }
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      showToast(language === 'en' ? 'Error creating admin' : 'Fel vid skapande av administratör', 'error');
     }
-  } catch (error) {
-    console.error('Error creating admin:', error);
-    showToast(language === 'en' ? 'Error creating admin' : 'Fel vid skapande av administratör', 'error');
-  }
-};
+  };
 
   const handleAssignBranch = async (branchId) => {
     try {
@@ -521,120 +517,159 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleCreateEmployee = async (e) => {
-  e.preventDefault();
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Make sure we're sending the correct data structure
-    const employeeData = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: 'employee',
-      jobDescription: formData.jobDescription, // This should be an ObjectId string
-      branch: formData.branch || null
-    };
-    
-    console.log('Creating employee with data:', employeeData);
-    
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(employeeData)
-    });
-    
-    const data = await response.json();
-    console.log('Response:', data);
-    
-    if (response.ok) {
-      showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
-      setShowCreateEmployeeModal(false);
-      setFormData({});
-      fetchDashboardData();
-    } else {
-      showToast(data.message || (language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd'), 'error');
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      const employeeData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'employee',
+        jobDescription: formData.jobDescription,
+        branch: formData.branch || null
+      };
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(employeeData)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
+        setShowCreateEmployeeModal(false);
+        setFormData({});
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd'), 'error');
+      }
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      showToast(language === 'en' ? 'Error creating employee' : 'Fel vid skapande av anställd', 'error');
     }
-  } catch (error) {
-    console.error('Error creating employee:', error);
-    showToast(language === 'en' ? 'Error creating employee' : 'Fel vid skapande av anställd', 'error');
-  }
-};
+  };
 
   const handleCreateBranch = async (e) => {
-  e.preventDefault();
-  try {
-    const token = localStorage.getItem('token');
-    
-    const branchData = {
-      name: formData.name,
-      address: {
-        city: formData.city || '',
-        street: formData.street || '',
-        postalCode: formData.postalCode || '',
-        country: formData.country || 'Sweden'
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      const branchData = {
+        name: formData.name,
+        address: {
+          city: formData.city || '',
+          street: formData.street || '',
+          postalCode: formData.postalCode || '',
+          country: formData.country || 'Sweden'
+        }
+      };
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(branchData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
+        setShowCreateBranchModal(false);
+        setFormData({});
+        fetchDashboardData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning'), 'error');
       }
-    };
-    
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(branchData)
-    });
-    
-    if (response.ok) {
-      showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
-      setShowCreateBranchModal(false);
-      setFormData({});
-      fetchDashboardData();
-    } else {
-      const data = await response.json();
-      showToast(data.message || (language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning'), 'error');
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      showToast(language === 'en' ? 'Error creating branch' : 'Fel vid skapande av avdelning', 'error');
     }
-  } catch (error) {
-    console.error('Error creating branch:', error);
-    showToast(language === 'en' ? 'Error creating branch' : 'Fel vid skapande av avdelning', 'error');
-  }
-};
+  };
 
   const handleCreateJob = async (e) => {
-  e.preventDefault();
-  try {
-    const token = localStorage.getItem('token');
-    
-    const jobData = {
-      name: formData.name,
-      description: formData.description || ''
-    };
-    
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(jobData)
-    });
-    
-    if (response.ok) {
-      showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
-      setShowCreateJobModal(false);
-      setFormData({});
-      fetchDashboardData();
-    } else {
-      const data = await response.json();
-      showToast(data.message || (language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll'), 'error');
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      const jobData = {
+        name: formData.name,
+        description: formData.description || ''
+      };
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(jobData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
+        setShowCreateJobModal(false);
+        setFormData({});
+        fetchDashboardData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll'), 'error');
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+      showToast(language === 'en' ? 'Error creating job role' : 'Fel vid skapande av jobbroll', 'error');
     }
-  } catch (error) {
-    console.error('Error creating job:', error);
-    showToast(language === 'en' ? 'Error creating job role' : 'Fel vid skapande av jobbroll', 'error');
-  }
-};
+  };
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      const taskData = {
+        title: formData.title,
+        description: formData.description || '',
+        branch: formData.branch,
+        jobDescription: formData.jobDescription,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        maxEmployees: formData.maxEmployees || 1,
+        location: formData.location || '',
+        notes: formData.notes || ''
+      };
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(taskData)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
+        setShowCreateTaskModal(false);
+        setFormData({});
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to create task' : 'Kunde inte skapa uppgift'), 'error');
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+      showToast(language === 'en' ? 'Error creating task' : 'Fel vid skapande av uppgift', 'error');
+    }
+  };
 
   const handleResetUserPassword = async () => {
     if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
@@ -658,7 +693,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setSelectedUser(null);
         setResetPasswordData({ newPassword: '', confirmPassword: '' });
       } else {
-        showToast(language === 'en' ? 'Failed to reset password' : 'Kunde inte återställa lösenord', 'error');
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to reset password' : 'Kunde inte återställa lösenord'), 'error');
       }
     } catch (error) {
       console.error('Error resetting password:', error);
@@ -667,135 +703,200 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteAdmin = async (adminId, adminName) => {
-    if (!confirm(language === 'en' ? `Delete ${adminName}? This cannot be undone.` : `Radera ${adminName}? Detta går inte att ångra.`)) return;
+    const confirmMsg = language === 'en' 
+      ? `Delete ${adminName}? This cannot be undone.` 
+      : `Radera ${adminName}? Detta går inte att ångra.`;
+    
+    if (!window.confirm(confirmMsg)) return;
+    
     try {
       const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
-      fetchDashboardData();
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to delete admin' : 'Kunde inte ta bort administratör'), 'error');
+      }
     } catch (error) {
       console.error('Error deleting admin:', error);
-      showToast(language === 'en' ? 'Failed to delete admin' : 'Kunde inte ta bort administratör', 'error');
+      showToast(language === 'en' ? 'Error deleting admin' : 'Fel vid borttagning av administratör', 'error');
     }
   };
 
   const handleDeleteEmployee = async (empId, empName) => {
-  if (!confirm(`Delete ${empName}? This cannot be undone.`)) return;
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
-      method: 'DELETE',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const confirmMsg = language === 'en'
+      ? `Delete ${empName}? This cannot be undone.`
+      : `Radera ${empName}? Detta går inte att ångra.`;
     
-    const data = await response.json();
+    if (!window.confirm(confirmMsg)) return;
     
-    if (response.ok) {
-      alert('Employee deleted successfully!');
-      fetchDashboardData();
-    } else {
-      alert(data.message || 'Failed to delete employee');
-    }
-  } catch (error) {
-    console.error('Error deleting employee:', error);
-    alert('Error deleting employee');
-  }
-};
-
-  const handleDeleteBranch = async (branchId, branchName) => {
-  if (!confirm(`Delete ${branchName}? This will delete all employees and tasks in this branch.`)) return;
-  
-  try {
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      alert('Branch deleted successfully!');
-      fetchDashboardData();
-    } else {
-      alert(data.message || 'Failed to delete branch');
-    }
-  } catch (error) {
-    console.error('Error deleting branch:', error);
-    alert('Error deleting branch');
-  }
-};
-
-
-
-  const handleDeleteJob = async (jobId, jobName) => {
-    if (!confirm(language === 'en' ? `Delete ${jobName}? This affects employees with this role.` : `Radera ${jobName}? Detta påverkar anställda med denna roll.`)) return;
     try {
       const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to delete employee' : 'Kunde inte ta bort anställd'), 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      showToast(language === 'en' ? 'Error deleting employee' : 'Fel vid borttagning av anställd', 'error');
+    }
+  };
+
+  const handleDeleteBranch = async (branchId, branchName) => {
+    const employeesInBranch = employees.filter(e => e.branch?._id === branchId).length;
+    const adminsWithBranch = admins.filter(a => a.assignedBranches?.some(b => b._id === branchId)).length;
+    
+    let warningMsg = '';
+    if (employeesInBranch > 0 || adminsWithBranch > 0) {
+      warningMsg = language === 'en'
+        ? `\n\n⚠️ WARNING: This branch has:\n• ${employeesInBranch} employees\n• ${adminsWithBranch} admins assigned\n\nThese will be PERMANENTLY DELETED or unassigned!`
+        : `\n\n⚠️ VARNING: Denna avdelning har:\n• ${employeesInBranch} anställda\n• ${adminsWithBranch} administratörer tilldelade\n\nDessa kommer att RADERAS PERMANENT eller avassocieras!`;
+    }
+    
+    const confirmMsg = language === 'en'
+      ? `Delete branch "${branchName}"? This will delete all employees and tasks in this branch.${warningMsg}\n\nThis cannot be undone!`
+      : `Radera avdelning "${branchName}"? Detta raderar alla anställda och uppgifter i denna avdelning.${warningMsg}\n\nDetta går inte att ångra!`;
+    
+    if (!window.confirm(confirmMsg)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning'), 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting branch:', error);
+      showToast(language === 'en' ? 'Error deleting branch' : 'Fel vid borttagning av avdelning', 'error');
+    }
+  };
+
+  const handleDeleteJob = async (jobId, jobName) => {
+    const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
+    
+    if (employeesWithJob > 0) {
+      const errorMsg = language === 'en'
+        ? `Cannot delete "${jobName}" because ${employeesWithJob} employee(s) have this job role. Please reassign them first.`
+        : `Kan inte radera "${jobName}" eftersom ${employeesWithJob} anställd(a) har denna jobbroll. Vänligen omplacera dem först.`;
+      showToast(errorMsg, 'error');
+      return;
+    }
+    
+    const confirmMsg = language === 'en'
+      ? `Delete job role "${jobName}"? This cannot be undone.`
+      : `Radera jobbroll "${jobName}"? Detta går inte att ångra.`;
+    
+    if (!window.confirm(confirmMsg)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
-      fetchDashboardData();
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to delete job role' : 'Kunde inte ta bort jobbroll'), 'error');
+      }
     } catch (error) {
       console.error('Error deleting job:', error);
-      showToast(language === 'en' ? 'Failed to delete job role' : 'Kunde inte ta bort jobbroll', 'error');
+      showToast(language === 'en' ? 'Error deleting job role' : 'Fel vid borttagning av jobbroll', 'error');
     }
   };
 
   const handleDeleteTask = async (taskId, taskTitle) => {
-    if (!confirm(language === 'en' ? `Delete "${taskTitle}"?` : `Radera "${taskTitle}"?`)) return;
+    const confirmMsg = language === 'en'
+      ? `Delete task "${taskTitle}"? This cannot be undone.`
+      : `Radera uppgift "${taskTitle}"? Detta går inte att ångra.`;
+    
+    if (!window.confirm(confirmMsg)) return;
+    
     try {
       const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
-      fetchDashboardData();
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
+        fetchDashboardData();
+      } else {
+        showToast(data.message || (language === 'en' ? 'Failed to delete task' : 'Kunde inte ta bort uppgift'), 'error');
+      }
     } catch (error) {
       console.error('Error deleting task:', error);
-      showToast(language === 'en' ? 'Failed to delete task' : 'Kunde inte ta bort uppgift', 'error');
+      showToast(language === 'en' ? 'Error deleting task' : 'Fel vid borttagning av uppgift', 'error');
     }
   };
 
   const handleApproveApplication = async (appId) => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/approve`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (response.ok) {
-      showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
-      // Refresh all data
-      fetchDashboardData();
-      fetchSubscriptionData();
-    } else {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/approve`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
+        fetchDashboardData();
+        fetchSubscriptionData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna'), 'error');
+      }
+    } catch (error) {
+      console.error('Error approving application:', error);
       showToast(language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna', 'error');
     }
-  } catch (error) {
-    console.error('Error approving application:', error);
-    showToast(language === 'en' ? 'Failed to approve' : 'Kunde inte godkänna', 'error');
-  }
-};
-
+  };
 
   const handleRejectApplication = async (appId) => {
     const reason = prompt(language === 'en' ? 'Reason for rejection:' : 'Anledning till avslag:');
     if (reason === null) return;
     try {
       const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/reject`, {
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${appId}/reject`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -803,8 +904,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ reason })
       });
-      showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
-      fetchDashboardData();
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
+        fetchDashboardData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to reject' : 'Kunde inte avslå'), 'error');
+      }
     } catch (error) {
       console.error('Error rejecting application:', error);
       showToast(language === 'en' ? 'Failed to reject' : 'Kunde inte avslå', 'error');
@@ -812,15 +919,26 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm(language === 'en' ? '⚠️ WARNING: This will delete YOUR account only. Are you sure?' : '⚠️ VARNING: Detta raderar ENDAST ditt konto. Är du säker?')) return;
+    const confirmMsg = language === 'en'
+      ? '⚠️ WARNING: This will delete YOUR account only. Are you sure?'
+      : '⚠️ VARNING: Detta raderar ENDAST ditt konto. Är du säker?';
+    
+    if (!window.confirm(confirmMsg)) return;
+    
     try {
       const token = localStorage.getItem('token');
-      await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', {
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      localStorage.removeItem('token');
-      onLogout();
+      
+      if (response.ok) {
+        localStorage.removeItem('token');
+        onLogout();
+      } else {
+        const data = await response.json();
+        showToast(data.message || (language === 'en' ? 'Failed to delete account' : 'Kunde inte radera konto'), 'error');
+      }
     } catch (error) {
       console.error('Error deleting account:', error);
       showToast(language === 'en' ? 'Failed to delete account' : 'Kunde inte radera konto', 'error');
@@ -832,14 +950,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     if (onLogout) onLogout();
   };
 
-  const goBack = () => {
-    setActiveTab(previousTab);
-  };
-
   const handleTabChange = (tab) => {
     if (activeTab !== tab) {
       setPreviousTab(activeTab);
       setActiveTab(tab);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -912,6 +1027,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   return (
     <div style={styles.container}>
+      {toastMessage && (
+        <div style={{
+          ...styles.toast,
+          background: toastMessage.type === 'success' ? '#10b981' : '#ef4444'
+        }}>
+          {toastMessage.message}
+        </div>
+      )}
+
       <div style={styles.header}>
         <div style={styles.logoSection}>
           {logoPreview ? (
@@ -1069,43 +1193,43 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'employees' && (
-  <div>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
-      <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
-    </div>
-    <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
-    <div style={styles.tableContainer}>
-      <table style={styles.table}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={styles.th}>Name</th>
-            <th style={styles.th}>Email</th>
-            <th style={styles.th}>Job Role</th>
-            <th style={styles.th}>Branch</th>
-            <th style={styles.th}>Status</th>
-            <th style={styles.th}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
-            <tr key={emp._id} style={styles.tableRow}>
-              <td style={styles.td}>{emp.name}</td>
-              <td style={styles.td}>{emp.email}</td>
-              <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
-              <td style={styles.td}>{emp.branch?.name || '-'}</td>
-              <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-              <td style={styles.td}>
-                <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton} title="Reset Password">🔑</button>
-                <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+          <div>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
+              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
+            </div>
+            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={styles.th}>Name</th>
+                    <th style={styles.th}>Email</th>
+                    <th style={styles.th}>Job Role</th>
+                    <th style={styles.th}>Branch</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
+                    <tr key={emp._id} style={styles.tableRow}>
+                      <td style={styles.td}>{emp.name}</td>
+                      <td style={styles.td}>{emp.email}</td>
+                      <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
+                      <td style={styles.td}>{emp.branch?.name || '-'}</td>
+                      <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={styles.td}>
+                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton} title="Reset Password">🔑</button>
+                        <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'branches' && (
           <div>
@@ -1126,7 +1250,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       <td style={styles.td}>{branch.name}</td>
                       <td style={styles.td}>{branch.address?.city || '-'}</td>
                       <td style={styles.td}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
-                      <td style={styles.td}>{admins.filter(a => a.branch?._id === branch._id).length}</td>
+                      <td style={styles.td}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
                       <td style={styles.td}><button onClick={() => handleDeleteBranch(branch._id, branch.name)} style={styles.deleteButton}>🗑️</button></td>
                     </tr>
                   ))}
@@ -1165,89 +1289,89 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'tasks' && (
-  <div>
-    <div style={styles.taskHeader}>
-      <h2 style={styles.sectionTitle}>{lang.taskManagement}</h2>
-      <button onClick={() => setShowCreateTaskModal(true)} style={styles.createTaskButton}>+ {lang.createTask}</button>
-    </div>
-    <div style={styles.tableContainer}>
-      <table style={styles.table}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={styles.th}>Title</th>
-            <th style={styles.th}>Date</th>
-            <th style={styles.th}>Time</th>
-            <th style={styles.th}>Role</th>
-            <th style={styles.th}>Branch</th>
-            <th style={styles.th}>Status</th>
-            <th style={styles.th}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map(task => (
-            <tr key={task._id} style={styles.tableRow}>
-              <td style={styles.td}>{task.title}</td>
-              <td style={styles.td}>{new Date(task.date).toLocaleDateString()}</td>
-              <td style={styles.td}>{task.startTime} - {task.endTime}</td>
-              <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
-              <td style={styles.td}>{task.branch?.name || '-'}</td>
-              <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
-              <td style={styles.td}><button onClick={() => handleDeleteTask(task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+          <div>
+            <div style={styles.taskHeader}>
+              <h2 style={styles.sectionTitle}>{lang.taskManagement}</h2>
+              <button onClick={() => setShowCreateTaskModal(true)} style={styles.createTaskButton}>+ {lang.createTask}</button>
+            </div>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={styles.th}>Title</th>
+                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>Time</th>
+                    <th style={styles.th}>Role</th>
+                    <th style={styles.th}>Branch</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.map(task => (
+                    <tr key={task._id} style={styles.tableRow}>
+                      <td style={styles.td}>{task.title}</td>
+                      <td style={styles.td}>{new Date(task.date).toLocaleDateString()}</td>
+                      <td style={styles.td}>{task.startTime} - {task.endTime}</td>
+                      <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
+                      <td style={styles.td}>{task.branch?.name || '-'}</td>
+                      <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
+                      <td style={styles.td}><button onClick={() => handleDeleteTask(task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'applications' && (
-  <div>
-    <h2 style={styles.sectionTitle}>All Applications</h2>
-    <div style={styles.tableContainer}>
-      <table style={styles.table}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={styles.th}>Employee</th>
-            <th style={styles.th}>Task</th>
-            <th style={styles.th}>Date</th>
-            <th style={styles.th}>Time</th>
-            <th style={styles.th}>Status</th>
-            <th style={styles.th}>Applied Date</th>
-            <th style={styles.th}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {applications.map(app => (
-            <tr key={app._id} style={styles.tableRow}>
-              <td style={styles.td}>{app.employee?.name}</td>
-              <td style={styles.td}>{app.task?.title}</td>
-              <td style={styles.td}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
-              <td style={styles.td}>{app.task?.startTime} - {app.task?.endTime}</td>
-              <td style={styles.td}>
-                <span style={{...styles.statusBadge, background: 
-                  app.status === 'approved' ? '#10b981' : 
-                  app.status === 'rejected' ? '#ef4444' : '#f59e0b'
-                }}>
-                  {app.status}
-                </span>
-               </td>
-              <td style={styles.td}>{new Date(app.appliedAt).toLocaleDateString()}</td>
-              <td style={styles.td}>
-                {app.status === 'pending' && (
-                  <div style={styles.actionButtons}>
-                    <button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button>
-                    <button onClick={() => handleRejectApplication(app._id)} style={styles.rejectButton}>✗</button>
-                  </div>
-                )}
-              </td>
-             </tr>
-          ))}
-        </tbody>
-       </table>
-    </div>
-  </div>
-)}
+          <div>
+            <h2 style={styles.sectionTitle}>All Applications</h2>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={styles.th}>Employee</th>
+                    <th style={styles.th}>Task</th>
+                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>Time</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Applied Date</th>
+                    <th style={styles.th}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.map(app => (
+                    <tr key={app._id} style={styles.tableRow}>
+                      <td style={styles.td}>{app.employee?.name}</td>
+                      <td style={styles.td}>{app.task?.title}</td>
+                      <td style={styles.td}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
+                      <td style={styles.td}>{app.task?.startTime} - {app.task?.endTime}</td>
+                      <td style={styles.td}>
+                        <span style={{...styles.statusBadge, background: 
+                          app.status === 'approved' ? '#10b981' : 
+                          app.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                        }}>
+                          {app.status}
+                        </span>
+                       </td>
+                      <td style={styles.td}>{new Date(app.appliedAt).toLocaleDateString()}</td>
+                      <td style={styles.td}>
+                        {app.status === 'pending' && (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button>
+                            <button onClick={() => handleRejectApplication(app._id)} style={styles.rejectButton}>✗</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'reports' && (
           <div>
@@ -1300,6 +1424,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
       </div>
 
+      {/* Modals */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -1575,6 +1700,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
+  toast: { position: 'fixed', bottom: '20px', right: '20px', color: 'white', padding: '12px 20px', borderRadius: '8px', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
   subscriptionBlockedContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
@@ -1625,14 +1751,14 @@ const styles = {
   addButton: { padding: '6px 14px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   createTaskButton: { padding: '6px 14px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   searchInput: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: 'white', width: '100%', marginBottom: '14px', fontSize: '12px' },
-  tableContainer: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
+  tableContainer: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '600px' },
   tableHeaderRow: { borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
   th: { padding: '10px 8px' },
   tableRow: { borderBottom: '1px solid rgba(255,255,255,0.05)' },
   td: { padding: '10px 8px', color: 'white' },
   statusBadge: { padding: '2px 6px', borderRadius: '20px', fontSize: '9px', fontWeight: '600', color: 'white', display: 'inline-block' },
-  actionButtons: { display: 'flex', gap: '6px' },
+  actionButtons: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
   resetButton: { background: 'rgba(245,158,11,0.2)', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px', color: '#f59e0b', cursor: 'pointer', fontSize: '12px' },
   deleteButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
   approveButton: { background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '6px', padding: '4px 8px', color: '#10b981', cursor: 'pointer', fontSize: '12px' },
