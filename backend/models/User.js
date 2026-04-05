@@ -20,8 +20,7 @@ const UserSchema = new mongoose.Schema({
   resetPasswordExpire: Date
 }, { timestamps: true });
 
-// REMOVE the pre-save hook completely - it's causing the error
-// The passwords are already hashed in your database, so we don't need it
+
 
 // Only keep the matchPassword method
 UserSchema.methods.matchPassword = async function(enteredPassword) {
