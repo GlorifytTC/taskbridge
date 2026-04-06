@@ -9,7 +9,7 @@ const SubscriptionSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['trial', 'basic', 'standard', 'professional', 'business', 'enterprise', 'unlimited'],
+    enum: ['trial', 'basic', 'standard', 'professional', 'business', 'enterprise'],
     default: 'trial'
   },
   status: {
@@ -30,8 +30,14 @@ const SubscriptionSchema = new mongoose.Schema({
   },
   autoRenew: {
     type: Boolean,
-    default: false
+    default: true  // Auto-renew by default
   },
+  cancelledAt: {
+    type: Date
+  },
+  pauseReason: String,
+  upgradedFromPlan: String,
+  upgradedAt: Date,
   price: {
     amount: {
       type: Number,
@@ -61,7 +67,7 @@ const SubscriptionSchema = new mongoose.Schema({
     },
     maxEmailsPerMonth: {
       type: Number,
-      default: 50
+      default: 50  // LIMITED - no infinity!
     },
     maxAdmins: {
       type: Number,
@@ -69,7 +75,7 @@ const SubscriptionSchema = new mongoose.Schema({
     },
     reportLevel: {
       type: String,
-      enum: ['basic', 'standard', 'advanced', 'premium', 'unlimited'],
+      enum: ['basic', 'standard', 'advanced', 'premium'],
       default: 'basic'
     },
     exportReports: {
@@ -85,10 +91,6 @@ const SubscriptionSchema = new mongoose.Schema({
       default: false
     },
     prioritySupport: {
-      type: Boolean,
-      default: false
-    },
-    unlimited: {
       type: Boolean,
       default: false
     }
@@ -111,26 +113,20 @@ const SubscriptionSchema = new mongoose.Schema({
       default: Date.now
     }
   },
-  stripeCustomerId: String,
-  stripeSubscriptionId: String,
   lastPaymentDate: Date,
-  nextPaymentDate: Date,
-  cancelledAt: Date,
-  pauseReason: String,
-  upgradedFromPlan: String,
-  upgradedAt: Date
+  nextPaymentDate: Date
 }, {
   timestamps: true
 });
 
-// Plan pricing and features mapping
+// PLAN FEATURES - REALISTIC LIMITS (NO INFINITY!)
 SubscriptionSchema.statics.PLAN_FEATURES = {
   trial: {
     name: 'Trial',
     price: 0,
     maxEmployees: 10,
     maxBranches: 2,
-    maxEmailsPerMonth: 50,
+    maxEmailsPerMonth: 50,    // Limited!
     maxAdmins: 1,
     reportLevel: 'basic',
     exportReports: false,
@@ -144,7 +140,7 @@ SubscriptionSchema.statics.PLAN_FEATURES = {
     price: 500,
     maxEmployees: 20,
     maxBranches: 3,
-    maxEmailsPerMonth: 100,
+    maxEmailsPerMonth: 100,   // Limited!
     maxAdmins: 2,
     reportLevel: 'basic',
     exportReports: false,
@@ -157,7 +153,7 @@ SubscriptionSchema.statics.PLAN_FEATURES = {
     price: 1000,
     maxEmployees: 50,
     maxBranches: 5,
-    maxEmailsPerMonth: 250,
+    maxEmailsPerMonth: 250,   // Limited!
     maxAdmins: 3,
     reportLevel: 'standard',
     exportReports: false,
@@ -170,7 +166,7 @@ SubscriptionSchema.statics.PLAN_FEATURES = {
     price: 1750,
     maxEmployees: 100,
     maxBranches: 10,
-    maxEmailsPerMonth: 500,
+    maxEmailsPerMonth: 500,   // Limited!
     maxAdmins: 5,
     reportLevel: 'advanced',
     exportReports: false,
@@ -183,35 +179,22 @@ SubscriptionSchema.statics.PLAN_FEATURES = {
     price: 2500,
     maxEmployees: 200,
     maxBranches: 20,
-    maxEmailsPerMonth: 1000,
+    maxEmailsPerMonth: 1000,  // Limited!
     maxAdmins: 10,
     reportLevel: 'advanced',
     exportReports: true,
     customReports: false,
     apiAccess: false,
-    prioritySupport: false
+    prioritySupport: true
   },
   enterprise: {
     name: 'Enterprise',
     price: 5000,
     maxEmployees: 500,
     maxBranches: 50,
-    maxEmailsPerMonth: 2500,
+    maxEmailsPerMonth: 2500,  // Limited!
     maxAdmins: 20,
     reportLevel: 'premium',
-    exportReports: true,
-    customReports: true,
-    apiAccess: true,
-    prioritySupport: false
-  },
-  unlimited: {
-    name: 'Unlimited',
-    price: 15000,
-    maxEmployees: Infinity,
-    maxBranches: Infinity,
-    maxEmailsPerMonth: Infinity,
-    maxAdmins: Infinity,
-    reportLevel: 'unlimited',
     exportReports: true,
     customReports: true,
     apiAccess: true,
@@ -219,20 +202,78 @@ SubscriptionSchema.statics.PLAN_FEATURES = {
   }
 };
 
-// Calculate VAT amount
-SubscriptionSchema.methods.calculateVAT = function() {
-  const vatRate = 25; // Sweden VAT
-  const vatAmount = (this.price.amount * vatRate) / 100;
-  this.price.vat = {
-    rate: vatRate,
-    amount: vatAmount
-  };
-  return vatAmount;
+// Auto-renew monthly subscription
+SubscriptionSchema.methods.renewIfNeeded = async function() {
+  const now = new Date();
+  
+  // Check if subscription expired
+  if (this.endDate < now && this.status === 'active' && this.autoRenew) {
+    // Renew for another month
+    this.startDate = now;
+    this.endDate = new Date(now.setMonth(now.getMonth() + 1));
+    this.lastPaymentDate = new Date();
+    this.nextPaymentDate = this.endDate;
+    
+    // Reset monthly usage counters
+    this.usage.emailsSentThisMonth = 0;
+    this.usage.lastResetDate = new Date();
+    
+    await this.save();
+    console.log(`Auto-renewed subscription for ${this.organization}`);
+    return true;
+  }
+  
+  // Reset monthly counters if new month
+  const lastReset = new Date(this.usage.lastResetDate);
+  if (lastReset.getMonth() !== new Date().getMonth()) {
+    this.usage.emailsSentThisMonth = 0;
+    this.usage.lastResetDate = new Date();
+    await this.save();
+    console.log(`Reset monthly counters for ${this.organization}`);
+  }
+  
+  return false;
 };
 
-// Check if subscription is active
-SubscriptionSchema.methods.isActive = function() {
-  return (this.status === 'active' || this.status === 'trial') && this.endDate > new Date();
+// Check if can send more emails this month
+SubscriptionSchema.methods.canSendEmail = function() {
+  const plan = this.constructor.PLAN_FEATURES[this.plan];
+  const maxEmails = plan.maxEmailsPerMonth;
+  return this.usage.emailsSentThisMonth < maxEmails;
+};
+
+// Increment email counter
+SubscriptionSchema.methods.incrementEmailCount = async function() {
+  this.usage.emailsSentThisMonth += 1;
+  await this.save();
+};
+
+// Cancel subscription (stops auto-renew)
+SubscriptionSchema.methods.cancel = async function() {
+  this.autoRenew = false;
+  this.cancelledAt = new Date();
+  this.status = 'cancelled';
+  await this.save();
+};
+
+// Pause subscription
+SubscriptionSchema.methods.pause = async function(reason) {
+  this.status = 'paused';
+  this.pauseReason = reason;
+  await this.save();
+};
+
+// Resume subscription
+SubscriptionSchema.methods.resume = async function() {
+  this.status = 'active';
+  this.autoRenew = true;
+  this.pauseReason = null;
+  // Extend end date by remaining days
+  const daysLeft = Math.ceil((this.endDate - new Date()) / (1000 * 60 * 60 * 24));
+  if (daysLeft > 0) {
+    this.endDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000);
+  }
+  await this.save();
 };
 
 // Get days remaining
@@ -242,21 +283,23 @@ SubscriptionSchema.methods.getDaysRemaining = function() {
   return days > 0 ? days : 0;
 };
 
-// Get usage percentage for a feature
+// Check if subscription is active
+SubscriptionSchema.methods.isActive = function() {
+  return (this.status === 'active' || this.status === 'trial') && this.endDate > new Date();
+};
+
+// Get usage percentage
 SubscriptionSchema.methods.getUsagePercentage = function(feature) {
   const plan = this.constructor.PLAN_FEATURES[this.plan];
   if (!plan) return 0;
   
   switch(feature) {
     case 'employees':
-      const maxEmployees = plan.maxEmployees;
-      return maxEmployees === Infinity ? 0 : (this.usage.currentEmployees / maxEmployees) * 100;
+      return (this.usage.currentEmployees / plan.maxEmployees) * 100;
     case 'branches':
-      const maxBranches = plan.maxBranches;
-      return maxBranches === Infinity ? 0 : (this.usage.currentBranches / maxBranches) * 100;
+      return (this.usage.currentBranches / plan.maxBranches) * 100;
     case 'emails':
-      const maxEmails = plan.maxEmailsPerMonth;
-      return maxEmails === Infinity ? 0 : (this.usage.emailsSentThisMonth / maxEmails) * 100;
+      return (this.usage.emailsSentThisMonth / plan.maxEmailsPerMonth) * 100;
     default:
       return 0;
   }

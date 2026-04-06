@@ -205,38 +205,68 @@ exports.changePlan = async (req, res) => {
   }
 };
 
-// @desc    Cancel subscription
-// @route   PUT /api/subscriptions/cancel
-// @access  Private/SuperAdmin
+// @desc    Cancel subscription (stop auto-renew)
+// @route   PUT /api/organizations/:id/cancel-subscription
 exports.cancelSubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({
-      organization: req.user.organization
-    });
-    
+    const subscription = await Subscription.findOne({ organization: req.params.id });
     if (!subscription) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
     
-    subscription.status = 'cancelled';
-    subscription.cancelledAt = Date.now();
-    subscription.autoRenew = false;
-    await subscription.save();
+    await subscription.cancel();
     
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'cancel',
-      entityType: 'subscription',
-      entityId: subscription._id,
-      changes: { status: 'cancelled' },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
+    res.json({ 
+      success: true, 
+      message: 'Subscription cancelled. Will not renew after end date.' 
     });
-    
-    res.json({ success: true, message: 'Subscription cancelled successfully' });
   } catch (error) {
-    console.error('Error cancelling subscription:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Resume subscription
+// @route   PUT /api/organizations/:id/resume-subscription
+exports.resumeSubscription = async (req, res) => {
+  try {
+    const subscription = await Subscription.findOne({ organization: req.params.id });
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+    
+    await subscription.resume();
+    
+    res.json({ 
+      success: true, 
+      message: 'Subscription resumed' 
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Check email quota before sending
+exports.checkEmailQuota = async (req, res) => {
+  try {
+    const subscription = await Subscription.findOne({ organization: req.user.organization });
+    if (!subscription) {
+      return res.json({ canSend: false, message: 'No subscription found' });
+    }
+    
+    const canSend = subscription.canSendEmail();
+    const remaining = subscription.plan === 'trial' ? 50 : 
+                     subscription.plan === 'basic' ? 100 :
+                     subscription.plan === 'standard' ? 250 :
+                     subscription.plan === 'professional' ? 500 :
+                     subscription.plan === 'business' ? 1000 : 2500;
+    
+    res.json({
+      canSend,
+      used: subscription.usage.emailsSentThisMonth,
+      limit: subscription.PLAN_FEATURES[subscription.plan].maxEmailsPerMonth,
+      remaining: Math.max(0, remaining - subscription.usage.emailsSentThisMonth)
+    });
+  } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
