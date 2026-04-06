@@ -147,7 +147,15 @@ exports.createOrganization = async (req, res) => {
       status: 'trial',
       startDate: Date.now(),
       endDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000),
-      trialEndDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000)
+      trialEndDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000),
+      price: {  // ✅ Add this entire price object
+        amount: 0,  // Trial is free
+        currency: 'SEK',
+        vat: {
+          rate: 25,
+          amount: 0
+        }
+      }
     });
     
     // Create audit log
