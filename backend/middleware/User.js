@@ -19,11 +19,11 @@ const userSchema = new mongoose.Schema({
     organization: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Organization',
-        required: function() { return this.role !== 'master'; } // Master doesn't belong to an org
-    },
+        required: false    },
     branch: { type: String, default: 'Main' }, // For multi-branch support
     jobDescription: { type: String, default: 'General' },
     isApproved: { type: Boolean, default: true }, // For employee approval flow
+    isActive: { type: Boolean, default: true },
     resetPasswordToken: String,
     resetPasswordExpire: Date
 }, { timestamps: true });
