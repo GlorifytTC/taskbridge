@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import EmailQuota from './EmailQuota';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1506,7 +1505,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         {activeTab === 'settings' && (
           <div>
             <h2 style={styles.sectionTitle}>{lang.settingsManagement}</h2>
-            <EmailQuota />
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white'}}>Organization Logo</h3>
               {logoPreview && <img src={logoPreview} alt="Logo" style={styles.logoPreview} />}
