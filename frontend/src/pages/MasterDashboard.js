@@ -250,37 +250,41 @@ const MasterDashboard = ({ onLogout }) => {
 };
 
   const handleCreateOrganization = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newOrg = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      subscriptionPlan: formData.get('plan'),
-      trialDays: parseInt(formData.get('trialDays')) || 14
-    };
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/organizations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newOrg)
-      });
-      
-      if (response.ok) {
-        showToastMessage(lang.create, 'success');
-        fetchDashboardData();
-        setShowOrgModal(false);
-      }
-    } catch (error) {
-      console.error('Error creating organization:', error);
-      showToastMessage('Error creating organization', 'error');
-    }
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const newOrg = {
+    name: formData.get('name'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    adminName: formData.get('adminName'),  // ✅ ADD THIS LINE
+    subscriptionPlan: formData.get('plan'),
+    trialDays: parseInt(formData.get('trialDays')) || 14
   };
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/organizations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(newOrg)
+    });
+    
+    if (response.ok) {
+      showToastMessage(lang.create, 'success');
+      fetchDashboardData();
+      setShowOrgModal(false);
+    } else {
+      const errorData = await response.json();
+      showToastMessage(errorData.message || 'Error creating organization', 'error');
+    }
+  } catch (error) {
+    console.error('Error creating organization:', error);
+    showToastMessage('Error creating organization', 'error');
+  }
+};
 
   const handleChangePlan = async () => {
     if (!selectedOrg) return;
@@ -599,7 +603,7 @@ const MasterDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      <div style={styles.tableContainer}>
+     <div style={styles.tableContainer}>
   {!filteredOrgs || filteredOrgs.length === 0 ? (
     <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.5)' }}>
       <i className="fas fa-building" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
@@ -617,13 +621,13 @@ const MasterDashboard = ({ onLogout }) => {
           <th style={styles.th}>{lang.tasks}</th>
           <th style={styles.th}>{lang.subscription}</th>
           <th style={styles.th}>{lang.actions}</th>
-         </tr>
+        </tr>
       </thead>
       <tbody>
-        {filteredOrgs.map((org) => (
+        {filteredOrgs && filteredOrgs.map((org) => (
           <tr key={org._id} style={styles.tableRow}>
             <td style={styles.td}>
-              <strong>{org.name}</strong>
+              <strong>{org.name || 'N/A'}</strong>
               <div style={styles.orgDetails}>{org.address?.city && `${org.address.city}`}</div>
               <button 
                 onClick={() => {
@@ -636,10 +640,10 @@ const MasterDashboard = ({ onLogout }) => {
               >
                 <i className="fas fa-users-cog"></i>
               </button>
-             </td>
+            </td>
             <td style={styles.td}>
-              <div>{org.email}</div>
-              <div style={styles.orgDetails}>{org.phone}</div>
+              <div>{org.email || 'N/A'}</div>
+              <div style={styles.orgDetails}>{org.phone || 'N/A'}</div>
             </td>
             <td style={styles.td}>
               <span style={{
@@ -732,15 +736,15 @@ const MasterDashboard = ({ onLogout }) => {
         />
         
         <select name="plan" style={styles.select} defaultValue="trial" required>
-          <option value="trial">💰 Trial - 0 SEK (14 days)</option>
-          <option value="basic">💰 Basic - 399 SEK/month</option>
-          <option value="standard">💰 Standard - 799 SEK/month</option>
-          <option value="pro">💰 Pro - 1,299 SEK/month</option>
-          <option value="business">💎 Business - 2,499 SEK/month</option>
-          <option value="enterprise">💎 Enterprise - 4,999 SEK/month</option>
-          <option value="corporate">💎 Corporate - 9,999 SEK/month</option>
-          <option value="custom">💎 Custom - Contact Sales</option>
-        </select>
+            <option value="trial">💰 Trial - 0 SEK (14 days)</option>
+            <option value="basic">💰 Basic - 399 SEK/month</option>
+            <option value="standard">💰 Standard - 799 SEK/month</option>
+            <option value="pro">💰 Pro - 1,299 SEK/month</option>
+            <option value="business">💎 Business - 2,499 SEK/month</option>
+            <option value="enterprise">💎 Enterprise - 4,999 SEK/month</option>
+            <option value="corporate">💎 Corporate - 9,999 SEK/month</option>
+            <option value="custom">💎 Custom - Contact Sales</option>
+          </select>
         
         <input 
           type="number" 
@@ -786,96 +790,126 @@ const MasterDashboard = ({ onLogout }) => {
       )}
 
       {/* Change Plan Modal */}
-      {showPlanModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowPlanModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.changePlan}</h2>
-            <p style={{ marginBottom: '20px', fontSize: '14px' }}>{lang.changeTo} <strong>{selectedOrg?.name}</strong></p>
-            
-            <div style={styles.planOptions}>
-              <div onClick={() => setSelectedPlan('basic')} style={{...styles.planCard, borderColor: selectedPlan === 'basic' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'basic' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Basic</h3>
-                <div style={styles.planPrice}>500<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Up to 20 employees</li>
-                  <li>✓ 3 branches</li>
-                  <li>✓ Basic reports</li>
-                  <li>✓ Email support</li>
-                </ul>
-              </div>
-              <div onClick={() => setSelectedPlan('standard')} style={{...styles.planCard, borderColor: selectedPlan === 'standard' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'standard' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Standard</h3>
-                <div style={styles.planPrice}>1000<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Up to 50 employees</li>
-                  <li>✓ 5 branches</li>
-                  <li>✓ Standard reports</li>
-                  <li>✓ Priority support</li>
-                </ul>
-              </div>
-              <div onClick={() => setSelectedPlan('professional')} style={{...styles.planCard, borderColor: selectedPlan === 'professional' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'professional' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Professional</h3>
-                <div style={styles.planPrice}>1750<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Up to 100 employees</li>
-                  <li>✓ 10 branches</li>
-                  <li>✓ Advanced reports</li>
-                  <li>✓ Priority support</li>
-                </ul>
-              </div>
-              <div onClick={() => setSelectedPlan('business')} style={{...styles.planCard, borderColor: selectedPlan === 'business' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'business' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Business</h3>
-                <div style={styles.planPrice}>2500<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Up to 200 employees</li>
-                  <li>✓ 20 branches</li>
-                  <li>✓ Advanced + Export</li>
-                  <li>✓ Priority support</li>
-                </ul>
-              </div>
-              <div onClick={() => setSelectedPlan('enterprise')} style={{...styles.planCard, borderColor: selectedPlan === 'enterprise' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'enterprise' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Enterprise</h3>
-                <div style={styles.planPrice}>5000<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Up to 500 employees</li>
-                  <li>✓ 50 branches</li>
-                  <li>✓ Premium + Custom</li>
-                  <li>✓ API access</li>
-                </ul>
-              </div>
-              <div onClick={() => setSelectedPlan('unlimited')} style={{...styles.planCard, borderColor: selectedPlan === 'unlimited' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'unlimited' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-                <h3>Unlimited</h3>
-                <div style={styles.planPrice}>15000<span>SEK/month</span></div>
-                <ul style={styles.planFeatures}>
-                  <li>✓ Unlimited employees</li>
-                  <li>✓ Unlimited branches</li>
-                  <li>✓ Unlimited reports</li>
-                  <li>✓ 24/7 support</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div style={styles.durationSelector}>
-              <label style={{ fontSize: '14px' }}>Duration:</label>
-              <select value={selectedDuration} onChange={(e) => setSelectedDuration(parseInt(e.target.value))} style={styles.durationSelect}>
-                <option value={1}>1 month</option>
-                <option value={3}>3 months (save 5%)</option>
-                <option value={6}>6 months (save 10%)</option>
-                <option value={12}>12 months (save 15%)</option>
-              </select>
-            </div>
-            
-            <div style={styles.priceSummary}>
-              <strong>Total:</strong> {getPlanPrice(selectedPlan, selectedDuration)} SEK
-            </div>
-            
-            <div style={styles.modalButtons}>
-              <button onClick={() => setShowPlanModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={handleChangePlan} style={styles.submitButton}>{lang.changeTo} {getPlanDisplayName(selectedPlan)}</button>
-            </div>
-          </div>
+{showPlanModal && (
+  <div style={styles.modalOverlay} onClick={() => setShowPlanModal(false)}>
+    <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <h2 style={styles.modalTitle}>{lang.changePlan}</h2>
+      <p style={{ marginBottom: '20px', fontSize: '14px' }}>{lang.changeTo} <strong>{selectedOrg?.name}</strong></p>
+      
+      <div style={styles.planOptions}>
+        {/* Basic - 399 SEK */}
+        <div onClick={() => setSelectedPlan('basic')} style={{...styles.planCard, borderColor: selectedPlan === 'basic' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'basic' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💰 Basic</h3>
+          <div style={styles.planPrice}>399<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 25 employees</li>
+            <li>✓ 3 branches</li>
+            <li>✓ 200 emails/month</li>
+            <li>✓ Basic reports</li>
+            <li>✓ Email support</li>
+          </ul>
         </div>
-      )}
+        
+        {/* Standard - 799 SEK */}
+        <div onClick={() => setSelectedPlan('standard')} style={{...styles.planCard, borderColor: selectedPlan === 'standard' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'standard' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💰 Standard</h3>
+          <div style={styles.planPrice}>799<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 50 employees</li>
+            <li>✓ 5 branches</li>
+            <li>✓ 400 emails/month</li>
+            <li>✓ Standard reports</li>
+            <li>✓ Email support</li>
+          </ul>
+        </div>
+        
+        {/* Pro - 1,299 SEK */}
+        <div onClick={() => setSelectedPlan('pro')} style={{...styles.planCard, borderColor: selectedPlan === 'pro' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'pro' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💰 Pro</h3>
+          <div style={styles.planPrice}>1,299<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 100 employees</li>
+            <li>✓ 8 branches</li>
+            <li>✓ 700 emails/month</li>
+            <li>✓ Advanced reports</li>
+            <li>✓ Priority support</li>
+          </ul>
+        </div>
+        
+        {/* Business - 2,499 SEK */}
+        <div onClick={() => setSelectedPlan('business')} style={{...styles.planCard, borderColor: selectedPlan === 'business' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'business' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💎 Business</h3>
+          <div style={styles.planPrice}>2,499<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 250 employees</li>
+            <li>✓ 15 branches</li>
+            <li>✓ 2,000 emails/month</li>
+            <li>✓ Advanced + Export</li>
+            <li>✓ Priority support</li>
+          </ul>
+        </div>
+        
+        {/* Enterprise - 4,999 SEK */}
+        <div onClick={() => setSelectedPlan('enterprise')} style={{...styles.planCard, borderColor: selectedPlan === 'enterprise' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'enterprise' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💎 Enterprise</h3>
+          <div style={styles.planPrice}>4,999<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 500 employees</li>
+            <li>✓ 30 branches</li>
+            <li>✓ 5,000 emails/month</li>
+            <li>✓ Premium + Custom</li>
+            <li>✓ API access</li>
+          </ul>
+        </div>
+        
+        {/* Corporate - 9,999 SEK */}
+        <div onClick={() => setSelectedPlan('corporate')} style={{...styles.planCard, borderColor: selectedPlan === 'corporate' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'corporate' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💎 Corporate</h3>
+          <div style={styles.planPrice}>9,999<span>SEK/month</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ Up to 1,000 employees</li>
+            <li>✓ 60 branches</li>
+            <li>✓ 12,000 emails/month</li>
+            <li>✓ Premium+ reports</li>
+            <li>✓ 24/7 dedicated support</li>
+          </ul>
+        </div>
+        
+        {/* Custom - Contact Sales */}
+        <div onClick={() => setSelectedPlan('custom')} style={{...styles.planCard, borderColor: selectedPlan === 'custom' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'custom' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+          <h3>💎 Custom</h3>
+          <div style={styles.planPrice}>Contact<span>Sales</span></div>
+          <ul style={styles.planFeatures}>
+            <li>✓ 5,000+ employees</li>
+            <li>✓ 200+ branches</li>
+            <li>✓ 50,000+ emails/month</li>
+            <li>✓ Unlimited reports</li>
+            <li>✓ Dedicated account manager</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div style={styles.durationSelector}>
+        <label style={{ fontSize: '14px' }}>Duration:</label>
+        <select value={selectedDuration} onChange={(e) => setSelectedDuration(parseInt(e.target.value))} style={styles.durationSelect}>
+          <option value={1}>1 month</option>
+          <option value={3}>3 months</option>
+          <option value={6}>6 months</option>
+          <option value={12}>12 months</option>
+        </select>
+      </div>
+      
+      <div style={styles.priceSummary}>
+        <strong>Total:</strong> {getPlanPrice(selectedPlan, selectedDuration)} SEK
+      </div>
+      
+      <div style={styles.modalButtons}>
+        <button onClick={() => setShowPlanModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
+        <button onClick={handleChangePlan} style={styles.submitButton}>{lang.changeTo} {getPlanDisplayName(selectedPlan)}</button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Users Management Modal */}
       {showUsersModal && (
