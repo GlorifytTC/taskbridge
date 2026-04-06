@@ -7,61 +7,60 @@ const Login = ({ onBack, onLogin }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-  try {
-    console.log('🔐 Attempting login for:', email);
-    
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ email, password })
-    });
+    try {
+      console.log('🔐 Attempting login for:', email);
+      
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
 
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response headers:', [...response.headers.entries()]);
-    
-    const data = await response.json();
-    console.log('📦 Response data:', data);
+      console.log('📡 Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📦 Response data:', data);
 
-    if (response.ok && data.success) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      onLogin(data.user);
-    } else {
-      setError(data.message || 'Invalid credentials');
-    }
-  } catch (err) {
-    console.error('❌ Login error details:', err);
-    console.error('Error name:', err.name);
-    console.error('Error message:', err.message);
-    
-    if (err.message.includes('CORS')) {
-      setError('CORS error: Unable to connect to server. Please check backend configuration.');
-    } else if (err.message.includes('Failed to fetch')) {
-      setError('Network error: Cannot reach the server. Please check if the backend is running.');
-    } else {
+      if (response.ok && data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onLogin(data.user);
+      } else {
+        setError(data.message || 'Invalid credentials');
+      }
+    } catch (err) {
+      console.error('❌ Login error:', err);
       setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  // Super Admin quick login
+  const handleSuperAdminLogin = () => {
+    setEmail('georgeglor@hotmail.com');
+    setPassword('Gladiatorman40');
+    // Auto submit after setting
+    setTimeout(() => {
+      handleSubmit(new Event('submit'));
+    }, 100);
+  };
+
   return (
     <div style={styles.container}>
-      {/* Animated Background */}
       <div style={styles.bgAnimation}>
         <div style={styles.bgCircle1}></div>
         <div style={styles.bgCircle2}></div>
         <div style={styles.bgCircle3}></div>
       </div>
 
-      {/* Login Card */}
       <div style={styles.cardWrapper}>
         <div style={styles.card}>
           <div style={styles.logoContainer}>
@@ -122,6 +121,20 @@ const Login = ({ onBack, onLogin }) => {
               )}
             </button>
           </form>
+
+          {/* Super Admin Quick Login Button */}
+          <div style={styles.superAdminSection}>
+            <div style={styles.divider}>
+              <span style={styles.dividerText}>Super Admin Access</span>
+            </div>
+            <button
+              onClick={handleSuperAdminLogin}
+              style={styles.superAdminButton}
+              disabled={loading}
+            >
+              <i className="fas fa-user-shield"></i> Sign in as Super Admin
+            </button>
+          </div>
 
           <div style={styles.backLink}>
             <button onClick={onBack} style={styles.backButton}>
@@ -311,10 +324,41 @@ const styles = {
     opacity: 0.7,
     cursor: 'not-allowed',
   },
-  backLink: {
-    marginTop: '32px',
+  superAdminSection: {
+    marginTop: '24px',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
     textAlign: 'center',
-    paddingTop: '24px',
+    margin: '16px 0',
+  },
+  dividerText: {
+    flex: 1,
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.4)',
+    padding: '0 10px',
+  },
+  superAdminButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(139, 92, 246, 0.2)',
+    border: '1px solid #8b5cf6',
+    borderRadius: '12px',
+    color: '#a78bfa',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  backLink: {
+    marginTop: '24px',
+    textAlign: 'center',
+    paddingTop: '20px',
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
   },
   backButton: {
@@ -350,6 +394,11 @@ styleSheet.textContent = `
   button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.4);
+  }
+  .superAdminButton:hover {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: #a78bfa;
+    transform: translateY(-2px);
   }
   .backButton:hover {
     color: #00d1ff;

@@ -11,8 +11,6 @@ import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
 import CreateAccount from './components/CreateAccount';
 
-
-
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
@@ -95,6 +93,11 @@ function App() {
     return <Login onBack={goToLanding} onLogin={handleLogin} />;
   }
 
+  // Create Account route
+  if (currentPage === 'create-account') {
+    return <CreateAccount onBack={() => setCurrentPage('login')} onLogin={handleLogin} />;
+  }
+
   // Protected routes with role-based dashboards
   if (currentPage === 'master' && user) {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
@@ -133,8 +136,6 @@ function App() {
       else setCurrentPage('dashboard');
     }} />;
   }
-  <Route path="/create-account" element={<CreateAccount onBack={() => navigate('/login')} onLogin={handleLogin} />} />
-
 
   // Default landing page
   return <Landing onLoginClick={goToLogin} />;
