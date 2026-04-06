@@ -80,12 +80,8 @@ exports.login = async (req, res) => {
         message: 'Please provide email and password' 
       });
     }
-    console.log('🔐 Looking for email:', `"${email}"`);
-console.log('🔐 Email length:', email.length);
-console.log('🔐 Email chars:', [...email].map(c => c.charCodeAt(0)));
-    const user = await User.findOne({ 
-        email: { $regex: new RegExp(`^${email}$`, 'i') } 
-      }).select('+password');                   
+    
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
       console.log('❌ User not found');
