@@ -66,9 +66,6 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -105,8 +102,11 @@ exports.login = async (req, res) => {
     
     console.log('✅ Password matched');
     
-    user.lastLogin = new Date();
-    await user.save();
+    // ✅ FIX: Use updateOne instead of save to bypass validation
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
     
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
@@ -126,7 +126,7 @@ exports.login = async (req, res) => {
         name: userData.name,
         email: userData.email,
         role: userData.role,
-        organization: userData.organization,
+        organization: userData.organization || null,
         branch: userData.branch
       }
     });
