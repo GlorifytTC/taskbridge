@@ -17,6 +17,8 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 
 // Protected routes
+router.get('/validate-email', authController.validateEmail);
+router.post('/setup-account', authController.setupAccount);
 router.get('/me', protect, getMe);
 router.post('/register', protect, authorize('admin', 'superadmin'), register);
 router.put('/change-password', protect, changePassword);

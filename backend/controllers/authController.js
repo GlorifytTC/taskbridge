@@ -140,6 +140,89 @@ exports.login = async (req, res) => {
   }
 };
 
+
+// @desc    Validate email for account creation
+// @route   GET /api/auth/validate-email
+// @access  Public
+exports.validateEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    const user = await User.findOne({ email });
+    
+    res.json({
+      exists: !!user,
+      needsPasswordSetup: user?.mustChangePassword === true,
+      isActive: user?.isActive === true
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Setup account (set password for new user)
+// @route   POST /api/auth/setup-account
+// @access  Public
+exports.setupAccount = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No account found with this email. Please check your invoice.' 
+      });
+    }
+    
+    if (!user.mustChangePassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Account already set up. Please login instead.' 
+      });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters' 
+      });
+    }
+    
+    const bcrypt = require('bcryptjs');
+    user.password = await bcrypt.hash(password, 10);
+    user.mustChangePassword = false;
+    user.isActive = true;
+    await user.save();
+    
+    // Generate token and login
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Account created successfully!',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Setup account error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private

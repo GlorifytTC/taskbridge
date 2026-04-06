@@ -4,6 +4,10 @@ const Branch = require('../models/Branch');
 const Subscription = require('../models/Subscription');
 const AuditLog = require('../models/AuditLog');
 const Task = require('../models/Task');
+const { sendWelcomeEmailWithInvoice } = require('../utils/emailService');
+const { generateInvoicePDF } = require('../utils/generateInvoice');
+// ============ EXISTING FUNCTIONS (keep these) ============
+
 // @desc    Change organization subscription plan
 // @route   PUT /api/organizations/:id/plan
 // @access  Private/Master
@@ -16,16 +20,25 @@ exports.changePlan = async (req, res) => {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // Plan prices
+    // UPDATED PLAN PRICES with new packages
     const prices = {
-      basic: 49,
-      professional: 99,
-      enterprise: 299
+      trial: 0,
+      basic: 399,
+      standard: 799,
+      pro: 1299,
+      business: 2499,
+      enterprise: 4999,
+      corporate: 9999,
+      custom: 0
     };
     
     // Calculate new end date
     const currentEndDate = organization.subscription?.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
+    
+    // Get plan features
+    const Subscription = require('../models/Subscription');
+    const planFeatures = Subscription.PLAN_FEATURES[plan];
     
     // Update organization subscription
     organization.subscription = {
@@ -37,7 +50,6 @@ exports.changePlan = async (req, res) => {
     await organization.save();
     
     // Update subscription record if exists
-    const Subscription = require('../models/Subscription');
     await Subscription.findOneAndUpdate(
       { organization: organization._id },
       { 
@@ -46,7 +58,20 @@ exports.changePlan = async (req, res) => {
         endDate: newEndDate,
         price: {
           amount: prices[plan] * duration,
-          currency: 'SEK'
+          currency: 'SEK',
+          vat: { rate: 25, amount: (prices[plan] * duration * 0.25) }
+        },
+        features: {
+          maxEmployees: planFeatures.maxEmployees,
+          maxBranches: planFeatures.maxBranches,
+          maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
+          maxAdmins: planFeatures.maxAdmins,
+          reportLevel: planFeatures.reportLevel,
+          exportReports: planFeatures.exportReports,
+          customReports: planFeatures.customReports,
+          apiAccess: planFeatures.apiAccess,
+          prioritySupport: planFeatures.prioritySupport,
+          dedicatedSupport: planFeatures.dedicatedSupport
         }
       },
       { upsert: true }
@@ -75,6 +100,98 @@ exports.changePlan = async (req, res) => {
   } catch (error) {
     console.error('Error changing plan:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// ============ ADD THESE NEW FUNCTIONS BELOW ============
+
+// @desc    Check email quota before sending emails
+// @access  Private (use as middleware)
+exports.checkEmailQuota = async (req, res, next) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const subscription = await Subscription.findOne({ organization: req.user.organization });
+    
+    if (!subscription) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'No active subscription found. Please contact your administrator.' 
+      });
+    }
+    
+    if (!subscription.canSendEmail || !subscription.canSendEmail()) {
+      const plan = Subscription.PLAN_FEATURES[subscription.plan];
+      return res.status(429).json({ 
+        success: false,
+        message: `Email limit reached for this month. Your ${plan.name} plan allows ${plan.maxEmailsPerMonth} emails per month. Upgrade to send more.`,
+        limit: plan.maxEmailsPerMonth,
+        used: subscription.usage?.emailsSentThisMonth || 0,
+        remaining: Math.max(0, plan.maxEmailsPerMonth - (subscription.usage?.emailsSentThisMonth || 0))
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Email quota check error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error checking email quota' 
+    });
+  }
+};
+
+// @desc    Track email sent (call this after sending each email)
+// @route   Used internally
+exports.trackEmailSent = async (organizationId) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const subscription = await Subscription.findOne({ organization: organizationId });
+    if (subscription && subscription.incrementEmailCount) {
+      await subscription.incrementEmailCount();
+      console.log(`Email tracked for organization ${organizationId}`);
+    }
+  } catch (error) {
+    console.error('Error tracking email:', error);
+  }
+};
+
+// @desc    Get email quota status
+// @route   GET /api/organizations/email-quota
+// @access  Private
+exports.getEmailQuotaStatus = async (req, res) => {
+  try {
+    const Subscription = require('../models/Subscription');
+    const subscription = await Subscription.findOne({ organization: req.user.organization });
+    
+    if (!subscription) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No subscription found' 
+      });
+    }
+    
+    const plan = Subscription.PLAN_FEATURES[subscription.plan];
+    const used = subscription.usage?.emailsSentThisMonth || 0;
+    const limit = plan.maxEmailsPerMonth;
+    
+    res.json({
+      success: true,
+      data: {
+        plan: subscription.plan,
+        planName: plan.name,
+        used: used,
+        limit: limit,
+        remaining: Math.max(0, limit - used),
+        percentage: (used / limit) * 100,
+        canSend: used < limit
+      }
+    });
+  } catch (error) {
+    console.error('Error getting quota status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
   }
 };
 
@@ -111,7 +228,7 @@ exports.getOrganizationUsers = async (req, res) => {
 // @access  Private/Master
 exports.createOrganization = async (req, res) => {
   try {
-    const { name, email, phone, address, subscriptionPlan, trialDays } = req.body;
+    const { name, email, phone, address, subscriptionPlan, trialDays, adminName, adminPassword } = req.body;
     
     console.log('Creating organization with plan:', subscriptionPlan);
     
@@ -121,7 +238,6 @@ exports.createOrganization = async (req, res) => {
       return res.status(400).json({ message: 'Organization already exists' });
     }
     
-    // Get plan features for correct pricing and limits
     const selectedPlan = subscriptionPlan || 'trial';
     const planFeatures = Subscription.PLAN_FEATURES[selectedPlan];
     
@@ -129,42 +245,21 @@ exports.createOrganization = async (req, res) => {
       return res.status(400).json({ message: 'Invalid subscription plan' });
     }
     
-    // Calculate end date based on plan
     let endDate;
     let status;
     
-    switch(selectedPlan) {
-      case 'trial':
-        endDate = new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000);
-        status = 'trial';
-        break;
-      case 'basic':
-      case 'standard':
-      case 'professional':
-      case 'business':
-      case 'enterprise':
-      case 'unlimited':
-        // Paid plans: 30 days from now (monthly subscription)
-        endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        status = 'active';
-        break;
-      default:
-        endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-        status = 'trial';
+    if (selectedPlan === 'trial') {
+      endDate = new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000);
+      status = 'trial';
+    } else {
+      endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      status = 'active';
     }
     
-    // Create organization with correct plan
+    // Create organization
     const organization = await Organization.create({
-      name,
-      email,
-      phone,
-      address,
-      subscription: {
-        plan: selectedPlan,
-        status: status,
-        startDate: new Date(),
-        endDate: endDate
-      }
+      name, email, phone, address,
+      subscription: { plan: selectedPlan, status, startDate: new Date(), endDate }
     });
     
     // Create default branch
@@ -174,11 +269,27 @@ exports.createOrganization = async (req, res) => {
       isActive: true
     });
     
-    // Calculate price amount
+    // Create temporary password for admin (they will reset on first login)
+    const bcrypt = require('bcryptjs');
+    const tempPassword = adminPassword || Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    // Create Super Admin user for the organization
+    const superAdmin = await User.create({
+      name: adminName || 'Super Admin',
+      email: email,
+      password: hashedPassword,
+      role: 'superadmin',
+      organization: organization._id,
+      branch: defaultBranch._id,
+      isActive: true,
+      mustChangePassword: true // Force password change on first login
+    });
+    
     const priceAmount = planFeatures.price || 0;
     
-    // Create subscription record with complete data
-    await Subscription.create({
+    // Create subscription record
+    const subscription = await Subscription.create({
       organization: organization._id,
       plan: selectedPlan,
       status: status,
@@ -188,10 +299,7 @@ exports.createOrganization = async (req, res) => {
       price: {
         amount: priceAmount,
         currency: 'SEK',
-        vat: {
-          rate: 25,
-          amount: (priceAmount * 25) / 100
-        },
+        vat: { rate: 25, amount: (priceAmount * 25) / 100 },
         monthlyPrice: priceAmount
       },
       features: {
@@ -200,19 +308,35 @@ exports.createOrganization = async (req, res) => {
         maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
         maxAdmins: planFeatures.maxAdmins,
         reportLevel: planFeatures.reportLevel,
-        exportReports: planFeatures.exportReports || false,
-        customReports: planFeatures.customReports || false,
-        apiAccess: planFeatures.apiAccess || false,
-        prioritySupport: planFeatures.prioritySupport || false,
-        unlimited: selectedPlan === 'unlimited'
+        exportReports: planFeatures.exportReports,
+        customReports: planFeatures.customReports,
+        apiAccess: planFeatures.apiAccess,
+        prioritySupport: planFeatures.prioritySupport,
+        dedicatedSupport: planFeatures.dedicatedSupport
       },
       usage: {
         currentEmployees: 0,
-        currentBranches: 1, // Main branch created
+        currentBranches: 1,
         emailsSentThisMonth: 0,
         lastResetDate: new Date()
       }
     });
+    
+    // Generate invoice PDF
+    const paymentData = {
+      invoiceNumber: `INV-${Date.now()}`,
+      amount: priceAmount,
+      totalAmount: priceAmount + (priceAmount * 0.25),
+      currency: 'SEK',
+      description: `${planFeatures.name} Plan - Monthly Subscription`,
+      createdAt: new Date(),
+      vat: { rate: 25, amount: (priceAmount * 0.25) }
+    };
+    
+    const invoicePath = await generateInvoicePDF(paymentData, organization, superAdmin);
+    
+    // Send welcome email with invoice
+    await sendWelcomeEmailWithInvoice(organization, superAdmin, tempPassword, invoicePath, paymentData);
     
     // Create audit log
     await AuditLog.create({
@@ -228,10 +352,14 @@ exports.createOrganization = async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: `Organization created with ${selectedPlan} plan`,
+      message: `Organization created with ${selectedPlan} plan. Welcome email sent to ${email}`,
       data: {
         organization,
-        defaultBranch
+        defaultBranch,
+        superAdmin: {
+          email: superAdmin.email,
+          tempPassword: tempPassword
+        }
       }
     });
     
@@ -242,6 +370,74 @@ exports.createOrganization = async (req, res) => {
       message: 'Server error: ' + error.message 
     });
   }
+};
+
+
+
+// Send welcome email with invoice attachment
+exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, invoicePath, paymentData) => {
+  const subject = `Welcome to TaskBridge - ${organization.name} - Invoice #${paymentData.invoiceNumber}`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0;">Welcome to TaskBridge!</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
+        <p style="font-size: 16px; color: #1e293b;">Dear ${admin.name},</p>
+        
+        <p style="color: #334155;">Your organization <strong>${organization.name}</strong> has been successfully created with the <strong>${paymentData.description}</strong>.</p>
+        
+        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e293b;">Account Details:</h3>
+          <p style="margin: 5px 0;"><strong>Organization:</strong> ${organization.name}</p>
+          <p style="margin: 5px 0;"><strong>Your Email:</strong> ${admin.email}</p>
+          <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: white; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+        </div>
+        
+        <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e40af;">Invoice Summary:</h3>
+          <p style="margin: 5px 0;"><strong>Invoice #:</strong> ${paymentData.invoiceNumber}</p>
+          <p style="margin: 5px 0;"><strong>Plan:</strong> ${paymentData.description}</p>
+          <p style="margin: 5px 0;"><strong>Subtotal:</strong> ${paymentData.amount} SEK</p>
+          <p style="margin: 5px 0;"><strong>VAT (25%):</strong> ${paymentData.vat.amount} SEK</p>
+          <p style="margin: 5px 0; font-size: 18px;"><strong>Total:</strong> ${paymentData.totalAmount} SEK</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/create-account?email=${encodeURIComponent(admin.email)}" 
+             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Create Your Account
+          </a>
+        </div>
+        
+        <p style="color: #475569; font-size: 14px;">Click the button above to set up your password and access your dashboard.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #64748b; font-size: 12px;">If you have any questions, contact us at support@taskbridge.com</p>
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  // Read the invoice file as attachment
+  const invoiceAttachment = fs.readFileSync(invoicePath);
+  
+  await exports.sendEmail({
+    to: admin.email,
+    subject,
+    html,
+    attachments: [{
+      filename: `invoice-${paymentData.invoiceNumber}.pdf`,
+      content: invoiceAttachment,
+      contentType: 'application/pdf'
+    }]
+  });
+  
+  // Clean up - delete the temporary invoice file
+  fs.unlinkSync(invoicePath);
 };
 
 // @desc    Get all organizations (Master only)

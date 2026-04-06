@@ -41,14 +41,15 @@ const MasterDashboard = ({ onLogout }) => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   const planPrices = {
-    trial: { price: 0, name: 'Trial', maxEmployees: 10, maxBranches: 2, maxEmails: 50, maxAdmins: 1 },
-    basic: { price: 500, name: 'Basic', maxEmployees: 20, maxBranches: 3, maxEmails: 100, maxAdmins: 2 },
-    standard: { price: 1000, name: 'Standard', maxEmployees: 50, maxBranches: 5, maxEmails: 250, maxAdmins: 3 },
-    professional: { price: 1750, name: 'Professional', maxEmployees: 100, maxBranches: 10, maxEmails: 500, maxAdmins: 5 },
-    business: { price: 2500, name: 'Business', maxEmployees: 200, maxBranches: 20, maxEmails: 1000, maxAdmins: 10 },
-    enterprise: { price: 5000, name: 'Enterprise', maxEmployees: 500, maxBranches: 50, maxEmails: 2500, maxAdmins: 20 },
-    unlimited: { price: 15000, name: 'Unlimited', maxEmployees: Infinity, maxBranches: Infinity, maxEmails: Infinity, maxAdmins: Infinity }
-  };
+  trial: { price: 0, name: 'Trial', maxEmployees: 10, maxBranches: 2, maxEmails: 50, maxAdmins: 1 },
+  basic: { price: 399, name: 'Basic', maxEmployees: 25, maxBranches: 3, maxEmails: 200, maxAdmins: 2 },
+  standard: { price: 799, name: 'Standard', maxEmployees: 50, maxBranches: 5, maxEmails: 400, maxAdmins: 3 },
+  pro: { price: 1299, name: 'Pro', maxEmployees: 100, maxBranches: 8, maxEmails: 700, maxAdmins: 5 },
+  business: { price: 2499, name: 'Business', maxEmployees: 250, maxBranches: 15, maxEmails: 2000, maxAdmins: 10 },
+  enterprise: { price: 4999, name: 'Enterprise', maxEmployees: 500, maxBranches: 30, maxEmails: 5000, maxAdmins: 20 },
+  corporate: { price: 9999, name: 'Corporate', maxEmployees: 1000, maxBranches: 60, maxEmails: 12000, maxAdmins: 50 },
+  custom: { price: 0, name: 'Custom', maxEmployees: 5000, maxBranches: 200, maxEmails: 50000, maxAdmins: 200 }
+};
 
   const t = {
     en: {
@@ -197,48 +198,56 @@ const MasterDashboard = ({ onLogout }) => {
   }, []);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const orgRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/organizations', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const orgData = await orgRes.json();
-      
-      if (orgData.success) {
-        const orgs = orgData.data;
-        setOrganizations(orgs);
-        
-        const activeSubs = orgs.filter(o => o.subscription?.status === 'active').length;
-        const trialExpiring = orgs.filter(o => {
-          if (o.subscription?.status === 'trial' && o.subscription?.endDate) {
-            const daysLeft = Math.ceil((new Date(o.subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-            return daysLeft <= 7 && daysLeft > 0;
-          }
-          return false;
-        }).length;
-        
-        const monthlyRevenue = orgs.reduce((sum, org) => {
-          const planPrice = planPrices[org.subscription?.plan]?.price || 0;
-          return sum + planPrice;
-        }, 0);
-        
-        setStats({
-          totalOrganizations: orgs.length,
-          totalUsers: orgs.reduce((sum, org) => sum + (org.userCount || 0), 0),
-          totalTasks: orgs.reduce((sum, org) => sum + (org.taskCount || 0), 0),
-          monthlyRevenue: monthlyRevenue,
-          activeSubscriptions: activeSubs,
-          trialExpiring: trialExpiring,
-          pendingOrganizations: orgs.filter(o => o.status === 'pending').length
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const orgRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/organizations', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!orgRes.ok) {
+      throw new Error(`HTTP ${orgRes.status}`);
     }
-  };
+    
+    const orgData = await orgRes.json();
+    
+    if (orgData.success && orgData.data) {
+      const orgs = orgData.data || [];
+      setOrganizations(orgs);
+      
+      const activeSubs = orgs.filter(o => o.subscription?.status === 'active').length;
+      const trialExpiring = orgs.filter(o => {
+        if (o.subscription?.status === 'trial' && o.subscription?.endDate) {
+          const daysLeft = Math.ceil((new Date(o.subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+          return daysLeft <= 7 && daysLeft > 0;
+        }
+        return false;
+      }).length;
+      
+      const monthlyRevenue = orgs.reduce((sum, org) => {
+        const planPrice = planPrices[org.subscription?.plan]?.price || 0;
+        return sum + planPrice;
+      }, 0);
+      
+      setStats({
+        totalOrganizations: orgs.length,
+        totalUsers: orgs.reduce((sum, org) => sum + (org.userCount || 0), 0),
+        totalTasks: orgs.reduce((sum, org) => sum + (org.taskCount || 0), 0),
+        monthlyRevenue: monthlyRevenue,
+        activeSubscriptions: activeSubs,
+        trialExpiring: trialExpiring,
+        pendingOrganizations: orgs.filter(o => o.status === 'pending').length
+      });
+    } else {
+      setOrganizations([]);
+    }
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    setOrganizations([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCreateOrganization = async (e) => {
     e.preventDefault();
@@ -460,8 +469,18 @@ const MasterDashboard = ({ onLogout }) => {
   };
 
   const getPlanDisplayName = (plan) => {
-    return planPrices[plan]?.name || plan;
+  const names = {
+    trial: 'Trial',
+    basic: 'Basic',
+    standard: 'Standard',
+    pro: 'Pro',
+    business: 'Business',
+    enterprise: 'Enterprise',
+    corporate: 'Corporate',
+    custom: 'Custom'
   };
+  return names[plan] || plan;
+};
 
   const getPlanPrice = (plan, months) => {
     const price = planPrices[plan]?.price || 0;
@@ -472,15 +491,16 @@ const MasterDashboard = ({ onLogout }) => {
     return Math.round(total);
   };
 
-  const filteredOrgs = organizations.filter(org => {
-    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          org.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || 
-                          (filterStatus === 'active' && org.isActive) ||
-                          (filterStatus === 'paused' && !org.isActive) ||
-                          (filterStatus === 'trial' && org.subscription?.status === 'trial');
-    return matchesSearch && matchesFilter;
-  });
+  const filteredOrgs = (organizations || []).filter(org => {
+  if (!org) return false;
+  const matchesSearch = (org.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                        (org.email || '').toLowerCase().includes((searchTerm || '').toLowerCase());
+  const matchesFilter = filterStatus === 'all' || 
+                        (filterStatus === 'active' && org.isActive) ||
+                        (filterStatus === 'paused' && !org.isActive) ||
+                        (filterStatus === 'trial' && org.subscription?.status === 'trial');
+  return matchesSearch && matchesFilter;
+});
 
   if (loading) {
     return (
@@ -580,119 +600,175 @@ const MasterDashboard = ({ onLogout }) => {
       </div>
 
       <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>{lang.organization}</th>
-              <th style={styles.th}>{lang.contact}</th>
-              <th style={styles.th}>{lang.plan}</th>
-              <th style={styles.th}>{lang.status}</th>
-              <th style={styles.th}>{lang.users}</th>
-              <th style={styles.th}>{lang.tasks}</th>
-              <th style={styles.th}>{lang.subscription}</th>
-              <th style={styles.th}>{lang.actions}</th>
-             </tr>
-          </thead>
-          <tbody>
-            {filteredOrgs.map((org) => (
-              <tr key={org._id} style={styles.tableRow}>
-                <td style={styles.td}>
-                  <strong>{org.name}</strong>
-                  <div style={styles.orgDetails}>{org.address?.city && `${org.address.city}`}</div>
-                  <button 
-                    onClick={() => {
-                      setSelectedOrg(org);
-                      fetchOrganizationUsers(org._id);
-                      setShowUsersModal(true);
-                    }}
-                    style={styles.usersButton}
-                    title={lang.manageUsers}
-                  >
-                    <i className="fas fa-users-cog"></i>
-                  </button>
-                </td>
-                <td style={styles.td}>
-                  <div>{org.email}</div>
-                  <div style={styles.orgDetails}>{org.phone}</div>
-                </td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.planBadge,
-                    background: org.subscription?.plan === 'unlimited' ? '#8b5cf6' : 
-                                org.subscription?.plan === 'enterprise' ? '#ec4899' :
-                                org.subscription?.plan === 'business' ? '#f59e0b' :
-                                org.subscription?.plan === 'professional' ? '#3b82f6' : 
-                                org.subscription?.plan === 'standard' ? '#10b981' : '#6b7280'
-                  }}>
-                    {getPlanDisplayName(org.subscription?.plan || 'trial')}
-                  </span>
-                </td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.statusBadge,
-                    background: org.isActive ? '#10b981' : '#ef4444'
-                  }}>
-                    {org.isActive ? lang.active : lang.paused}
-                    {org.subscription?.status === 'trial' && <span style={styles.trialBadge}>{lang.trial}</span>}
-                  </span>
-                </td>
-                <td style={styles.td}>{org.userCount || 0}</td>
-                <td style={styles.td}>{org.taskCount || 0}</td>
-                <td style={styles.td}>
-                  <div>{getDaysLeft(org.subscription?.endDate)}</div>
-                  <div style={styles.orgDetails}>
-                    {org.subscription?.endDate && new Date(org.subscription.endDate).toLocaleDateString()}
-                  </div>
-                </td>
-                <td style={styles.td}>
-                  <div style={styles.actionButtons}>
-                    <button onClick={() => { setSelectedOrg(org); setShowExtendModal(true); }} style={styles.extendButton} title={lang.extendSubscription}>
-                      <i className="fas fa-calendar-plus"></i>
-                    </button>
-                    <button onClick={() => org.isActive ? handlePauseOrg(org._id) : handleResumeOrg(org._id)} style={org.isActive ? styles.pauseButton : styles.resumeButton} title={org.isActive ? lang.pause : lang.resume}>
-                      <i className={`fas fa-${org.isActive ? 'pause' : 'play'}`}></i>
-                    </button>
-                    <button onClick={() => { setSelectedOrg(org); setSelectedPlan(org.subscription?.plan || 'trial'); setSelectedDuration(1); setShowPlanModal(true); }} style={styles.planButton} title={lang.changePlan}>
-                      <i className="fas fa-tag"></i>
-                    </button>
-                    <button onClick={() => { setSelectedOrg(org); setShowDeleteConfirm(true); }} style={styles.deleteButton} title={lang.delete}>
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+  {!filteredOrgs || filteredOrgs.length === 0 ? (
+    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.5)' }}>
+      <i className="fas fa-building" style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }}></i>
+      No organizations found. Click "New Organization" to create one.
+    </div>
+  ) : (
+    <table style={styles.table}>
+      <thead>
+        <tr style={styles.tableHeader}>
+          <th style={styles.th}>{lang.organization}</th>
+          <th style={styles.th}>{lang.contact}</th>
+          <th style={styles.th}>{lang.plan}</th>
+          <th style={styles.th}>{lang.status}</th>
+          <th style={styles.th}>{lang.users}</th>
+          <th style={styles.th}>{lang.tasks}</th>
+          <th style={styles.th}>{lang.subscription}</th>
+          <th style={styles.th}>{lang.actions}</th>
+         </tr>
+      </thead>
+      <tbody>
+        {filteredOrgs.map((org) => (
+          <tr key={org._id} style={styles.tableRow}>
+            <td style={styles.td}>
+              <strong>{org.name}</strong>
+              <div style={styles.orgDetails}>{org.address?.city && `${org.address.city}`}</div>
+              <button 
+                onClick={() => {
+                  setSelectedOrg(org);
+                  fetchOrganizationUsers(org._id);
+                  setShowUsersModal(true);
+                }}
+                style={styles.usersButton}
+                title={lang.manageUsers}
+              >
+                <i className="fas fa-users-cog"></i>
+              </button>
+             </td>
+            <td style={styles.td}>
+              <div>{org.email}</div>
+              <div style={styles.orgDetails}>{org.phone}</div>
+            </td>
+            <td style={styles.td}>
+              <span style={{
+                ...styles.planBadge,
+                background: org.subscription?.plan === 'corporate' ? '#ec4899' :
+                            org.subscription?.plan === 'enterprise' ? '#ec4899' :
+                            org.subscription?.plan === 'business' ? '#f59e0b' :
+                            org.subscription?.plan === 'pro' ? '#3b82f6' :
+                            org.subscription?.plan === 'standard' ? '#10b981' : 
+                            org.subscription?.plan === 'basic' ? '#6b7280' : '#8b5cf6'
+              }}>
+                {getPlanDisplayName(org.subscription?.plan || 'trial')}
+              </span>
+            </td>
+            <td style={styles.td}>
+              <span style={{
+                ...styles.statusBadge,
+                background: org.isActive ? '#10b981' : '#ef4444'
+              }}>
+                {org.isActive ? lang.active : lang.paused}
+                {org.subscription?.status === 'trial' && <span style={styles.trialBadge}>{lang.trial}</span>}
+              </span>
+            </td>
+            <td style={styles.td}>{org.userCount || 0}</td>
+            <td style={styles.td}>{org.taskCount || 0}</td>
+            <td style={styles.td}>
+              <div>{getDaysLeft(org.subscription?.endDate)}</div>
+              <div style={styles.orgDetails}>
+                {org.subscription?.endDate && new Date(org.subscription.endDate).toLocaleDateString()}
+              </div>
+            </td>
+            <td style={styles.td}>
+              <div style={styles.actionButtons}>
+                <button onClick={() => { setSelectedOrg(org); setShowExtendModal(true); }} style={styles.extendButton} title={lang.extendSubscription}>
+                  <i className="fas fa-calendar-plus"></i>
+                </button>
+                <button onClick={() => org.isActive ? handlePauseOrg(org._id) : handleResumeOrg(org._id)} style={org.isActive ? styles.pauseButton : styles.resumeButton} title={org.isActive ? lang.pause : lang.resume}>
+                  <i className={`fas fa-${org.isActive ? 'pause' : 'play'}`}></i>
+                </button>
+                <button onClick={() => { setSelectedOrg(org); setSelectedPlan(org.subscription?.plan || 'trial'); setSelectedDuration(1); setShowPlanModal(true); }} style={styles.planButton} title={lang.changePlan}>
+                  <i className="fas fa-tag"></i>
+                </button>
+                <button onClick={() => { setSelectedOrg(org); setShowDeleteConfirm(true); }} style={styles.deleteButton} title={lang.delete}>
+                  <i className="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
 
       {/* Create Organization Modal */}
-      {showOrgModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowOrgModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.createOrganization}</h2>
-            <form onSubmit={handleCreateOrganization}>
-              <input type="text" name="name" placeholder={lang.orgName} style={styles.input} required />
-              <input type="email" name="email" placeholder={lang.email} style={styles.input} required />
-              <input type="tel" name="phone" placeholder={lang.phone} style={styles.input} />
-              <select name="plan" style={styles.select} defaultValue="trial">
-                <option value="trial">Trial (14 days) - 0 SEK</option>
-                <option value="basic">Basic - 500 SEK/month</option>
-                <option value="standard">Standard - 1000 SEK/month</option>
-                <option value="professional">Professional - 1750 SEK/month</option>
-                <option value="business">Business - 2500 SEK/month</option>
-                <option value="enterprise">Enterprise - 5000 SEK/month</option>
-                <option value="unlimited">Unlimited - 15000 SEK/month</option>
-              </select>
-              <input type="number" name="trialDays" placeholder={lang.trialDays} style={styles.input} />
-              <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowOrgModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-                <button type="submit" style={styles.submitButton}>{lang.create}</button>
-              </div>
-            </form>
-          </div>
+{showOrgModal && (
+  <div style={styles.modalOverlay} onClick={() => setShowOrgModal(false)}>
+    <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <h2 style={styles.modalTitle}>{lang.createOrganization}</h2>
+      <form onSubmit={handleCreateOrganization}>
+        <input 
+          type="text" 
+          name="name" 
+          placeholder={lang.orgName} 
+          style={styles.input} 
+          required 
+        />
+        
+        <input 
+          type="email" 
+          name="email" 
+          placeholder={lang.email} 
+          style={styles.input} 
+          required 
+        />
+        
+        <input 
+          type="tel" 
+          name="phone" 
+          placeholder={lang.phone} 
+          style={styles.input} 
+        />
+        
+        <input 
+          type="text" 
+          name="adminName" 
+          placeholder="Super Admin Full Name" 
+          style={styles.input} 
+          required 
+        />
+        
+        <select name="plan" style={styles.select} defaultValue="trial" required>
+          <option value="trial">💰 Trial - 0 SEK (14 days)</option>
+          <option value="basic">💰 Basic - 399 SEK/month</option>
+          <option value="standard">💰 Standard - 799 SEK/month</option>
+          <option value="pro">💰 Pro - 1,299 SEK/month</option>
+          <option value="business">💎 Business - 2,499 SEK/month</option>
+          <option value="enterprise">💎 Enterprise - 4,999 SEK/month</option>
+          <option value="corporate">💎 Corporate - 9,999 SEK/month</option>
+          <option value="custom">💎 Custom - Contact Sales</option>
+        </select>
+        
+        <input 
+          type="number" 
+          name="trialDays" 
+          placeholder={lang.trialDays || "Trial Days (default: 14)"} 
+          style={styles.input} 
+          defaultValue="14"
+        />
+        
+        <div style={styles.modalButtons}>
+          <button 
+            type="button" 
+            onClick={() => setShowOrgModal(false)} 
+            style={styles.cancelButton}
+          >
+            {lang.cancel}
+          </button>
+          <button 
+            type="submit" 
+            style={styles.submitButton}
+          >
+            {lang.create}
+          </button>
         </div>
-      )}
+      </form>
+    </div>
+  </div>
+)}
 
       {/* Extend Subscription Modal */}
       {showExtendModal && (

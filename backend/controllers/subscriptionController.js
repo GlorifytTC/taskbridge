@@ -140,24 +140,23 @@ exports.getPlans = async (req, res) => {
 exports.changePlan = async (req, res) => {
   try {
     const { plan, duration = 1 } = req.body;
+    const organizationId = req.params.id;
     
-    if (!PLAN_PRICES[plan]) {
+    const planFeatures = Subscription.PLAN_FEATURES[plan];
+    if (!planFeatures) {
       return res.status(400).json({ message: 'Invalid plan selected' });
     }
     
-    let subscription = await Subscription.findOne({
-      organization: req.user.organization
-    });
+    let subscription = await Subscription.findOne({ organization: organizationId });
     
     if (!subscription) {
-      subscription = new Subscription({ organization: req.user.organization });
+      return res.status(404).json({ message: 'Subscription not found' });
     }
     
-    const monthlyPrice = PLAN_PRICES[plan];
+    const monthlyPrice = planFeatures.price;
     const totalAmount = monthlyPrice * duration;
     const vatAmount = totalAmount * 0.25;
     
-    // Calculate new end date
     const currentEndDate = subscription.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
     
@@ -170,14 +169,24 @@ exports.changePlan = async (req, res) => {
       vat: { rate: 25, amount: vatAmount },
       monthlyPrice: monthlyPrice
     };
-    subscription.features = PLAN_FEATURES[plan];
-    subscription.upgradedFromPlan = subscription.plan !== plan ? subscription.plan : null;
+    subscription.features = {
+      maxEmployees: planFeatures.maxEmployees,
+      maxBranches: planFeatures.maxBranches,
+      maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
+      maxAdmins: planFeatures.maxAdmins,
+      reportLevel: planFeatures.reportLevel,
+      exportReports: planFeatures.exportReports,
+      customReports: planFeatures.customReports,
+      apiAccess: planFeatures.apiAccess,
+      prioritySupport: planFeatures.prioritySupport,
+      dedicatedSupport: planFeatures.dedicatedSupport
+    };
+    subscription.upgradedFromPlan = subscription.plan;
     subscription.upgradedAt = new Date();
     
     await subscription.save();
     
-    // Update organization subscription info
-    await Organization.findByIdAndUpdate(req.user.organization, {
+    await Organization.findByIdAndUpdate(organizationId, {
       'subscription.plan': plan,
       'subscription.status': 'active',
       'subscription.endDate': newEndDate
@@ -185,7 +194,7 @@ exports.changePlan = async (req, res) => {
     
     await AuditLog.create({
       user: req.user.id,
-      organization: req.user.organization,
+      organization: organizationId,
       action: 'change_plan',
       entityType: 'subscription',
       entityId: subscription._id,
@@ -196,7 +205,7 @@ exports.changePlan = async (req, res) => {
     
     res.json({
       success: true,
-      message: `Plan changed to ${plan} successfully`,
+      message: `Plan changed to ${planFeatures.name} successfully`,
       data: subscription
     });
   } catch (error) {

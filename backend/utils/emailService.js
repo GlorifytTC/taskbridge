@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { trackEmailSent } = require('../controllers/organizationController');
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -11,8 +12,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Send email function
-exports.sendEmail = async ({ to, subject, html, text }) => {
+// Send email function - ADD ORGANIZATION ID PARAMETER
+exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     const mailOptions = {
       from: `"TaskBridge" <${process.env.SMTP_FROM_EMAIL}>`,
@@ -24,6 +25,12 @@ exports.sendEmail = async ({ to, subject, html, text }) => {
     
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
+    
+    // ✅ TRACK THE EMAIL FOR QUOTA (if organizationId provided)
+    if (organizationId) {
+      await trackEmailSent(organizationId);
+    }
+    
     return info;
   } catch (error) {
     console.error('Email error:', error);
@@ -31,7 +38,7 @@ exports.sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
-// Send welcome email
+// Send welcome email - ADD ORGANIZATION ID
 exports.sendWelcomeEmail = async (user, organization) => {
   const subject = `Welcome to TaskBridge - ${organization.name}`;
   const html = `
@@ -48,11 +55,17 @@ exports.sendWelcomeEmail = async (user, organization) => {
     </div>
   `;
   
-  await exports.sendEmail({ to: user.email, subject, html });
+  // ✅ Pass organization ID for tracking
+  await exports.sendEmail({ 
+    to: user.email, 
+    subject, 
+    html,
+    organizationId: organization._id 
+  });
 };
 
-// Send task notification email
-exports.sendTaskNotification = async (employee, task) => {
+// Send task notification email - ADD ORGANIZATION ID
+exports.sendTaskNotification = async (employee, task, organizationId) => {
   const subject = `New Task Available: ${task.title}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -72,11 +85,17 @@ exports.sendTaskNotification = async (employee, task) => {
     </div>
   `;
   
-  await exports.sendEmail({ to: employee.email, subject, html });
+  // ✅ Pass organization ID for tracking
+  await exports.sendEmail({ 
+    to: employee.email, 
+    subject, 
+    html,
+    organizationId: organizationId 
+  });
 };
 
-// Send application status email
-exports.sendApplicationStatusEmail = async (employee, task, status, reason = '') => {
+// Send application status email - ADD ORGANIZATION ID
+exports.sendApplicationStatusEmail = async (employee, task, status, organizationId, reason = '') => {
   const subject = `Application ${status}: ${task.title}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -95,10 +114,16 @@ exports.sendApplicationStatusEmail = async (employee, task, status, reason = '')
     </div>
   `;
   
-  await exports.sendEmail({ to: employee.email, subject, html });
+  // ✅ Pass organization ID for tracking
+  await exports.sendEmail({ 
+    to: employee.email, 
+    subject, 
+    html,
+    organizationId: organizationId 
+  });
 };
 
-// Send subscription expiration email
+// Send subscription expiration email - ADD ORGANIZATION ID
 exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
   const subject = `Subscription Expiration Notice - ${daysLeft} days left`;
   const html = `
@@ -113,5 +138,11 @@ exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
     </div>
   `;
   
-  await exports.sendEmail({ to: organization.email, subject, html });
+  // ✅ Pass organization ID for tracking
+  await exports.sendEmail({ 
+    to: organization.email, 
+    subject, 
+    html,
+    organizationId: organization._id 
+  });
 };

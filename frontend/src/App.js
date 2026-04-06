@@ -9,6 +9,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
+import CreateAccount from './components/CreateAccount';
 
 
 
@@ -132,6 +133,8 @@ function App() {
       else setCurrentPage('dashboard');
     }} />;
   }
+  <Route path="/create-account" element={<CreateAccount onBack={() => navigate('/login')} onLogin={handleLogin} />} />
+
 
   // Default landing page
   return <Landing onLoginClick={goToLogin} />;
