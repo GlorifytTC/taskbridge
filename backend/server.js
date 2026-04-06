@@ -28,21 +28,11 @@ const app = express();
 
 // ============ CORS - ALLOW ALL ============
 app.use(cors({
-  origin: [
-    'https://taskbridge-five.vercel.app',
-    'https://taskbridge-production-9d91.up.railway.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ],
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
-
-// Handle preflight requests explicitly
-app.options('*', cors());
-
 
 // Middleware
 app.use(express.json());

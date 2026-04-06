@@ -156,6 +156,7 @@ exports.validateEmail = async (req, res) => {
       isActive: user?.isActive === true
     });
   } catch (error) {
+    console.error('Validate email error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -196,10 +197,10 @@ exports.setupAccount = async (req, res) => {
     user.isActive = true;
     await user.save();
     
-    // Generate token and login
+    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
     
@@ -222,6 +223,7 @@ exports.setupAccount = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Get current user
 // @route   GET /api/auth/me
