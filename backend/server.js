@@ -171,6 +171,22 @@ app.get('/api/auth/me', async (req, res) => {
   }
 });
 
+// ============ SUBSCRIPTION CHECK - RUN DAILY ============
+// Run daily at midnight to check for subscription renewals
+const checkSubscriptions = async () => {
+  const Subscription = require('./models/Subscription');
+  const subscriptions = await Subscription.find({ status: 'active', autoRenew: true });
+  
+  for (const subscription of subscriptions) {
+    await subscription.renewIfNeeded();
+  }
+  console.log('Subscription check completed');
+};
+
+// Run every day at midnight
+setInterval(checkSubscriptions, 24 * 60 * 60 * 1000);
+
+
 // ============ CONNECT TO MONGODB AND START SERVER ============
 const PORT = process.env.PORT || 5000;
 

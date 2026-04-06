@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { getEmailQuotaStatus } = require('../controllers/organizationController');
 const { protect, authorize } = require('../middleware/auth');
 const {
   createOrganization,
@@ -18,6 +19,7 @@ const {
 // All routes require authentication and master role
 router.use(protect);
 router.use(authorize('master'));
+router.get('/email-quota', protect, getEmailQuotaStatus);
 
 // GET and POST for organizations
 router.route('/')
