@@ -315,19 +315,44 @@ const MasterDashboard = ({ onLogout }) => {
   };
 
   const fetchOrganizationUsers = async (orgId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSelectedOrgUsers(data.users);
+  try {
+    const token = localStorage.getItem('token');
+    console.log('Fetching users for org:', orgId);
+    
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/users`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    });
+    
+    console.log('Response status:', response.status);
+    const data = await response.json();
+    console.log('Response data:', data);
+    
+    if (response.ok && data.success) {
+      // Handle different possible data structures
+      if (data.users && Array.isArray(data.users)) {
+        setSelectedOrgUsers(data.users);
+      } else if (data.data && Array.isArray(data.data)) {
+        setSelectedOrgUsers(data.data);
+      } else if (Array.isArray(data)) {
+        setSelectedOrgUsers(data);
+      } else {
+        setSelectedOrgUsers([]);
+        console.warn('Unexpected data structure:', data);
+      }
+    } else {
+      console.error('Failed to fetch users:', data.message);
+      setSelectedOrgUsers([]);
+      showToastMessage(data.message || 'Failed to load users', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    setSelectedOrgUsers([]);
+    showToastMessage('Error loading users', 'error');
+  }
+};
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -911,68 +936,74 @@ const MasterDashboard = ({ onLogout }) => {
   </div>
 )}
 
-      {/* Users Management Modal */}
       {showUsersModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowUsersModal(false)}>
-          <div style={{...styles.modal, maxWidth: '800px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>
-              {lang.manageUsers} - {selectedOrg?.name}
-              <button onClick={() => setShowCreateUserModal(true)} style={styles.addUserButton}>
-                <i className="fas fa-plus"></i> {lang.addUser}
-              </button>
-            </h2>
-            
-            <div style={styles.usersTableContainer}>
-              <table style={styles.usersTable}>
-                <thead>
-                  <tr style={styles.tableHeader}>
-                    <th>Name</th><th>Email</th><th>{lang.role}</th><th>{lang.status}</th><th>{lang.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedOrgUsers.map((user) => (
-                    <tr key={user._id} style={styles.tableRow}>
-                      <td><strong>{user.name}</strong></td>
-                      <td>{user.email}</td>
-                      <td>
-                        <span style={{
-                          ...styles.roleBadge,
-                          background: user.role === 'superadmin' ? '#8b5cf6' : 
-                                      user.role === 'admin' ? '#3b82f6' : '#10b981'
-                        }}>
-                          {user.role}
-                        </span>
-                       </td>
-                      <td>
-                        <span style={{
-                          ...styles.statusBadge,
-                          background: user.isActive ? '#10b981' : '#ef4444'
-                        }}>
-                          {user.isActive ? lang.active : lang.paused}
-                        </span>
-                       </td>
-                      <td>
-                        <div style={styles.actionButtons}>
-                          <button onClick={() => { setSelectedUser(user); setShowResetPasswordModal(true); }} style={styles.resetButton} title={lang.resetPassword}>
-                            <i className="fas fa-key"></i>
-                          </button>
-                          <button onClick={() => handleDeleteUser(user._id)} style={styles.deleteButton} title={lang.delete}>
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        </div>
-                       </td>
-                     </tr>
-                  ))}
-                </tbody>
-               </table>
-            </div>
-            
-            <div style={styles.modalButtons}>
-              <button onClick={() => setShowUsersModal(false)} style={styles.cancelButton}>{lang.close}</button>
-            </div>
+  <div style={styles.modalOverlay} onClick={() => setShowUsersModal(false)}>
+    <div style={{...styles.modal, maxWidth: '800px'}} onClick={(e) => e.stopPropagation()}>
+      <h2 style={styles.modalTitle}>
+        {lang.manageUsers} - {selectedOrg?.name}
+        <button onClick={() => setShowCreateUserModal(true)} style={styles.addUserButton}>
+          <i className="fas fa-plus"></i> {lang.addUser}
+        </button>
+      </h2>
+      
+      <div style={styles.usersTableContainer}>
+        {!selectedOrgUsers || selectedOrgUsers.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+            <i className="fas fa-users" style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}></i>
+            No users found. Click "Add User" to create one.
           </div>
-        </div>
-      )}
+        ) : (
+          <table style={styles.usersTable}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th>Name</th><th>Email</th><th>{lang.role}</th><th>{lang.status}</th><th>{lang.actions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedOrgUsers.map((user) => (
+                <tr key={user._id} style={styles.tableRow}>
+                  <td><strong>{user.name}</strong></td>
+                  <td>{user.email}</td>
+                  <td>
+                    <span style={{
+                      ...styles.roleBadge,
+                      background: user.role === 'superadmin' ? '#8b5cf6' : 
+                                  user.role === 'admin' ? '#3b82f6' : '#10b981'
+                    }}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      ...styles.statusBadge,
+                      background: user.isActive ? '#10b981' : '#ef4444'
+                    }}>
+                      {user.isActive ? lang.active : lang.paused}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={styles.actionButtons}>
+                      <button onClick={() => { setSelectedUser(user); setShowResetPasswordModal(true); }} style={styles.resetButton} title={lang.resetPassword}>
+                        <i className="fas fa-key"></i>
+                      </button>
+                      <button onClick={() => handleDeleteUser(user._id)} style={styles.deleteButton} title={lang.delete}>
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      
+      <div style={styles.modalButtons}>
+        <button onClick={() => setShowUsersModal(false)} style={styles.cancelButton}>{lang.close}</button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Create User Modal */}
       {showCreateUserModal && (
