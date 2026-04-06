@@ -113,23 +113,57 @@ exports.createOrganization = async (req, res) => {
   try {
     const { name, email, phone, address, subscriptionPlan, trialDays } = req.body;
     
+    console.log('Creating organization with plan:', subscriptionPlan);
+    
     // Check if organization exists
     const orgExists = await Organization.findOne({ name });
     if (orgExists) {
       return res.status(400).json({ message: 'Organization already exists' });
     }
     
-    // Create organization
+    // Get plan features for correct pricing and limits
+    const selectedPlan = subscriptionPlan || 'trial';
+    const planFeatures = Subscription.PLAN_FEATURES[selectedPlan];
+    
+    if (!planFeatures) {
+      return res.status(400).json({ message: 'Invalid subscription plan' });
+    }
+    
+    // Calculate end date based on plan
+    let endDate;
+    let status;
+    
+    switch(selectedPlan) {
+      case 'trial':
+        endDate = new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000);
+        status = 'trial';
+        break;
+      case 'basic':
+      case 'standard':
+      case 'professional':
+      case 'business':
+      case 'enterprise':
+      case 'unlimited':
+        // Paid plans: 30 days from now (monthly subscription)
+        endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        status = 'active';
+        break;
+      default:
+        endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        status = 'trial';
+    }
+    
+    // Create organization with correct plan
     const organization = await Organization.create({
       name,
       email,
       phone,
       address,
       subscription: {
-        plan: subscriptionPlan || 'trial',
-        status: 'trial',
-        startDate: Date.now(),
-        endDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000)
+        plan: selectedPlan,
+        status: status,
+        startDate: new Date(),
+        endDate: endDate
       }
     });
     
@@ -140,21 +174,43 @@ exports.createOrganization = async (req, res) => {
       isActive: true
     });
     
-    // Create subscription record
+    // Calculate price amount
+    const priceAmount = planFeatures.price || 0;
+    
+    // Create subscription record with complete data
     await Subscription.create({
       organization: organization._id,
-      plan: subscriptionPlan || 'trial',
-      status: 'trial',
-      startDate: Date.now(),
-      endDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000),
-      trialEndDate: new Date(Date.now() + (trialDays || 14) * 24 * 60 * 60 * 1000),
-      price: {  // ✅ Add this entire price object
-        amount: 0,  // Trial is free
+      plan: selectedPlan,
+      status: status,
+      startDate: new Date(),
+      endDate: endDate,
+      trialEndDate: selectedPlan === 'trial' ? endDate : null,
+      price: {
+        amount: priceAmount,
         currency: 'SEK',
         vat: {
           rate: 25,
-          amount: 0
-        }
+          amount: (priceAmount * 25) / 100
+        },
+        monthlyPrice: priceAmount
+      },
+      features: {
+        maxEmployees: planFeatures.maxEmployees,
+        maxBranches: planFeatures.maxBranches,
+        maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
+        maxAdmins: planFeatures.maxAdmins,
+        reportLevel: planFeatures.reportLevel,
+        exportReports: planFeatures.exportReports || false,
+        customReports: planFeatures.customReports || false,
+        apiAccess: planFeatures.apiAccess || false,
+        prioritySupport: planFeatures.prioritySupport || false,
+        unlimited: selectedPlan === 'unlimited'
+      },
+      usage: {
+        currentEmployees: 0,
+        currentBranches: 1, // Main branch created
+        emailsSentThisMonth: 0,
+        lastResetDate: new Date()
       }
     });
     
@@ -165,21 +221,26 @@ exports.createOrganization = async (req, res) => {
       action: 'create',
       entityType: 'organization',
       entityId: organization._id,
-      changes: { name, email },
+      changes: { name, email, plan: selectedPlan, price: priceAmount },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
     
     res.status(201).json({
       success: true,
+      message: `Organization created with ${selectedPlan} plan`,
       data: {
         organization,
         defaultBranch
       }
     });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error creating organization:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
