@@ -1,13 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 dotenv.config();
 
-// Import mongoose and models
-const mongoose = require('mongoose');
+// Import models
 const User = require('./models/User');
 const Organization = require('./models/Organization');
 
@@ -26,7 +24,7 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
-// ============ CORS - ALLOW ALL ============
+// ============ CORS ============
 app.use(cors({
   origin: '*',
   credentials: true,
@@ -51,7 +49,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// ============ SIMPLE TEST ROUTES ============
+// ============ TEST ROUTES ============
 app.get('/', (req, res) => {
   res.json({ 
     name: 'TaskBridge API', 
@@ -75,16 +73,14 @@ app.get('/api/test', (req, res) => {
 // Debug endpoint to check users
 app.get('/api/debug/users', async (req, res) => {
   try {
-    const users = await User.find({}, { email: 1, name: 1, role: 1, password: 1 });
+    const users = await User.find({}, { email: 1, name: 1, role: 1 });
     res.json({
       success: true,
       count: users.length,
       users: users.map(u => ({
         email: u.email,
         name: u.name,
-        role: u.role,
-        hasPassword: !!u.password,
-        passwordLength: u.password ? u.password.length : 0
+        role: u.role
       }))
     });
   } catch (error) {
@@ -92,87 +88,7 @@ app.get('/api/debug/users', async (req, res) => {
   }
 });
 
-// ============ AUTH ENDPOINT - LOGIN ============
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log('========================================');
-    console.log('🔐 Login attempt for:', email);
-    
-    // Find user with password
-    const user = await User.findOne({ email }).select('+password');
-    
-    if (!user) {
-      console.log('❌ User not found');
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-    
-    console.log('✅ User found');
-    
-    // Use matchPassword method
-    const isMatch = await user.matchPassword(password);
-    
-    if (!isMatch) {
-      console.log('❌ Invalid password');
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-    
-    console.log('✅ Password matched');
-    
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-    
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'mysecretkey123',
-      { expiresIn: '30d' }
-    );
-    
-    console.log('✅ Login successful!');
-    console.log('========================================');
-    
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        organization: user.organization
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
-  }
-});
-
-// ============ GET CURRENT USER ============
-app.get('/api/auth/me', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'No token' });
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findById(decoded.id).select('-password').populate('organization');
-    
-    res.json({ success: true, user });
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid token' });
-  }
-});
-
-// ============ SUBSCRIPTION CHECK - RUN DAILY ============
-// Run daily at midnight to check for subscription renewals
+// ============ SUBSCRIPTION CHECK ============
 const checkSubscriptions = async () => {
   const Subscription = require('./models/Subscription');
   const subscriptions = await Subscription.find({ status: 'active', autoRenew: true });
@@ -183,11 +99,9 @@ const checkSubscriptions = async () => {
   console.log('Subscription check completed');
 };
 
-// Run every day at midnight
 setInterval(checkSubscriptions, 24 * 60 * 60 * 1000);
 
-
-// ============ CONNECT TO MONGODB AND START SERVER ============
+// ============ CONNECT TO MONGODB ============
 const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGODB_URI)
@@ -197,7 +111,6 @@ mongoose.connect(process.env.MONGODB_URI)
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Health: http://localhost:${PORT}/health`);
-      console.log(`🔑 Login: http://localhost:${PORT}/api/auth/login`);
     });
   })
   .catch(err => {
