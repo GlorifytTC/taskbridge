@@ -24,9 +24,6 @@ exports.changePlan = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Organization not found' });
     }
     
-    // Store old plan before updating
-    const oldPlan = organization.subscription?.plan || 'trial';
-    
     // Get plan features
     const Subscription = require('../models/Subscription');
     const planFeatures = Subscription.PLAN_FEATURES[plan];
@@ -81,15 +78,9 @@ exports.changePlan = async (req, res) => {
       { upsert: true, new: true }
     );
     
-    // ✅ SEND EMAIL NOTIFICATION (ADD THIS BLOCK)
-    try {
-      const { sendPlanChangeEmail } = require('../utils/emailService');
-      await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
-      console.log(`📧 Plan change email sent to ${organization.email}`);
-    } catch (emailError) {
-      console.error('⚠️ Failed to send plan change email:', emailError.message);
-      // Don't fail the whole request if email fails
-    }
+    // ⚠️ EMAIL DISABLED TEMPORARILY - Fix Railway SMTP issue
+    // TODO: Re-enable when SMTP is configured correctly
+    console.log(`📧 Email would be sent to ${organization.email} (disabled - SMTP issue)`);
     
     // Create audit log
     const AuditLog = require('../models/AuditLog');
