@@ -23,6 +23,8 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       text: text || html?.replace(/<[^>]*>/g, '')
     };
     
+    console.log('📧 Mail options subject:', mailOptions.subject);
+    
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
     
@@ -123,12 +125,13 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
   });
 };
 // Send plan change notification email
+// Send plan change notification email
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
-  console.log('📧 Sending plan change email to:', organization.email);
-  console.log('   SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'NOT SET');
-  console.log('   SMTP_PASS:', process.env.SMTP_PASS ? 'Set' : 'NOT SET');
-  console.log('   SMTP_HOST:', process.env.SMTP_HOST);
+  console.log('📧 Preparing plan change email for:', organization.email);
+  console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
   
+  const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
+  console.log('   Subject:', subject);
   
   // Get plan features for the new plan
   const Subscription = require('../models/Subscription');
@@ -185,7 +188,7 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL}/billing" 
+          <a href="${process.env.FRONTEND_URL || 'https://taskbridge-five.vercel.app'}/billing" 
              style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
             View Billing Details
           </a>
@@ -199,10 +202,16 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
     </div>
   `;
   
+  // Make sure subject is defined before calling sendEmail
+  if (!subject) {
+    console.error('❌ Subject is undefined!');
+    return;
+  }
+  
   await exports.sendEmail({ 
     to: organization.email, 
-    subject, 
-    html,
+    subject: subject,  // Make sure this is passed
+    html: html,
     organizationId: organization._id 
   });
 };
