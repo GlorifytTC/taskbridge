@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Organization = require('../models/Organization');
 const User = require('../models/User');
 const Branch = require('../models/Branch');
@@ -572,16 +573,12 @@ exports.deleteOrganization = async (req, res) => {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // Delete ALL related data
+    // Delete ALL related data (only models that exist)
     await User.deleteMany({ organization: organization._id });
     await Branch.deleteMany({ organization: organization._id });
     await Task.deleteMany({ organization: organization._id });
-    // Only delete these if the models exist
-    if (mongoose.models.Application) await Application.deleteMany({ organization: organization._id });
     await Subscription.deleteOne({ organization: organization._id });
     await AuditLog.deleteMany({ organization: organization._id });
-    if (mongoose.models.Notification) await Notification.deleteMany({ organization: organization._id });
-    if (mongoose.models.JobDescription) await JobDescription.deleteMany({ organization: organization._id });
     
     // HARD DELETE the organization
     await organization.deleteOne();
