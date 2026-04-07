@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 
-const Login = ({ onBack, onLogin, onNavigate }) => {
+const Login = ({ onBack, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,6 +47,37 @@ const Login = ({ onBack, onLogin, onNavigate }) => {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setResetMessage('');
+    setResetLoading(true);
+
+    try {
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResetMessage('Password reset link sent to your email!');
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setResetEmail('');
+          setResetMessage('');
+        }, 3000);
+      } else {
+        setResetMessage(data.message || 'Email not found');
+      }
+    } catch (err) {
+      setResetMessage('Network error. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.bgAnimation}>
@@ -58,71 +93,126 @@ const Login = ({ onBack, onLogin, onNavigate }) => {
             <h1 style={styles.logoTitle}>TaskBridge</h1>
           </div>
 
-          <h2 style={styles.welcomeTitle}>Welcome Back</h2>
-          <p style={styles.welcomeSubtitle}>Sign in to your account</p>
+          {!showForgotPassword ? (
+            <>
+              <h2 style={styles.welcomeTitle}>Welcome Back</h2>
+              <p style={styles.welcomeSubtitle}>Sign in to your account</p>
 
-          {error && (
-            <div style={styles.errorMessage}>
-              <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Email Address</label>
-              <div style={styles.inputWrapper}>
-                <i className="fas fa-envelope" style={styles.inputIcon}></i>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={styles.input}
-                  required
-                />
-              </div>
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Password</label>
-              <div style={styles.inputWrapper}>
-                <i className="fas fa-lock" style={styles.inputIcon}></i>
-                <input
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={styles.input}
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={loading ? { ...styles.button, ...styles.buttonDisabled } : styles.button}
-            >
-              {loading ? (
-                <span><i className="fas fa-spinner fa-spin"></i> Signing in...</span>
-              ) : (
-                'Sign In'
+              {error && (
+                <div style={styles.errorMessage}>
+                  <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
+                  {error}
+                </div>
               )}
-            </button>
-          </form>
 
-          <div style={styles.registerSection}>
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>New School?</span>
-            </div>
-            <button
-              onClick={() => onNavigate && onNavigate('create-account')}
-              style={styles.registerButton}
-            >
-              <i className="fas fa-school"></i> Register Your School
-            </button>
-          </div>  
+              <form onSubmit={handleSubmit} style={styles.form}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Email Address</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-envelope" style={styles.inputIcon}></i>
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Password</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-lock" style={styles.inputIcon}></i>
+                    <input
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.forgotPasswordLink}>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowForgotPassword(true)}
+                    style={styles.forgotButton}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={loading ? { ...styles.button, ...styles.buttonDisabled } : styles.button}
+                >
+                  {loading ? (
+                    <span><i className="fas fa-spinner fa-spin"></i> Signing in...</span>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 style={styles.welcomeTitle}>Reset Password</h2>
+              <p style={styles.welcomeSubtitle}>Enter your email to receive reset link</p>
+
+              {resetMessage && (
+                <div style={resetMessage.includes('sent') ? styles.successMessage : styles.errorMessage}>
+                  <i className={`fas fa-${resetMessage.includes('sent') ? 'check-circle' : 'exclamation-circle'}`} style={{ marginRight: '8px' }}></i>
+                  {resetMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleForgotPassword} style={styles.form}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Email Address</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-envelope" style={styles.inputIcon}></i>
+                    <input
+                      type="email"
+                      placeholder="Enter your registered email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  style={resetLoading ? { ...styles.button, ...styles.buttonDisabled } : styles.button}
+                >
+                  {resetLoading ? (
+                    <span><i className="fas fa-spinner fa-spin"></i> Sending...</span>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetMessage('');
+                    setResetEmail('');
+                  }}
+                  style={styles.backToLoginButton}
+                >
+                  ← Back to Login
+                </button>
+              </form>
+            </>
+          )}
 
           <div style={styles.backLink}>
             <button onClick={onBack} style={styles.backButton}>
@@ -257,6 +347,17 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
   },
+  successMessage: {
+    background: 'rgba(16, 185, 129, 0.1)',
+    border: '1px solid rgba(16, 185, 129, 0.3)',
+    borderRadius: '12px',
+    padding: '12px',
+    color: '#10b981',
+    fontSize: '14px',
+    marginBottom: '24px',
+    display: 'flex',
+    alignItems: 'center',
+  },
   form: {
     display: 'flex',
     flexDirection: 'column',
@@ -295,6 +396,31 @@ const styles = {
     boxSizing: 'border-box',
     outline: 'none',
   },
+  forgotPasswordLink: {
+    textAlign: 'right',
+    marginTop: '-8px',
+  },
+  forgotButton: {
+    background: 'none',
+    border: 'none',
+    color: '#00d1ff',
+    fontSize: '12px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    transition: 'color 0.3s',
+  },
+  backToLoginButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '12px',
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    marginTop: '8px',
+  },
   button: {
     width: '100%',
     padding: '14px',
@@ -311,37 +437,6 @@ const styles = {
   buttonDisabled: {
     opacity: 0.7,
     cursor: 'not-allowed',
-  },
-  registerSection: {
-    marginTop: '24px',
-  },
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    textAlign: 'center',
-    margin: '16px 0',
-  },
-  dividerText: {
-    flex: 1,
-    fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.4)',
-    padding: '0 10px',
-  },
-  registerButton: {
-    width: '100%',
-    padding: '12px',
-    background: 'rgba(16, 185, 129, 0.2)',
-    border: '1px solid #10b981',
-    borderRadius: '12px',
-    color: '#34d399',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
   },
   backLink: {
     marginTop: '32px',
@@ -383,13 +478,16 @@ styleSheet.textContent = `
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.4);
   }
+  .forgotButton:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
   .backButton:hover {
     color: #00d1ff;
   }
-  .registerButton:hover {
-    background: rgba(16, 185, 129, 0.3);
-    border-color: #34d399;
-    transform: translateY(-2px);
+  .backToLoginButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
   }
 `;
 document.head.appendChild(styleSheet);
