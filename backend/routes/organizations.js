@@ -11,6 +11,7 @@ const {
   pauseOrganization,
   resumeOrganization,
   extendSubscription,
+  changePlan,  // ✅ ADD THIS LINE
   getOrganizationUsers,
   createOrganizationUser
 } = require('../controllers/organizationController');
@@ -31,7 +32,7 @@ router.post('/:id/users', createOrganizationUser);
 router.put('/:id/pause', pauseOrganization);
 router.put('/:id/resume', resumeOrganization);
 router.put('/:id/extend', extendSubscription);
-router.put('/:id/plan', changePlan);
+router.put('/:id/plan', changePlan);  // ✅ Now changePlan is defined
 
 // Generic :id route - MUST BE LAST
 router.route('/:id')
