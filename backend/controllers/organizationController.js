@@ -13,14 +13,14 @@ const { generateInvoicePDF } = require('../utils/generateInvoice');
 // @access  Private/Master
 exports.changePlan = async (req, res) => {
   try {
-    const { plan, duration } = req.body;
+    const { plan, duration = 1 } = req.body;
     const organization = await Organization.findById(req.params.id);
     
     if (!organization) {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // UPDATED PLAN PRICES with new packages
+    // NEW PLAN PRICES
     const prices = {
       trial: 0,
       basic: 399,
@@ -32,13 +32,18 @@ exports.changePlan = async (req, res) => {
       custom: 0
     };
     
+    // Check if plan exists
+    if (!prices[plan]) {
+      return res.status(400).json({ message: 'Invalid plan selected' });
+    }
+    
+    const monthlyPrice = prices[plan];
+    const totalAmount = monthlyPrice * duration;
+    const vatAmount = totalAmount * 0.25;
+    
     // Calculate new end date
     const currentEndDate = organization.subscription?.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
-    
-    // Get plan features
-    const Subscription = require('../models/Subscription');
-    const planFeatures = Subscription.PLAN_FEATURES[plan];
     
     // Update organization subscription
     organization.subscription = {
@@ -49,7 +54,11 @@ exports.changePlan = async (req, res) => {
     };
     await organization.save();
     
-    // Update subscription record if exists
+    // Get plan features from Subscription model
+    const Subscription = require('../models/Subscription');
+    const planFeatures = Subscription.PLAN_FEATURES[plan];
+    
+    // Update or create subscription record
     await Subscription.findOneAndUpdate(
       { organization: organization._id },
       { 
@@ -57,34 +66,36 @@ exports.changePlan = async (req, res) => {
         status: 'active',
         endDate: newEndDate,
         price: {
-          amount: prices[plan] * duration,
+          amount: totalAmount,
           currency: 'SEK',
-          vat: { rate: 25, amount: (prices[plan] * duration * 0.25) }
+          vat: { rate: 25, amount: vatAmount },
+          monthlyPrice: monthlyPrice
         },
-        features: {
+        features: planFeatures ? {
           maxEmployees: planFeatures.maxEmployees,
           maxBranches: planFeatures.maxBranches,
           maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
           maxAdmins: planFeatures.maxAdmins,
           reportLevel: planFeatures.reportLevel,
-          exportReports: planFeatures.exportReports,
-          customReports: planFeatures.customReports,
-          apiAccess: planFeatures.apiAccess,
-          prioritySupport: planFeatures.prioritySupport,
-          dedicatedSupport: planFeatures.dedicatedSupport
-        }
+          exportReports: planFeatures.exportReports || false,
+          customReports: planFeatures.customReports || false,
+          apiAccess: planFeatures.apiAccess || false,
+          prioritySupport: planFeatures.prioritySupport || false,
+          dedicatedSupport: planFeatures.dedicatedSupport || false
+        } : {}
       },
       { upsert: true }
     );
     
     // Create audit log
+    const AuditLog = require('../models/AuditLog');
     await AuditLog.create({
       user: req.user.id,
       organization: organization._id,
       action: 'change_plan',
       entityType: 'subscription',
       entityId: organization._id,
-      changes: { plan, duration, newEndDate },
+      changes: { plan, duration, totalAmount, newEndDate },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -94,9 +105,11 @@ exports.changePlan = async (req, res) => {
       message: `Plan changed to ${plan}`,
       data: {
         plan,
-        endDate: newEndDate
+        endDate: newEndDate,
+        totalAmount
       }
     });
+    
   } catch (error) {
     console.error('Error changing plan:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
