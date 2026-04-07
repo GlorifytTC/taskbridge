@@ -43,16 +43,6 @@ const Login = ({ onBack, onLogin }) => {
     }
   };
 
-  // Super Admin quick login
-  const handleSuperAdminLogin = () => {
-    setEmail('georgeglor@hotmail.com');
-    setPassword('Gladiatorman40');
-    // Auto submit after setting
-    setTimeout(() => {
-      handleSubmit(new Event('submit'));
-    }, 100);
-  };
-
   return (
     <div style={styles.container}>
       <div style={styles.bgAnimation}>
@@ -121,20 +111,6 @@ const Login = ({ onBack, onLogin }) => {
               )}
             </button>
           </form>
-
-          {/* Super Admin Quick Login Button */}
-          <div style={styles.superAdminSection}>
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>Super Admin Access</span>
-            </div>
-            <button
-              onClick={handleSuperAdminLogin}
-              style={styles.superAdminButton}
-              disabled={loading}
-            >
-              <i className="fas fa-user-shield"></i> Sign in as Super Admin
-            </button>
-          </div>
 
           <div style={styles.backLink}>
             <button onClick={onBack} style={styles.backButton}>
@@ -324,41 +300,10 @@ const styles = {
     opacity: 0.7,
     cursor: 'not-allowed',
   },
-  superAdminSection: {
-    marginTop: '24px',
-  },
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    textAlign: 'center',
-    margin: '16px 0',
-  },
-  dividerText: {
-    flex: 1,
-    fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.4)',
-    padding: '0 10px',
-  },
-  superAdminButton: {
-    width: '100%',
-    padding: '12px',
-    background: 'rgba(139, 92, 246, 0.2)',
-    border: '1px solid #8b5cf6',
-    borderRadius: '12px',
-    color: '#a78bfa',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-  },
   backLink: {
-    marginTop: '24px',
+    marginTop: '32px',
     textAlign: 'center',
-    paddingTop: '20px',
+    paddingTop: '24px',
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
   },
   backButton: {
@@ -394,11 +339,6 @@ styleSheet.textContent = `
   button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 209, 255, 0.4);
-  }
-  .superAdminButton:hover {
-    background: rgba(139, 92, 246, 0.3);
-    border-color: #a78bfa;
-    transform: translateY(-2px);
   }
   .backButton:hover {
     color: #00d1ff;
