@@ -124,7 +124,11 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
 };
 // Send plan change notification email
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
-  const subject = `Plan Changed: ${oldPlan?.toUpperCase()} → ${newPlan.toUpperCase()}`;
+  console.log('📧 Sending plan change email to:', organization.email);
+  console.log('   SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'NOT SET');
+  console.log('   SMTP_PASS:', process.env.SMTP_PASS ? 'Set' : 'NOT SET');
+  console.log('   SMTP_HOST:', process.env.SMTP_HOST);
+  
   
   // Get plan features for the new plan
   const Subscription = require('../models/Subscription');
