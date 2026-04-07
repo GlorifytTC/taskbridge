@@ -7,7 +7,9 @@ const Task = require('../models/Task');
 const { sendWelcomeEmailWithInvoice } = require('../utils/emailService');
 const { generateInvoicePDF } = require('../utils/generateInvoice');
 const { sendWelcomeEmail, sendPlanChangeEmail } = require('../utils/emailService');
-
+const Application = require('../models/Application'); 
+const Notification = require('../models/Notification'); 
+const JobDescription = require('../models/JobDescription'); 
 
 // ============ EXISTING FUNCTIONS (keep these) ============
 
@@ -574,16 +576,17 @@ exports.deleteOrganization = async (req, res) => {
     await User.deleteMany({ organization: organization._id });
     await Branch.deleteMany({ organization: organization._id });
     await Task.deleteMany({ organization: organization._id });
-    await Application.deleteMany({ organization: organization._id });
+    // Only delete these if the models exist
+    if (mongoose.models.Application) await Application.deleteMany({ organization: organization._id });
     await Subscription.deleteOne({ organization: organization._id });
     await AuditLog.deleteMany({ organization: organization._id });
-    await Notification.deleteMany({ organization: organization._id });
-    await JobDescription.deleteMany({ organization: organization._id });
+    if (mongoose.models.Notification) await Notification.deleteMany({ organization: organization._id });
+    if (mongoose.models.JobDescription) await JobDescription.deleteMany({ organization: organization._id });
     
     // HARD DELETE the organization
     await organization.deleteOne();
     
-    // Create audit log (before organization is deleted)
+    // Create audit log
     await AuditLog.create({
       user: req.user.id,
       action: 'delete',
