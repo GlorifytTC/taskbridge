@@ -50,7 +50,6 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/auth', authRoutes);
 
 // ============ SIMPLE TEST ROUTES ============
 app.get('/', (req, res) => {

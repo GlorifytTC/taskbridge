@@ -26,6 +26,5 @@ router.get('/me', protect, getMe);
 router.post('/register', protect, authorize('admin', 'superadmin'), register);
 router.put('/change-password', protect, changePassword);
 router.delete('/account', protect, deleteAccount);
-router.post('/forgot-password', forgotPassword);
 
 module.exports = router;
