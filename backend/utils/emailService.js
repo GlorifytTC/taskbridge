@@ -9,6 +9,8 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
     console.log('   Subject:', subject);
+    console.log('   API Key:', process.env.MAILAZY_API_KEY ? '✅ Set' : '❌ Not set');
+    console.log('   Secret Key:', process.env.MAILAZY_SECRET_KEY ? '✅ Set' : '❌ Not set');
     
     const auth = Buffer.from(`${process.env.MAILAZY_API_KEY}:${process.env.MAILAZY_SECRET_KEY}`).toString('base64');
     
@@ -25,7 +27,8 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       headers: {
         'Authorization': `Basic ${auth}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 30000
     });
     
     console.log('✅ Email sent!', response.data);
@@ -36,11 +39,18 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     
     return response.data;
   } catch (error) {
-    console.error('❌ Mailazy error:', error.response?.data || error.message);
+    console.error('❌ Mailazy error:');
+    if (error.response) {
+      console.error('   Status:', error.response.status);
+      console.error('   Data:', error.response.data);
+    } else if (error.request) {
+      console.error('   No response from server:', error.message);
+    } else {
+      console.error('   Error:', error.message);
+    }
     return { error: error.message };
   }
 };
-
 
 
 // Send welcome email with invoice (for new organization creation)

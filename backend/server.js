@@ -73,6 +73,30 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'API is working!' });
 });
 
+
+// Add this temporary test endpoint
+app.post('/api/test-email', async (req, res) => {
+  try {
+    const { sendEmail } = require('./utils/emailService');
+    
+    console.log('🧪 Testing email send...');
+    
+    const result = await sendEmail({
+      to: 'taskbridge.noreply@gmail.com', // Your own email for testing
+      subject: 'Test Email from TaskBridge',
+      html: '<h1>Test</h1><p>If you see this, email is working!</p>',
+      organizationId: null
+    });
+    
+    console.log('Test result:', result);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Test error:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+
 // Debug endpoint to check users
 app.get('/api/debug/users', async (req, res) => {
   try {
