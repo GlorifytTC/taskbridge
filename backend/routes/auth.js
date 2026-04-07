@@ -9,16 +9,17 @@ const {
   resetPassword,
   changePassword,
   deleteAccount,
-  validateEmail,
-  setupAccount       
+  validateOrganization,
+  setupOrganizationAccount        
 } = require('../controllers/authController');
 
 // Public routes
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
-router.get('/validate-email', validateEmail);       
-router.post('/setup-account', setupAccount);         
+router.get('/validate-organization', validateOrganization);
+router.post('/setup-organization-account', setupOrganizationAccount);
+         
 
 // Protected routes
 router.get('/me', protect, getMe);

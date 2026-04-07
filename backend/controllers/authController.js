@@ -224,18 +224,24 @@ exports.setupAccount = async (req, res) => {
   }
 };
 
-// @desc    Validate organization for setup
+// @desc    Validate organization for school registration
 // @route   GET /api/auth/validate-organization
 // @access  Public
 exports.validateOrganization = async (req, res) => {
   try {
     const { email } = req.query;
     
-    const organization = await Organization.findOne({ email })
-      .populate('subscription');
+    console.log('🔍 Validating organization email:', email);
+    
+    // Find organization by email
+    const organization = await Organization.findOne({ email: email.toLowerCase() });
     
     if (!organization) {
-      return res.json({ exists: false, needsSetup: false });
+      return res.json({ 
+        exists: false, 
+        needsSetup: false,
+        message: 'No organization found with this email' 
+      });
     }
     
     // Check if super admin already exists for this organization
@@ -244,18 +250,26 @@ exports.validateOrganization = async (req, res) => {
       role: 'superadmin'
     });
     
+    console.log('Organization found:', organization.name);
+    console.log('Existing admin:', existingAdmin ? 'Yes' : 'No');
+    
     res.json({
       exists: true,
       needsSetup: !existingAdmin,
       organization: {
         _id: organization._id,
         name: organization.name,
-        subscription: organization.subscription
+        subscription: organization.subscription || { plan: 'trial' }
       }
     });
+    
   } catch (error) {
     console.error('Error validating organization:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      exists: false, 
+      needsSetup: false,
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
@@ -265,6 +279,8 @@ exports.validateOrganization = async (req, res) => {
 exports.setupOrganizationAccount = async (req, res) => {
   try {
     const { email, password, schoolName, organizationId } = req.body;
+    
+    console.log('📝 Setting up account for:', email);
     
     const organization = await Organization.findById(organizationId);
     
@@ -306,7 +322,7 @@ exports.setupOrganizationAccount = async (req, res) => {
     // Create super admin user
     const superAdmin = await User.create({
       name: schoolName + ' Admin',
-      email: email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       role: 'superadmin',
       organization: organization._id,
@@ -315,11 +331,13 @@ exports.setupOrganizationAccount = async (req, res) => {
       mustChangePassword: false
     });
     
+    console.log('✅ Super admin created:', superAdmin.email);
+    
     // Generate token and login
     const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { id: superAdmin._id, email: superAdmin.email, role: superAdmin.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
     
@@ -332,7 +350,10 @@ exports.setupOrganizationAccount = async (req, res) => {
         name: superAdmin.name,
         email: superAdmin.email,
         role: superAdmin.role,
-        organization: organization
+        organization: {
+          _id: organization._id,
+          name: organization.name
+        }
       }
     });
     
