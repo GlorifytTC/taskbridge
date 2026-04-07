@@ -543,7 +543,7 @@ exports.updateOrganization = async (req, res) => {
   }
 };
 
-// @desc    Delete organization (Master only)
+// @desc    Delete organization (HARD DELETE - completely remove)
 // @route   DELETE /api/organizations/:id
 // @access  Private/Master
 exports.deleteOrganization = async (req, res) => {
@@ -554,33 +554,44 @@ exports.deleteOrganization = async (req, res) => {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
-    // Delete all related data
+    // Delete ALL related data
     await User.deleteMany({ organization: organization._id });
     await Branch.deleteMany({ organization: organization._id });
+    await Task.deleteMany({ organization: organization._id });
+    await Application.deleteMany({ organization: organization._id });
     await Subscription.deleteOne({ organization: organization._id });
+    await AuditLog.deleteMany({ organization: organization._id });
+    await Notification.deleteMany({ organization: organization._id });
+    await JobDescription.deleteMany({ organization: organization._id });
     
-    // Delete organization
+    // HARD DELETE the organization
     await organization.deleteOne();
     
-    // Create audit log
+    // Create audit log (before organization is deleted)
     await AuditLog.create({
       user: req.user.id,
-      organization: organization._id,
       action: 'delete',
       entityType: 'organization',
-      entityId: organization._id,
-      changes: { deleted: true },
+      entityId: req.params.id,
+      changes: { 
+        deleted: true,
+        orgName: organization.name,
+        orgEmail: organization.email
+      },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
     
-    res.json({ message: 'Organization deleted successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Organization and all related data permanently deleted' 
+    });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error deleting organization:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
-
 
 // @desc    Reset user password
 // @route   PUT /api/users/:id/reset-password
