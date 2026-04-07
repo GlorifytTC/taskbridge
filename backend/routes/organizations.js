@@ -11,7 +11,7 @@ const {
   pauseOrganization,
   resumeOrganization,
   extendSubscription,
-  changePlan,  // ✅ ADD THIS LINE
+  changePlan,  
   getOrganizationUsers,
   createOrganizationUser
 } = require('../controllers/organizationController');

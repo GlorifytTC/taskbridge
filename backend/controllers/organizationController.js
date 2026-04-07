@@ -20,20 +20,32 @@ exports.changePlan = async (req, res) => {
       return res.status(404).json({ message: 'Organization not found' });
     }
     
+    // NEW PLAN PRICES
     const prices = {
-      trial: 0, basic: 399, standard: 799, pro: 1299,
-      business: 2499, enterprise: 4999, corporate: 9999, custom: 0
+      trial: 0,
+      basic: 399,
+      standard: 799,
+      pro: 1299,
+      business: 2499,
+      enterprise: 4999,
+      corporate: 9999,
+      custom: 0
     };
     
-    if (prices[plan] === undefined) {
+    // Check if plan exists
+    if (!prices[plan]) {
       return res.status(400).json({ message: 'Invalid plan selected' });
     }
     
     const monthlyPrice = prices[plan];
     const totalAmount = monthlyPrice * duration;
+    const vatAmount = totalAmount * 0.25;
+    
+    // Calculate new end date
     const currentEndDate = organization.subscription?.endDate || new Date();
     const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
     
+    // Update organization subscription
     organization.subscription = {
       ...organization.subscription,
       plan: plan,
@@ -42,10 +54,59 @@ exports.changePlan = async (req, res) => {
     };
     await organization.save();
     
+    // Update subscription record
+    const Subscription = require('../models/Subscription');
+    const planFeatures = Subscription.PLAN_FEATURES[plan];
+    
+    await Subscription.findOneAndUpdate(
+      { organization: organization._id },
+      { 
+        plan: plan,
+        status: 'active',
+        endDate: newEndDate,
+        price: {
+          amount: totalAmount,
+          currency: 'SEK',
+          vat: { rate: 25, amount: vatAmount },
+          monthlyPrice: monthlyPrice
+        },
+        features: planFeatures ? {
+          maxEmployees: planFeatures.maxEmployees,
+          maxBranches: planFeatures.maxBranches,
+          maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
+          maxAdmins: planFeatures.maxAdmins,
+          reportLevel: planFeatures.reportLevel,
+          exportReports: planFeatures.exportReports || false,
+          customReports: planFeatures.customReports || false,
+          apiAccess: planFeatures.apiAccess || false,
+          prioritySupport: planFeatures.prioritySupport || false,
+          dedicatedSupport: planFeatures.dedicatedSupport || false
+        } : {}
+      },
+      { upsert: true }
+    );
+    
+    // Create audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      user: req.user.id,
+      organization: organization._id,
+      action: 'change_plan',
+      entityType: 'subscription',
+      entityId: organization._id,
+      changes: { plan, duration, totalAmount, newEndDate },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
     res.json({ 
       success: true, 
       message: `Plan changed to ${plan}`,
-      data: { plan, endDate: newEndDate, totalAmount }
+      data: {
+        plan,
+        endDate: newEndDate,
+        totalAmount
+      }
     });
     
   } catch (error) {
