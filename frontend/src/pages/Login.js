@@ -111,6 +111,17 @@ const Login = ({ onBack, onLogin }) => {
               )}
             </button>
           </form>
+          <div style={styles.registerSection}>
+            <div style={styles.divider}>
+              <span style={styles.dividerText}>New School?</span>
+            </div>
+            <button
+              onClick={() => window.location.href = '/create-account'}
+              style={styles.registerButton}
+            >
+              <i className="fas fa-school"></i> Register Your School
+            </button>
+          </div>  
 
           <div style={styles.backLink}>
             <button onClick={onBack} style={styles.backButton}>
@@ -343,6 +354,25 @@ styleSheet.textContent = `
   .backButton:hover {
     color: #00d1ff;
   }
+    registerSection: {
+  marginTop: '24px',
+},
+registerButton: {
+  width: '100%',
+  padding: '12px',
+  background: 'rgba(16, 185, 129, 0.2)',
+  border: '1px solid #10b981',
+  borderRadius: '12px',
+  color: '#34d399',
+  fontSize: '14px',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+},
 `;
 document.head.appendChild(styleSheet);
 

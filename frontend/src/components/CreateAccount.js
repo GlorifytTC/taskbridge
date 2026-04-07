@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 
 const CreateAccount = ({ onBack, onLogin }) => {
   const [email, setEmail] = useState('');
+  const [schoolName, setSchoolName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [validEmail, setValidEmail] = useState(false);
+  const [organizationData, setOrganizationData] = useState(null);
 
   useEffect(() => {
     // Get email from URL parameter
@@ -15,23 +17,30 @@ const CreateAccount = ({ onBack, onLogin }) => {
     const emailParam = urlParams.get('email');
     if (emailParam) {
       setEmail(emailParam);
-      // Validate email with backend
       validateEmail(emailParam);
     }
   }, []);
 
   const validateEmail = async (emailToCheck) => {
     try {
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/auth/validate-email?email=${encodeURIComponent(emailToCheck)}`);
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/auth/validate-organization?email=${encodeURIComponent(emailToCheck)}`);
       const data = await response.json();
-      setValidEmail(data.exists && data.needsPasswordSetup);
-      if (!data.exists) {
+      
+      if (data.exists && data.needsSetup) {
+        setValidEmail(true);
+        setOrganizationData(data.organization);
+        setSchoolName(data.organization.name);
+        setError('');
+      } else if (!data.exists) {
         setError('This email is not registered. Please check your invoice or contact support.');
-      } else if (!data.needsPasswordSetup) {
-        setError('An account already exists for this email. Please login instead.');
+        setValidEmail(false);
+      } else if (!data.needsSetup) {
+        setError('Account already set up for this organization. Please login instead.');
+        setValidEmail(false);
       }
     } catch (err) {
       console.error('Error validating email:', err);
+      setError('Error validating email. Please try again.');
     }
   };
 
@@ -39,6 +48,12 @@ const CreateAccount = ({ onBack, onLogin }) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    
+    // Verify school name matches
+    if (schoolName !== organizationData?.name) {
+      setError(`School name does not match. Please enter "${organizationData?.name}" exactly as in your contract.`);
+      return;
+    }
     
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -53,17 +68,24 @@ const CreateAccount = ({ onBack, onLogin }) => {
     setLoading(true);
     
     try {
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/setup-account', {
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/setup-organization-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ 
+          email, 
+          password,
+          schoolName,
+          organizationId: organizationData?._id
+        })
       });
       
       const data = await response.json();
       
       if (response.ok && data.success) {
-        setSuccess('Account created successfully! Redirecting to login...');
+        setSuccess('Account created successfully! Redirecting to dashboard...');
         setTimeout(() => {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
           onLogin(data.user);
         }, 2000);
       } else {
@@ -91,8 +113,8 @@ const CreateAccount = ({ onBack, onLogin }) => {
             <h1 style={styles.logoTitle}>TaskBridge</h1>
           </div>
 
-          <h2 style={styles.welcomeTitle}>Create Your Account</h2>
-          <p style={styles.welcomeSubtitle}>Set up your password to get started</p>
+          <h2 style={styles.welcomeTitle}>Register Your School</h2>
+          <p style={styles.welcomeSubtitle}>Verify your information and set up your account</p>
 
           {error && (
             <div style={styles.errorMessage}>
@@ -124,8 +146,38 @@ const CreateAccount = ({ onBack, onLogin }) => {
                   disabled={validEmail}
                 />
               </div>
-              {validEmail && (
-                <p style={styles.validMessage}>✓ Valid email found</p>
+              {validEmail && organizationData && (
+                <p style={styles.validMessage}>
+                  ✓ Valid: {organizationData.name}
+                </p>
+              )}
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>
+                School Name <span style={styles.required}>(exactly as in contract)</span>
+              </label>
+              <div style={styles.inputWrapper}>
+                <i className="fas fa-school" style={styles.inputIcon}></i>
+                <input
+                  type="text"
+                  placeholder="Enter your school name exactly as in contract"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  style={styles.input}
+                  required
+                  disabled={!validEmail}
+                />
+              </div>
+              {organizationData && schoolName !== organizationData.name && schoolName && (
+                <p style={styles.warningMessage}>
+                  ⚠️ Must match: "{organizationData.name}"
+                </p>
+              )}
+              {organizationData && schoolName === organizationData.name && (
+                <p style={styles.validMessage}>
+                  ✓ School name verified
+                </p>
               )}
             </div>
 
@@ -140,6 +192,7 @@ const CreateAccount = ({ onBack, onLogin }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   style={styles.input}
                   required
+                  disabled={!validEmail}
                 />
               </div>
             </div>
@@ -155,9 +208,19 @@ const CreateAccount = ({ onBack, onLogin }) => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   style={styles.input}
                   required
+                  disabled={!validEmail}
                 />
               </div>
             </div>
+
+            {organizationData && (
+              <div style={styles.infoBox}>
+                <h4>Your Package: {organizationData.subscription?.plan?.toUpperCase()}</h4>
+                <p>📧 {organizationData.subscription?.features?.maxEmailsPerMonth || 0} emails/month</p>
+                <p>👥 Up to {organizationData.subscription?.features?.maxEmployees || 0} employees</p>
+                <p>🏢 Up to {organizationData.subscription?.features?.maxBranches || 0} branches</p>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -167,7 +230,7 @@ const CreateAccount = ({ onBack, onLogin }) => {
               {loading ? (
                 <span><i className="fas fa-spinner fa-spin"></i> Creating Account...</span>
               ) : (
-                'Create Account'
+                'Register School Account'
               )}
             </button>
           </form>
@@ -241,7 +304,7 @@ const styles = {
     position: 'relative',
     zIndex: 10,
     width: '100%',
-    maxWidth: '480px',
+    maxWidth: '500px',
     margin: '0 auto',
     padding: '20px',
   },
@@ -331,6 +394,10 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
   },
+  required: {
+    color: '#f87171',
+    fontSize: '11px',
+  },
   inputWrapper: {
     position: 'relative',
   },
@@ -358,6 +425,18 @@ const styles = {
     fontSize: '12px',
     color: '#10b981',
     marginTop: '4px',
+  },
+  warningMessage: {
+    fontSize: '12px',
+    color: '#f59e0b',
+    marginTop: '4px',
+  },
+  infoBox: {
+    background: 'rgba(0, 209, 255, 0.1)',
+    borderRadius: '12px',
+    padding: '16px',
+    marginTop: '8px',
+    border: '1px solid rgba(0, 209, 255, 0.2)',
   },
   button: {
     width: '100%',
@@ -409,7 +488,7 @@ styleSheet.textContent = `
   }
   input:focus {
     border-color: #00d1ff !important;
-    box-shadow: 0 0 0 3px rgba(0, 209, 255, 0.1);
+    outline: none;
   }
   button:hover:not(:disabled) {
     transform: translateY(-2px);
