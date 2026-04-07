@@ -74,24 +74,16 @@ app.get('/api/test', (req, res) => {
 });
 
 
-// Add this temporary test endpoint
-app.post('/api/test-email', async (req, res) => {
+app.get('/api/test-mailjet', async (req, res) => {
   try {
     const { sendEmail } = require('./utils/emailService');
-    
-    console.log('🧪 Testing email send...');
-    
     const result = await sendEmail({
-      to: 'taskbridge.noreply@gmail.com', // Your own email for testing
-      subject: 'Test Email from TaskBridge',
-      html: '<h1>Test</h1><p>If you see this, email is working!</p>',
-      organizationId: null
+      to: 'taskbridge.noreply@gmail.com', // Your email
+      subject: 'Test from Mailjet',
+      html: '<h1>Success!</h1><p>Mailjet is working!</p>'
     });
-    
-    console.log('Test result:', result);
     res.json({ success: true, result });
   } catch (error) {
-    console.error('Test error:', error);
     res.json({ success: false, error: error.message });
   }
 });

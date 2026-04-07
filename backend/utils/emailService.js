@@ -1,56 +1,52 @@
-const axios = require('axios');
+const mailjet = require('node-mailjet').apiConnect(
+  process.env.MJ_APIKEY_PUBLIC,
+  process.env.MJ_APIKEY_PRIVATE
+);
 const { trackEmailSent } = require('../controllers/organizationController');
-
-// Mailazy API configuration
-const MAILAZY_API_URL = 'https://api.mailazy.com/v1/emails';
 
 // Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
     console.log('   Subject:', subject);
-    console.log('   API Key:', process.env.MAILAZY_API_KEY ? '✅ Set' : '❌ Not set');
-    console.log('   Secret Key:', process.env.MAILAZY_SECRET_KEY ? '✅ Set' : '❌ Not set');
     
-    const auth = Buffer.from(`${process.env.MAILAZY_API_KEY}:${process.env.MAILAZY_SECRET_KEY}`).toString('base64');
-    
-    const response = await axios.post(MAILAZY_API_URL, {
-      to: [{ email: to }],
-      subject: subject,
-      html: html || text,
-      text: text || html?.replace(/<[^>]*>/g, ''),
-      from: {
-        email: process.env.MAILAZY_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
-        name: 'TaskBridge'
-      }
-    }, {
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
+    const request = mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: process.env.MJ_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
+            Name: 'TaskBridge'
+          },
+          To: [
+            {
+              Email: to,
+              Name: to.split('@')[0]
+            }
+          ],
+          Subject: subject,
+          TextPart: text || html?.replace(/<[^>]*>/g, ''),
+          HTMLPart: html || text
+        }
+      ]
     });
     
-    console.log('✅ Email sent!', response.data);
+    const result = await request;
+    console.log('✅ Email sent!', result.body);
     
     if (organizationId) {
       await trackEmailSent(organizationId);
     }
     
-    return response.data;
+    return result.body;
   } catch (error) {
-    console.error('❌ Mailazy error:');
-    if (error.response) {
-      console.error('   Status:', error.response.status);
-      console.error('   Data:', error.response.data);
-    } else if (error.request) {
-      console.error('   No response from server:', error.message);
-    } else {
-      console.error('   Error:', error.message);
+    console.error('❌ Mailjet error:', error.message);
+    if (error.statusCode) {
+      console.error('   Status:', error.statusCode);
     }
     return { error: error.message };
   }
 };
+
 
 
 // Send welcome email with invoice (for new organization creation)
