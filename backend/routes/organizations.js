@@ -11,7 +11,6 @@ const {
   pauseOrganization,
   resumeOrganization,
   extendSubscription,
-  changePlan,
   getOrganizationUsers,
   createOrganizationUser
 } = require('../controllers/organizationController');
