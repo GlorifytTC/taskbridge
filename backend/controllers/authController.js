@@ -141,65 +141,136 @@ exports.login = async (req, res) => {
 };
 
 
-// @desc    Validate email for account creation
-// @route   GET /api/auth/validate-email
+// Add these functions to your existing authController.js file
+
+// @desc    Validate organization for school registration
+// @route   GET /api/auth/validate-organization
 // @access  Public
-exports.validateEmail = async (req, res) => {
+exports.validateOrganization = async (req, res) => {
   try {
     const { email } = req.query;
     
-    const user = await User.findOne({ email });
+    console.log('🔍 Validating organization email:', email);
+    
+    if (!email) {
+      return res.status(400).json({ 
+        exists: false, 
+        needsSetup: false,
+        message: 'Email is required' 
+      });
+    }
+    
+    // Find organization by email
+    const organization = await Organization.findOne({ email: email.toLowerCase() });
+    
+    if (!organization) {
+      return res.json({ 
+        exists: false, 
+        needsSetup: false,
+        message: 'No organization found with this email. Please check your invoice.' 
+      });
+    }
+    
+    // Check if super admin already exists for this organization
+    const existingAdmin = await User.findOne({ 
+      organization: organization._id,
+      role: 'superadmin'
+    });
+    
+    console.log('Organization found:', organization.name);
+    console.log('Existing admin:', existingAdmin ? 'Yes' : 'No');
     
     res.json({
-      exists: !!user,
-      needsPasswordSetup: user?.mustChangePassword === true,
-      isActive: user?.isActive === true
+      exists: true,
+      needsSetup: !existingAdmin,
+      organization: {
+        _id: organization._id,
+        name: organization.name,
+        subscription: organization.subscription || { plan: 'trial' }
+      }
     });
+    
   } catch (error) {
-    console.error('Validate email error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error validating organization:', error);
+    res.status(500).json({ 
+      exists: false, 
+      needsSetup: false,
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
-// @desc    Setup account (set password for new user)
-// @route   POST /api/auth/setup-account
+// @desc    Setup organization account (create super admin)
+// @route   POST /api/auth/setup-organization-account
 // @access  Public
-exports.setupAccount = async (req, res) => {
+exports.setupOrganizationAccount = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, schoolName, organizationId, userName } = req.body;
     
-    const user = await User.findOne({ email });
+    console.log('📝 Setting up account for:', email);
     
-    if (!user) {
+    if (!email || !password || !organizationId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email, password, and organization are required' 
+      });
+    }
+    
+    const organization = await Organization.findById(organizationId);
+    
+    if (!organization) {
       return res.status(404).json({ 
         success: false, 
-        message: 'No account found with this email. Please check your invoice.' 
+        message: 'Organization not found' 
       });
     }
     
-    if (!user.mustChangePassword) {
+    // Verify school name matches
+    if (organization.name !== schoolName) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Account already set up. Please login instead.' 
+        message: `School name does not match. Please enter "${organization.name}" exactly.` 
       });
     }
     
-    if (password.length < 6) {
+    // Check if super admin already exists
+    const existingAdmin = await User.findOne({ 
+      organization: organization._id,
+      role: 'superadmin'
+    });
+    
+    if (existingAdmin) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 6 characters' 
+        message: 'Account already set up for this organization. Please login instead.' 
       });
     }
     
+    // Get default branch
+    const defaultBranch = await Branch.findOne({ organization: organization._id });
+    
+    // Hash password
     const bcrypt = require('bcryptjs');
-    user.password = await bcrypt.hash(password, 10);
-    user.mustChangePassword = false;
-    user.isActive = true;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(password, 10);
     
+    // Create super admin user
+    const superAdmin = await User.create({
+      name: userName || `${organization.name} Admin`,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: 'superadmin',
+      organization: organization._id,
+      branch: defaultBranch?._id,
+      isActive: true,
+      mustChangePassword: false
+    });
+    
+    console.log('✅ Super admin created:', superAdmin.email);
+    
+    // Generate token and login
     const jwt = require('jsonwebtoken');
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: superAdmin._id, email: superAdmin.email, role: superAdmin.role },
       process.env.JWT_SECRET || 'mysecretkey123',
       { expiresIn: '30d' }
     );
@@ -209,14 +280,19 @@ exports.setupAccount = async (req, res) => {
       message: 'Account created successfully!',
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+        id: superAdmin._id,
+        name: superAdmin.name,
+        email: superAdmin.email,
+        role: superAdmin.role,
+        organization: {
+          _id: organization._id,
+          name: organization.name
+        }
       }
     });
+    
   } catch (error) {
-    console.error('Setup account error:', error);
+    console.error('Setup organization error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 

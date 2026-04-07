@@ -12,6 +12,7 @@ const UserSchema = new mongoose.Schema({
   jobDescription: { type: mongoose.Schema.Types.ObjectId, ref: 'JobDescription' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   isActive: { type: Boolean, default: true },
+  isAccountSetup: { type: Boolean, default: false },
   permissions: [{ type: String }],
   lastLogin: Date,
   deletedAt: Date,
