@@ -16,7 +16,8 @@ const AuditLogSchema = new mongoose.Schema({
     enum: [
       'create', 'update', 'delete', 'login', 'logout',
       'approve', 'reject', 'assign', 'transfer', 'pause',
-      'resume', 'cancel', 'export', 'import', 'view'
+      'resume', 'cancel', 'export', 'import', 'view',
+      'change_plan'  // ✅ ADD THIS LINE
     ]
   },
   entityType: {
