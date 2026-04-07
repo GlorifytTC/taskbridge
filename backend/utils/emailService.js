@@ -1,42 +1,37 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { trackEmailSent } = require('../controllers/organizationController');
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Send email function - ADD ORGANIZATION ID PARAMETER
+// Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
-    const mailOptions = {
-      from: `"TaskBridge" <${process.env.SMTP_FROM_EMAIL}>`,
-      to,
-      subject,
+    console.log('📧 Sending email to:', to);
+    
+    const { data, error } = await resend.emails.send({
+      from: `TaskBridge <onboarding@resend.dev>`, // Use their test domain first
+      to: [to],
+      subject: subject,
       html: html || text,
       text: text || html?.replace(/<[^>]*>/g, '')
-    };
+    });
     
-    console.log('📧 Mail options subject:', mailOptions.subject);
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent:', info.messageId);
+    if (error) {
+      console.error('❌ Resend error:', error);
+      throw error;
+    }
     
-    // ✅ TRACK THE EMAIL FOR QUOTA (if organizationId provided)
+    console.log('✅ Email sent! ID:', data?.id);
+    
     if (organizationId) {
       await trackEmailSent(organizationId);
     }
     
-    return info;
+    return data;
   } catch (error) {
-    console.error('Email error:', error);
-    throw error;
+    console.error('❌ Email error:', error.message);
+    return { error: error.message };
   }
 };
 
@@ -96,7 +91,6 @@ exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, 
   });
 };
 
-
 // Send welcome email - ADD ORGANIZATION ID
 exports.sendWelcomeEmail = async (user, organization) => {
   const subject = `Welcome to TaskBridge - ${organization.name}`;
@@ -114,7 +108,6 @@ exports.sendWelcomeEmail = async (user, organization) => {
     </div>
   `;
   
-  // ✅ Pass organization ID for tracking
   await exports.sendEmail({ 
     to: user.email, 
     subject, 
@@ -144,7 +137,6 @@ exports.sendTaskNotification = async (employee, task, organizationId) => {
     </div>
   `;
   
-  // ✅ Pass organization ID for tracking
   await exports.sendEmail({ 
     to: employee.email, 
     subject, 
@@ -173,7 +165,6 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
     </div>
   `;
   
-  // ✅ Pass organization ID for tracking
   await exports.sendEmail({ 
     to: employee.email, 
     subject, 
@@ -181,8 +172,8 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
     organizationId: organizationId 
   });
 };
-// Send plan change notification email
-// Send plan change notification email
+
+// Send plan change notification email (SINGLE VERSION - NO DUPLICATE)
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
   console.log('📧 Preparing plan change email for:', organization.email);
   console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
@@ -259,7 +250,6 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
     </div>
   `;
   
-  // Make sure subject is defined before calling sendEmail
   if (!subject) {
     console.error('❌ Subject is undefined!');
     return;
@@ -267,7 +257,7 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
   
   await exports.sendEmail({ 
     to: organization.email, 
-    subject: subject,  // Make sure this is passed
+    subject: subject,
     html: html,
     organizationId: organization._id 
   });
@@ -288,7 +278,6 @@ exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
     </div>
   `;
   
-  // ✅ Pass organization ID for tracking
   await exports.sendEmail({ 
     to: organization.email, 
     subject, 
