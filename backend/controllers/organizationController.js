@@ -24,7 +24,7 @@ exports.changePlan = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Organization not found' });
     }
     
-    // Get old plan before updating
+    // Store old plan before updating
     const oldPlan = organization.subscription?.plan || 'trial';
     
     // Get plan features
@@ -81,10 +81,15 @@ exports.changePlan = async (req, res) => {
       { upsert: true, new: true }
     );
     
-    // ✅ SEND EMAIL NOTIFICATION
-    const { sendPlanChangeEmail } = require('../utils/emailService');
-    await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
-    console.log(`📧 Plan change email sent to ${organization.email}`);
+    // ✅ SEND EMAIL NOTIFICATION (ADD THIS BLOCK)
+    try {
+      const { sendPlanChangeEmail } = require('../utils/emailService');
+      await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
+      console.log(`📧 Plan change email sent to ${organization.email}`);
+    } catch (emailError) {
+      console.error('⚠️ Failed to send plan change email:', emailError.message);
+      // Don't fail the whole request if email fails
+    }
     
     // Create audit log
     const AuditLog = require('../models/AuditLog');
@@ -94,7 +99,7 @@ exports.changePlan = async (req, res) => {
       action: 'change_plan',
       entityType: 'subscription',
       entityId: organization._id,
-      changes: { oldPlan, newPlan: plan, duration, totalAmount, newEndDate },
+      changes: { plan, duration, totalAmount, newEndDate },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -103,7 +108,7 @@ exports.changePlan = async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: `Plan changed to ${plan} successfully. Email sent to ${organization.email}`,
+      message: `Plan changed to ${plan} successfully`,
       data: {
         plan: plan,
         endDate: newEndDate,

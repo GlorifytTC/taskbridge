@@ -195,7 +195,6 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
     </div>
   `;
   
-  // ✅ Send email to organization's main email
   await exports.sendEmail({ 
     to: organization.email, 
     subject, 
