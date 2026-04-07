@@ -111,12 +111,13 @@ const Login = ({ onBack, onLogin }) => {
               )}
             </button>
           </form>
+
           <div style={styles.registerSection}>
             <div style={styles.divider}>
               <span style={styles.dividerText}>New School?</span>
             </div>
             <button
-              onClick={() => window.location.href = '/create-account'}
+              onClick={() => setCurrentPage('create-account')}
               style={styles.registerButton}
             >
               <i className="fas fa-school"></i> Register Your School
@@ -279,7 +280,7 @@ const styles = {
     left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: 'rgba(255,  icolor: 'rgba(255, 255, 255, 0.4)',
     fontSize: '16px',
   },
   input: {
@@ -310,6 +311,37 @@ const styles = {
   buttonDisabled: {
     opacity: 0.7,
     cursor: 'not-allowed',
+  },
+  registerSection: {
+    marginTop: '24px',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    textAlign: 'center',
+    margin: '16px 0',
+  },
+  dividerText: {
+    flex: 1,
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.4)',
+    padding: '0 10px',
+  },
+  registerButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(16, 185, 129, 0.2)',
+    border: '1px solid #10b981',
+    borderRadius: '12px',
+    color: '#34d399',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
   },
   backLink: {
     marginTop: '32px',
@@ -354,25 +386,11 @@ styleSheet.textContent = `
   .backButton:hover {
     color: #00d1ff;
   }
-    registerSection: {
-  marginTop: '24px',
-},
-registerButton: {
-  width: '100%',
-  padding: '12px',
-  background: 'rgba(16, 185, 129, 0.2)',
-  border: '1px solid #10b981',
-  borderRadius: '12px',
-  color: '#34d399',
-  fontSize: '14px',
-  fontWeight: '500',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-},
+  .registerButton:hover {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: #34d399;
+    transform: translateY(-2px);
+  }
 `;
 document.head.appendChild(styleSheet);
 
