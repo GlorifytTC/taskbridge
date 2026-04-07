@@ -1,11 +1,8 @@
-const Mailazy = require('mailazy');
+const axios = require('axios');
 const { trackEmailSent } = require('../controllers/organizationController');
 
-// Initialize Mailazy
-const mailazy = new Mailazy({
-  apiKey: process.env.MAILAZY_API_KEY,
-  secretKey: process.env.MAILAZY_SECRET_KEY
-});
+// Mailazy API configuration
+const MAILAZY_API_URL = 'https://api.mailazy.com/v1/emails';
 
 // Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
@@ -13,27 +10,37 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     console.log('📧 Sending email to:', to);
     console.log('   Subject:', subject);
     
-    const response = await mailazy.sendEmail({
-      to: to,
+    const auth = Buffer.from(`${process.env.MAILAZY_API_KEY}:${process.env.MAILAZY_SECRET_KEY}`).toString('base64');
+    
+    const response = await axios.post(MAILAZY_API_URL, {
+      to: [{ email: to }],
       subject: subject,
       html: html || text,
       text: text || html?.replace(/<[^>]*>/g, ''),
-      from: process.env.MAILAZY_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
-      fromName: 'TaskBridge'
+      from: {
+        email: process.env.MAILAZY_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
+        name: 'TaskBridge'
+      }
+    }, {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      }
     });
     
-    console.log('✅ Email sent!', response);
+    console.log('✅ Email sent!', response.data);
     
     if (organizationId) {
       await trackEmailSent(organizationId);
     }
     
-    return response;
+    return response.data;
   } catch (error) {
-    console.error('❌ Mailazy error:', error);
+    console.error('❌ Mailazy error:', error.response?.data || error.message);
     return { error: error.message };
   }
 };
+
 
 
 // Send welcome email with invoice (for new organization creation)
