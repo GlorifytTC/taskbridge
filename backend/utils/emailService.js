@@ -1,8 +1,16 @@
-const mailjet = require('node-mailjet').apiConnect(
-  process.env.MJ_APIKEY_PUBLIC,
-  process.env.MJ_APIKEY_PRIVATE
-);
+const nodemailer = require('nodemailer');
 const { trackEmailSent } = require('../controllers/organizationController');
+
+// Create transporter
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: 'taskbridge.noreply@gmail.com',
+    pass: 'trnf qejo lmmr pjww'
+  }
+});
 
 // Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
@@ -10,42 +18,28 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     console.log('📧 Sending email to:', to);
     console.log('   Subject:', subject);
     
-    const request = mailjet.post('send', { version: 'v3.1' }).request({
-      Messages: [
-        {
-          From: {
-            Email: process.env.MJ_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
-            Name: 'TaskBridge'
-          },
-          To: [
-            {
-              Email: to,
-              Name: to.split('@')[0]
-            }
-          ],
-          Subject: subject,
-          TextPart: text || html?.replace(/<[^>]*>/g, ''),
-          HTMLPart: html || text
-        }
-      ]
-    });
+    const mailOptions = {
+      from: '"TaskBridge" <taskbridge.noreply@gmail.com>',
+      to,
+      subject,
+      html: html || text,
+      text: text || html?.replace(/<[^>]*>/g, '')
+    };
     
-    const result = await request;
-    console.log('✅ Email sent!', result.body);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent:', info.messageId);
     
     if (organizationId) {
       await trackEmailSent(organizationId);
     }
     
-    return result.body;
+    return info;
   } catch (error) {
-    console.error('❌ Mailjet error:', error.message);
-    if (error.statusCode) {
-      console.error('   Status:', error.statusCode);
-    }
+    console.error('❌ Email error:', error.message);
     return { error: error.message };
   }
 };
+
 
 
 
