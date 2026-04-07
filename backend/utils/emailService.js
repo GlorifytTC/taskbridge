@@ -24,7 +24,7 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     };
     
     console.log('📧 Mail options subject:', mailOptions.subject);
-    
+
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
     
@@ -39,6 +39,63 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     throw error;
   }
 };
+
+// Send welcome email with invoice (for new organization creation)
+exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, invoicePath, paymentData) => {
+  const subject = `Welcome to TaskBridge - ${organization.name} - Invoice #${paymentData.invoiceNumber}`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0;">Welcome to TaskBridge!</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
+        <p style="font-size: 16px; color: #1e293b;">Dear ${admin.name},</p>
+        
+        <p style="color: #334155;">Your organization <strong>${organization.name}</strong> has been successfully created with the <strong>${paymentData.description}</strong>.</p>
+        
+        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e293b;">Account Details:</h3>
+          <p style="margin: 5px 0;"><strong>Organization:</strong> ${organization.name}</p>
+          <p style="margin: 5px 0;"><strong>Your Email:</strong> ${admin.email}</p>
+          <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: white; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+        </div>
+        
+        <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e40af;">Invoice Summary:</h3>
+          <p style="margin: 5px 0;"><strong>Invoice #:</strong> ${paymentData.invoiceNumber}</p>
+          <p style="margin: 5px 0;"><strong>Plan:</strong> ${paymentData.description}</p>
+          <p style="margin: 5px 0;"><strong>Subtotal:</strong> ${paymentData.amount} SEK</p>
+          <p style="margin: 5px 0;"><strong>VAT (25%):</strong> ${paymentData.vat.amount} SEK</p>
+          <p style="margin: 5px 0; font-size: 18px;"><strong>Total:</strong> ${paymentData.totalAmount} SEK</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/create-account?email=${encodeURIComponent(admin.email)}" 
+             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Create Your Account
+          </a>
+        </div>
+        
+        <p style="color: #475569; font-size: 14px;">Click the button above to set up your password and access your dashboard.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #64748b; font-size: 12px;">If you have any questions, contact us at support@taskbridge.com</p>
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  await exports.sendEmail({ 
+    to: admin.email, 
+    subject, 
+    html,
+    organizationId: organization._id 
+  });
+};
+
 
 // Send welcome email - ADD ORGANIZATION ID
 exports.sendWelcomeEmail = async (user, organization) => {

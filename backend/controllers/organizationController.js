@@ -6,6 +6,9 @@ const AuditLog = require('../models/AuditLog');
 const Task = require('../models/Task');
 const { sendWelcomeEmailWithInvoice } = require('../utils/emailService');
 const { generateInvoicePDF } = require('../utils/generateInvoice');
+const { sendWelcomeEmail, sendPlanChangeEmail } = require('../utils/emailService');
+
+
 // ============ EXISTING FUNCTIONS (keep these) ============
 
 // @desc    Change organization subscription plan
@@ -345,22 +348,12 @@ exports.createOrganization = async (req, res) => {
       }
     });
     
-    // Generate invoice PDF
-    const paymentData = {
-      invoiceNumber: `INV-${Date.now()}`,
-      amount: priceAmount,
-      totalAmount: priceAmount + (priceAmount * 0.25),
-      currency: 'SEK',
-      description: `${planFeatures.name} Plan - Monthly Subscription`,
-      createdAt: new Date(),
-      vat: { rate: 25, amount: (priceAmount * 0.25) }
-    };
-    
-    const invoicePath = await generateInvoicePDF(paymentData, organization, superAdmin);
-    
-    // Send welcome email with invoice
-    await sendWelcomeEmailWithInvoice(organization, superAdmin, tempPassword, invoicePath, paymentData);
-    
+    // Send simple welcome email (no invoice PDF)
+const { sendWelcomeEmail } = require('../utils/emailService');
+await sendWelcomeEmail(superAdmin, organization);
+console.log(`📧 Welcome email sent to ${organization.email}`);
+
+
     // Create audit log
     await AuditLog.create({
       user: req.user.id,
@@ -615,6 +608,7 @@ exports.deleteOrganization = async (req, res) => {
     res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
+
 
 // @desc    Reset user password
 // @route   PUT /api/users/:id/reset-password
