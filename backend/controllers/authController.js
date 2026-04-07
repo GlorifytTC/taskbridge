@@ -14,67 +14,6 @@ const generateToken = (id) => {
   });
 };
 
-
-// @desc    Forgot password - send reset email
-// @route   POST /api/auth/forgot-password
-// @access  Public
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-    await user.save();
-    
-    // Send email with reset link
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-    await sendEmail({
-      to: user.email,
-      subject: 'Password Reset Request',
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 10 minutes.</p>`
-    });
-    
-    res.json({ message: 'Reset email sent' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// @desc    Reset password
-// @route   PUT /api/auth/reset-password/:token
-// @access  Public
-exports.resetPassword = async (req, res) => {
-  try {
-    const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
-    const user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() }
-    });
-    
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
-    }
-    
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    user.password = hashedPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save();
-    
-    res.json({ message: 'Password reset successful' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Private/Admin
@@ -127,6 +66,9 @@ exports.register = async (req, res) => {
   }
 };
 
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -163,7 +105,6 @@ exports.login = async (req, res) => {
     
     console.log('✅ Password matched');
     
-    // ✅ FIX: Use updateOne instead of save to bypass validation
     await User.updateOne(
       { _id: user._id },
       { $set: { lastLogin: new Date() } }
@@ -201,9 +142,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
-// Add these functions to your existing authController.js file
-
 // @desc    Validate organization for school registration
 // @route   GET /api/auth/validate-organization
 // @access  Public
@@ -221,7 +159,6 @@ exports.validateOrganization = async (req, res) => {
       });
     }
     
-    // Find organization by email
     const organization = await Organization.findOne({ email: email.toLowerCase() });
     
     if (!organization) {
@@ -232,7 +169,6 @@ exports.validateOrganization = async (req, res) => {
       });
     }
     
-    // Check if super admin already exists for this organization
     const existingAdmin = await User.findOne({ 
       organization: organization._id,
       role: 'superadmin'
@@ -286,7 +222,6 @@ exports.setupOrganizationAccount = async (req, res) => {
       });
     }
     
-    // Verify school name matches
     if (organization.name !== schoolName) {
       return res.status(400).json({ 
         success: false, 
@@ -294,7 +229,6 @@ exports.setupOrganizationAccount = async (req, res) => {
       });
     }
     
-    // Check if super admin already exists
     const existingAdmin = await User.findOne({ 
       organization: organization._id,
       role: 'superadmin'
@@ -307,14 +241,9 @@ exports.setupOrganizationAccount = async (req, res) => {
       });
     }
     
-    // Get default branch
     const defaultBranch = await Branch.findOne({ organization: organization._id });
-    
-    // Hash password
-    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create super admin user
     const superAdmin = await User.create({
       name: userName || `${organization.name} Admin`,
       email: email.toLowerCase(),
@@ -328,150 +257,6 @@ exports.setupOrganizationAccount = async (req, res) => {
     
     console.log('✅ Super admin created:', superAdmin.email);
     
-    // Generate token and login
-    const jwt = require('jsonwebtoken');
-    const token = jwt.sign(
-      { id: superAdmin._id, email: superAdmin.email, role: superAdmin.role },
-      process.env.JWT_SECRET || 'mysecretkey123',
-      { expiresIn: '30d' }
-    );
-    
-    res.json({
-      success: true,
-      message: 'Account created successfully!',
-      token,
-      user: {
-        id: superAdmin._id,
-        name: superAdmin.name,
-        email: superAdmin.email,
-        role: superAdmin.role,
-        organization: {
-          _id: organization._id,
-          name: organization.name
-        }
-      }
-    });
-    
-  } catch (error) {
-    console.error('Setup organization error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
-  }
-};
-
-// @desc    Validate organization for school registration
-// @route   GET /api/auth/validate-organization
-// @access  Public
-exports.validateOrganization = async (req, res) => {
-  try {
-    const { email } = req.query;
-    
-    console.log('🔍 Validating organization email:', email);
-    
-    // Find organization by email
-    const organization = await Organization.findOne({ email: email.toLowerCase() });
-    
-    if (!organization) {
-      return res.json({ 
-        exists: false, 
-        needsSetup: false,
-        message: 'No organization found with this email' 
-      });
-    }
-    
-    // Check if super admin already exists for this organization
-    const existingAdmin = await User.findOne({ 
-      organization: organization._id,
-      role: 'superadmin'
-    });
-    
-    console.log('Organization found:', organization.name);
-    console.log('Existing admin:', existingAdmin ? 'Yes' : 'No');
-    
-    res.json({
-      exists: true,
-      needsSetup: !existingAdmin,
-      organization: {
-        _id: organization._id,
-        name: organization.name,
-        subscription: organization.subscription || { plan: 'trial' }
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error validating organization:', error);
-    res.status(500).json({ 
-      exists: false, 
-      needsSetup: false,
-      message: 'Server error: ' + error.message 
-    });
-  }
-};
-
-// @desc    Setup organization account (create super admin)
-// @route   POST /api/auth/setup-organization-account
-// @access  Public
-exports.setupOrganizationAccount = async (req, res) => {
-  try {
-    const { email, password, schoolName, organizationId } = req.body;
-    
-    console.log('📝 Setting up account for:', email);
-    
-    const organization = await Organization.findById(organizationId);
-    
-    if (!organization) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Organization not found' 
-      });
-    }
-    
-    // Verify school name matches
-    if (organization.name !== schoolName) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `School name does not match. Please enter "${organization.name}" exactly.` 
-      });
-    }
-    
-    // Check if super admin already exists
-    const existingAdmin = await User.findOne({ 
-      organization: organization._id,
-      role: 'superadmin'
-    });
-    
-    if (existingAdmin) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Account already set up for this organization. Please login instead.' 
-      });
-    }
-    
-    // Get default branch
-    const defaultBranch = await Branch.findOne({ organization: organization._id });
-    
-    // Hash password
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Create super admin user
-    const superAdmin = await User.create({
-      name: schoolName + ' Admin',
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: 'superadmin',
-      organization: organization._id,
-      branch: defaultBranch?._id,
-      isActive: true,
-      mustChangePassword: false
-    });
-    
-    console.log('✅ Super admin created:', superAdmin.email);
-    
-    // Generate token and login
-    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { id: superAdmin._id, email: superAdmin.email, role: superAdmin.role },
       process.env.JWT_SECRET || 'mysecretkey123',
