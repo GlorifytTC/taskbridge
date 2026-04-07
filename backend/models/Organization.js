@@ -33,11 +33,11 @@ const OrganizationSchema = new mongoose.Schema({
     default: true
   },
   subscription: {
-    plan: {
-      type: String,
-      enum: ['trial', 'basic', 'standard', 'professional', 'business', 'enterprise', 'unlimited'],
-      default: 'trial'
-    },
+  plan: {
+    type: String,
+    enum: ['trial', 'basic', 'standard', 'pro', 'business', 'enterprise', 'corporate', 'custom'],
+    default: 'trial'
+  },
     status: {
       type: String,
       enum: ['active', 'trial', 'paused', 'cancelled', 'expired'],

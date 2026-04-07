@@ -78,9 +78,15 @@ exports.changePlan = async (req, res) => {
       { upsert: true, new: true }
     );
     
-    // ⚠️ EMAIL DISABLED TEMPORARILY - Fix Railway SMTP issue
-    // TODO: Re-enable when SMTP is configured correctly
-    console.log(`📧 Email would be sent to ${organization.email} (disabled - SMTP issue)`);
+    // ✅ SEND EMAIL NOTIFICATION
+try {
+  const { sendPlanChangeEmail } = require('../utils/emailService');
+  await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
+  console.log(`✅ Plan change email sent to ${organization.email}`);
+} catch (emailError) {
+  console.error('⚠️ Failed to send email:', emailError.message);
+  // Don't fail the request if email fails
+}
     
     // Create audit log
     const AuditLog = require('../models/AuditLog');
