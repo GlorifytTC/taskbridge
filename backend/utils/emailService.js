@@ -122,6 +122,87 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
     organizationId: organizationId 
   });
 };
+// Send plan change notification email
+exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
+  const subject = `Plan Changed: ${oldPlan?.toUpperCase()} → ${newPlan.toUpperCase()}`;
+  
+  // Get plan features for the new plan
+  const Subscription = require('../models/Subscription');
+  const planFeatures = Subscription.PLAN_FEATURES[newPlan];
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0;">Plan Update Confirmation</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
+        <p style="font-size: 16px; color: #1e293b;">Dear ${organization.name} Administrator,</p>
+        
+        <p style="color: #334155;">Your subscription plan has been successfully updated.</p>
+        
+        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e293b;">Plan Details:</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0;"><strong>Previous Plan:</strong></td>
+              <td style="padding: 8px 0; text-align: right;">${oldPlan?.toUpperCase() || 'Trial'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>New Plan:</strong></td>
+              <td style="padding: 8px 0; text-align: right; color: #00d1ff; font-weight: bold;">${newPlan.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Duration:</strong></td>
+              <td style="padding: 8px 0; text-align: right;">${duration} month(s)</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Total Amount:</strong></td>
+              <td style="padding: 8px 0; text-align: right;">${totalAmount.toLocaleString()} SEK</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>VAT (25%):</strong></td>
+              <td style="padding: 8px 0; text-align: right;">${(totalAmount * 0.25).toLocaleString()} SEK</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #1e40af;">New Plan Features:</h3>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li>👥 Up to ${planFeatures?.maxEmployees || 0} employees</li>
+            <li>🏢 Up to ${planFeatures?.maxBranches || 0} branches</li>
+            <li>📧 Up to ${planFeatures?.maxEmailsPerMonth || 0} emails/month</li>
+            <li>👔 Up to ${planFeatures?.maxAdmins || 0} administrators</li>
+            ${planFeatures?.exportReports ? '<li>📊 Advanced report exports</li>' : ''}
+            ${planFeatures?.prioritySupport ? '<li>⭐ Priority support</li>' : ''}
+            ${planFeatures?.apiAccess ? '<li>🔌 API access</li>' : ''}
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL}/billing" 
+             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            View Billing Details
+          </a>
+        </div>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #64748b; font-size: 12px;">If you did not authorize this change, please contact us immediately at support@taskbridge.com</p>
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  // ✅ Send email to organization's main email
+  await exports.sendEmail({ 
+    to: organization.email, 
+    subject, 
+    html,
+    organizationId: organization._id 
+  });
+};
 
 // Send subscription expiration email - ADD ORGANIZATION ID
 exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
