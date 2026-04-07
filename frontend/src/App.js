@@ -90,7 +90,7 @@ function App() {
 
   // Public routes
   if (currentPage === 'login') {
-    return <Login onBack={goToLanding} onLogin={handleLogin} />;
+    return <Login onBack={goToLanding} onLogin={handleLogin} onNavigate={handleNavigate} />;
   }
 
   // Create Account route

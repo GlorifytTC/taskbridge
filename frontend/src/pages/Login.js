@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Login = ({ onBack, onLogin }) => {
+const Login = ({ onBack, onLogin, onNavigate }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -117,7 +117,7 @@ const Login = ({ onBack, onLogin }) => {
               <span style={styles.dividerText}>New School?</span>
             </div>
             <button
-              onClick={() => setCurrentPage('create-account')}
+              onClick={() => onNavigate && onNavigate('create-account')}
               style={styles.registerButton}
             >
               <i className="fas fa-school"></i> Register Your School
@@ -280,7 +280,7 @@ const styles = {
     left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
-    color: 'rgba(255,  icolor: 'rgba(255, 255, 255, 0.4)',
+    color: 'rgba(255, 255, 255, 0.4)',
     fontSize: '16px',
   },
   input: {
