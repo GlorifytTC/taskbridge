@@ -14,30 +14,25 @@ const { generateInvoicePDF } = require('../utils/generateInvoice');
 exports.changePlan = async (req, res) => {
   try {
     const { plan, duration = 1 } = req.body;
-    const organization = await Organization.findById(req.params.id);
+    const organizationId = req.params.id;
+    
+    console.log('🔄 Changing plan for organization:', organizationId, 'to:', plan, 'duration:', duration);
+    
+    const organization = await Organization.findById(organizationId);
     
     if (!organization) {
-      return res.status(404).json({ message: 'Organization not found' });
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
     
-    // NEW PLAN PRICES
-    const prices = {
-      trial: 0,
-      basic: 399,
-      standard: 799,
-      pro: 1299,
-      business: 2499,
-      enterprise: 4999,
-      corporate: 9999,
-      custom: 0
-    };
+    // Get plan features
+    const Subscription = require('../models/Subscription');
+    const planFeatures = Subscription.PLAN_FEATURES[plan];
     
-    // Check if plan exists
-    if (!prices[plan]) {
-      return res.status(400).json({ message: 'Invalid plan selected' });
+    if (!planFeatures) {
+      return res.status(400).json({ success: false, message: 'Invalid plan selected' });
     }
     
-    const monthlyPrice = prices[plan];
+    const monthlyPrice = planFeatures.price;
     const totalAmount = monthlyPrice * duration;
     const vatAmount = totalAmount * 0.25;
     
@@ -54,11 +49,8 @@ exports.changePlan = async (req, res) => {
     };
     await organization.save();
     
-    // Update subscription record
-    const Subscription = require('../models/Subscription');
-    const planFeatures = Subscription.PLAN_FEATURES[plan];
-    
-    await Subscription.findOneAndUpdate(
+    // Update or create subscription record
+    const subscription = await Subscription.findOneAndUpdate(
       { organization: organization._id },
       { 
         plan: plan,
@@ -70,7 +62,7 @@ exports.changePlan = async (req, res) => {
           vat: { rate: 25, amount: vatAmount },
           monthlyPrice: monthlyPrice
         },
-        features: planFeatures ? {
+        features: {
           maxEmployees: planFeatures.maxEmployees,
           maxBranches: planFeatures.maxBranches,
           maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
@@ -81,9 +73,9 @@ exports.changePlan = async (req, res) => {
           apiAccess: planFeatures.apiAccess || false,
           prioritySupport: planFeatures.prioritySupport || false,
           dedicatedSupport: planFeatures.dedicatedSupport || false
-        } : {}
+        }
       },
-      { upsert: true }
+      { upsert: true, new: true }
     );
     
     // Create audit log
@@ -99,19 +91,24 @@ exports.changePlan = async (req, res) => {
       userAgent: req.headers['user-agent']
     });
     
+    console.log('✅ Plan changed successfully to:', plan);
+    
     res.json({ 
       success: true, 
-      message: `Plan changed to ${plan}`,
+      message: `Plan changed to ${plan} successfully`,
       data: {
-        plan,
+        plan: plan,
         endDate: newEndDate,
-        totalAmount
+        totalAmount: totalAmount
       }
     });
     
   } catch (error) {
-    console.error('Error changing plan:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Error changing plan:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
