@@ -1,41 +1,50 @@
-const nodemailer = require('nodemailer');
-const { trackEmailSent } = require('../controllers/organizationController');
+const emailjs = require('@emailjs/nodejs');
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: 'taskbridge.noreply@gmail.com',
-    pass: 'trnf qejo lmmr pjww'
-  }
+// Initialize EmailJS
+emailjs.init({
+  publicKey: 'JWu1RIU-g47xdem1Z',
+  privateKey: process.env.EMAILJS_PRIVATE_KEY // Store private key in Railway env
 });
 
 // Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
-    console.log('   Subject:', subject);
     
-    const mailOptions = {
-      from: '"TaskBridge" <taskbridge.noreply@gmail.com>',
-      to,
-      subject,
-      html: html || text,
-      text: text || html?.replace(/<[^>]*>/g, '')
-    };
-    
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent:', info.messageId);
-    
-    if (organizationId) {
-      await trackEmailSent(organizationId);
+    // Extract plan name from subject
+    let plan = 'plan';
+    if (subject.includes('→')) {
+      const match = subject.match(/→ (\w+)/);
+      if (match) plan = match[1];
     }
     
-    return info;
+    // Extract amount from html
+    let amount = '0';
+    if (html) {
+      const match = html.match(/Total Amount:<\/strong>\s*([\d,]+)/i);
+      if (match) amount = match[1].replace(/,/g, '');
+    }
+    
+    const templateParams = {
+      to_email: to,
+      subject: subject,
+      plan: plan.toUpperCase(),
+      amount: amount,
+      duration: '1',
+      organization_name: 'Your Organization',
+      message_html: html || text
+    };
+    
+    const response = await emailjs.send(
+      process.env.EMAILJS_SERVICE_ID, // service_n2rbr8a
+      process.env.EMAILJS_TEMPLATE_ID, // your template ID
+      templateParams
+    );
+    
+    console.log('✅ Email sent!', response.status);
+    return response;
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    console.error('❌ Email error:', error);
     return { error: error.message };
   }
 };
