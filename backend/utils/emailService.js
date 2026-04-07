@@ -1,39 +1,40 @@
-const { Resend } = require('resend');
+const Mailazy = require('mailazy');
 const { trackEmailSent } = require('../controllers/organizationController');
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Mailazy
+const mailazy = new Mailazy({
+  apiKey: process.env.MAILAZY_API_KEY,
+  secretKey: process.env.MAILAZY_SECRET_KEY
+});
 
 // Send email function
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
+    console.log('   Subject:', subject);
     
-    const { data, error } = await resend.emails.send({
-      from: `TaskBridge <onboarding@resend.dev>`, // Use their test domain first
-      to: [to],
+    const response = await mailazy.sendEmail({
+      to: to,
       subject: subject,
       html: html || text,
-      text: text || html?.replace(/<[^>]*>/g, '')
+      text: text || html?.replace(/<[^>]*>/g, ''),
+      from: process.env.MAILAZY_FROM_EMAIL || 'taskbridge.noreply@gmail.com',
+      fromName: 'TaskBridge'
     });
     
-    if (error) {
-      console.error('❌ Resend error:', error);
-      throw error;
-    }
-    
-    console.log('✅ Email sent! ID:', data?.id);
+    console.log('✅ Email sent!', response);
     
     if (organizationId) {
       await trackEmailSent(organizationId);
     }
     
-    return data;
+    return response;
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    console.error('❌ Mailazy error:', error);
     return { error: error.message };
   }
 };
+
 
 // Send welcome email with invoice (for new organization creation)
 exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, invoicePath, paymentData) => {
