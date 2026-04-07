@@ -24,6 +24,10 @@ exports.changePlan = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Organization not found' });
     }
     
+    // ✅ DEFINE oldPlan BEFORE using it
+    const oldPlan = organization.subscription?.plan || 'trial';
+    console.log('📋 Old plan:', oldPlan, '→ New plan:', plan);
+    
     // Get plan features
     const Subscription = require('../models/Subscription');
     const planFeatures = Subscription.PLAN_FEATURES[plan];
@@ -78,15 +82,15 @@ exports.changePlan = async (req, res) => {
       { upsert: true, new: true }
     );
     
-    // ✅ SEND EMAIL NOTIFICATION
-try {
-  const { sendPlanChangeEmail } = require('../utils/emailService');
-  await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
-  console.log(`✅ Plan change email sent to ${organization.email}`);
-} catch (emailError) {
-  console.error('⚠️ Failed to send email:', emailError.message);
-  // Don't fail the request if email fails
-}
+    // ✅ SEND EMAIL NOTIFICATION (with proper error handling)
+    try {
+      const { sendPlanChangeEmail } = require('../utils/emailService');
+      await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
+      console.log(`✅ Plan change email sent to ${organization.email}`);
+    } catch (emailError) {
+      console.error('⚠️ Failed to send email:', emailError.message);
+      // Don't fail the request if email fails
+    }
     
     // Create audit log
     const AuditLog = require('../models/AuditLog');
@@ -96,7 +100,7 @@ try {
       action: 'change_plan',
       entityType: 'subscription',
       entityId: organization._id,
-      changes: { plan, duration, totalAmount, newEndDate },
+      changes: { oldPlan, newPlan: plan, duration, totalAmount, newEndDate },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });

@@ -40,7 +40,7 @@ const OrganizationSchema = new mongoose.Schema({
   },
     status: {
       type: String,
-      enum: ['active', 'trial', 'paused', 'cancelled', 'expired'],
+      enum: ['trial', 'active', 'paused', 'cancelled', 'expired'],
       default: 'trial'
     },
     startDate: Date,
