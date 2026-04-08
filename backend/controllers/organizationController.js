@@ -647,6 +647,20 @@ exports.resetUserPassword = async (req, res) => {
 exports.createOrganizationUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+    
+    console.log('📝 Creating user for organization:', req.params.id);
+    console.log('   Name:', name);
+    console.log('   Email:', email);
+    console.log('   Role:', role);
+    
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name, email, and password are required' 
+      });
+    }
+    
     const User = require('../models/User');
     const Organization = require('../models/Organization');
     const bcrypt = require('bcryptjs');
@@ -665,22 +679,34 @@ exports.createOrganizationUser = async (req, res) => {
     if (userExists) {
       return res.status(400).json({ 
         success: false, 
-        message: 'User already exists' 
+        message: 'User with this email already exists' 
       });
     }
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    // Determine role (only superadmin or admin for org users)
+    let userRole = 'admin';
+    if (role === 'superadmin') {
+      userRole = 'superadmin';
+    } else if (role === 'admin') {
+      userRole = 'admin';
+    } else {
+      userRole = 'admin'; // Default to admin
+    }
+    
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role === 'superadmin' ? 'superadmin' : 'admin',
+      role: userRole,
       organization: organization._id,
       createdBy: req.user.id,
       isActive: true
     });
+    
+    console.log('✅ User created successfully:', user.email);
     
     // Create audit log
     const AuditLog = require('../models/AuditLog');
@@ -690,30 +716,31 @@ exports.createOrganizationUser = async (req, res) => {
       action: 'create',
       entityType: 'user',
       entityId: user._id,
-      changes: { name, email, role },
+      changes: { name, email, role: userRole },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
     
     res.status(201).json({
       success: true,
+      message: 'User created successfully',
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        isActive: user.isActive
       }
     });
+    
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Server error',
-      error: error.message 
+      message: 'Server error: ' + error.message 
     });
   }
 };
-
 
 // @desc    Pause organization (Master only)
 // @route   PUT /api/organizations/:id/pause

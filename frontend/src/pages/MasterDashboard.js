@@ -355,29 +355,38 @@ const MasterDashboard = ({ onLogout }) => {
 };
 
   const handleCreateUser = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newUserData)
-      });
-      
-      if (response.ok) {
-        showToastMessage(lang.createUser, 'success');
-        setShowCreateUserModal(false);
-        setNewUserData({ name: '', email: '', password: '', role: 'superadmin' });
-        fetchOrganizationUsers(selectedOrg._id);
-      }
-    } catch (error) {
-      console.error('Error creating user:', error);
-      showToastMessage('Error creating user', 'error');
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: newUserData.name,
+        email: newUserData.email,
+        password: newUserData.password,
+        role: newUserData.role  // Should be 'superadmin' or 'admin'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToastMessage(data.message || 'User created successfully', 'success');
+      setShowCreateUserModal(false);
+      setNewUserData({ name: '', email: '', password: '', role: 'superadmin' });
+      fetchOrganizationUsers(selectedOrg._id);
+    } else {
+      showToastMessage(data.message || 'Error creating user', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error creating user:', error);
+    showToastMessage('Error creating user', 'error');
+  }
+};
 
   const handleResetPassword = async () => {
     if (!selectedUser) return;
