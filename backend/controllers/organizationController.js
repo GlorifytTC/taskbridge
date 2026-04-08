@@ -186,39 +186,37 @@ function getPlanPrice(plan, months) {
 
 
 // @desc    Get organization users
-// @route   GET /api/organizations/:orgId/users
+// @route   GET /api/organizations/:id/users
 // @access  Private/Master
 exports.getOrganizationUsers = async (req, res) => {
   try {
-    const orgId = req.params.orgId;
-    console.log('🔍 Fetching users for organization:', orgId);
+    // ✅ Use 'id' not 'orgId' - match your route parameter
+    const organizationId = req.params.id;
     
-    // First, find ALL users with this organization ID (no role filter)
-    const allUsers = await User.find({ organization: orgId });
-    console.log('📊 All users in organization:', allUsers.length);
+    console.log('🔍 Fetching users for organization ID:', organizationId);
     
-    // Also check if any users have null organization
-    const usersWithNullOrg = await User.find({ organization: null });
-    console.log('📊 Users with null organization:', usersWithNullOrg.length);
+    if (!organizationId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Organization ID is required' 
+      });
+    }
     
-    // Find users that might have the organization as string instead of ObjectId
-    const usersWithStringOrg = await User.find({ organization: orgId.toString() });
-    console.log('📊 Users with string organization:', usersWithStringOrg.length);
-    
-    // Return all users for this organization (include superadmin, admin, employee)
     const users = await User.find({ 
-      organization: orgId
+      organization: organizationId
     }).select('-password');
     
-    console.log('✅ Returning users:', users.map(u => ({ name: u.name, email: u.email, role: u.role })));
+    console.log(`✅ Found ${users.length} users for organization`);
     
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
-
 
 // @desc    Create organization (Master only)
 // @route   POST /api/organizations
@@ -658,31 +656,22 @@ exports.resetUserPassword = async (req, res) => {
   }
 };
 
-// @desc    Create user for organization (Super Admin or Admin)
+// @desc    Create user for organization
 // @route   POST /api/organizations/:id/users
 // @access  Private/Master
 exports.createOrganizationUser = async (req, res) => {
   try {
+    // ✅ Use 'id' not 'orgId'
+    const organizationId = req.params.id;
     const { name, email, password, role } = req.body;
     
-    console.log('📝 Creating user for organization:', req.params.id);
-    console.log('   Name:', name);
-    console.log('   Email:', email);
-    console.log('   Role:', role);
+    console.log('📝 Creating user for organization:', organizationId);
     
-    // Validate required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Name, email, and password are required' 
-      });
-    }
-    
-    const User = require('../models/User');
     const Organization = require('../models/Organization');
+    const User = require('../models/User');
     const bcrypt = require('bcryptjs');
     
-    const organization = await Organization.findById(req.params.id);
+    const organization = await Organization.findById(organizationId);
     
     if (!organization) {
       return res.status(404).json({ 
@@ -696,57 +685,32 @@ exports.createOrganizationUser = async (req, res) => {
     if (userExists) {
       return res.status(400).json({ 
         success: false, 
-        message: 'User with this email already exists' 
+        message: 'User already exists' 
       });
     }
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Determine role (only superadmin or admin for org users)
-    let userRole = 'admin';
-    if (role === 'superadmin') {
-      userRole = 'superadmin';
-    } else if (role === 'admin') {
-      userRole = 'admin';
-    } else {
-      userRole = 'admin'; // Default to admin
-    }
-    
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: userRole,
+      role: role === 'superadmin' ? 'superadmin' : 'admin',
       organization: organization._id,
       createdBy: req.user.id,
       isActive: true
     });
     
-    console.log('✅ User created successfully:', user.email);
-    
-    // Create audit log
-    const AuditLog = require('../models/AuditLog');
-    await AuditLog.create({
-      user: req.user.id,
-      organization: organization._id,
-      action: 'create',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { name, email, role: userRole },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    console.log('✅ User created:', user.email);
     
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        isActive: user.isActive
+        role: user.role
       }
     });
     
