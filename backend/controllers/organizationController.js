@@ -584,18 +584,9 @@ exports.resetUserPassword = async (req, res) => {
     const { password } = req.body;
     const userId = req.params.id;
     
-    console.log('🔐 Reset password request for user ID:', userId);
-    console.log('📝 New password length:', password?.length);
+    console.log('🔐 Reset password for user ID:', userId);
     
-    // Validate password
-    if (!password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Password is required' 
-      });
-    }
-    
-    if (password.length < 6) {
+    if (!password || password.length < 6) {
       return res.status(400).json({ 
         success: false, 
         message: 'Password must be at least 6 characters' 
@@ -605,7 +596,6 @@ exports.resetUserPassword = async (req, res) => {
     const User = require('../models/User');
     const bcrypt = require('bcryptjs');
     
-    // Find user
     const user = await User.findById(userId);
     
     if (!user) {
@@ -615,29 +605,19 @@ exports.resetUserPassword = async (req, res) => {
       });
     }
     
-    console.log('✅ User found:', user.email, 'Role:', user.role);
-    
-    // Prevent resetting master user password (optional safety)
-    if (user.role === 'master') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Cannot reset master user password' 
-      });
-    }
+    console.log('User found:', user.email, 'Role:', user.role);
     
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
     
-    console.log('✅ Password reset successfully for:', user.email);
-    
-    // Create audit log (optional - don't fail if this errors)
+    // Create audit log - FIX: Check if organization exists before toString
     try {
       const AuditLog = require('../models/AuditLog');
       await AuditLog.create({
         user: req.user.id,
-        organization: user.organization,
+        organization: user.organization || req.user.organization, // ✅ FIX: use user.organization or fallback
         action: 'reset_password',
         entityType: 'user',
         entityId: user._id,
@@ -648,6 +628,8 @@ exports.resetUserPassword = async (req, res) => {
     } catch (auditError) {
       console.log('Audit log error (non-critical):', auditError.message);
     }
+    
+    console.log('✅ Password reset successfully for:', user.email);
     
     res.json({ 
       success: true, 
