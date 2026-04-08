@@ -1068,7 +1068,7 @@ const MasterDashboard = ({ onLogout }) => {
             <input type="password" placeholder={lang.newPassword} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={styles.input} required />
             <div style={styles.modalButtons}>
               <button onClick={() => setShowResetPasswordModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={handleResetPassword} style={styles.submitButton}>{lang.resetPassword}</button>
+              <button onClick={handleResetUserPassword} style={styles.submitButton}>{lang.resetPassword}</button>
             </div>
           </div>
         </div>
