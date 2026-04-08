@@ -349,7 +349,57 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-
+// @desc    Reset user password
+// @route   PUT /api/users/:id/reset-password
+// @access  Private/Admin/SuperAdmin/Master
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.params.id;
+    
+    console.log('🔐 Reset password for user ID:', userId);
+    
+    if (!password || password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters' 
+      });
+    }
+    
+    const User = require('../models/User');
+    const bcrypt = require('bcryptjs');
+    
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    console.log('✅ User found:', user.email);
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+    
+    console.log('✅ Password reset successfully for:', user.email);
+    
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully' 
+    });
+    
+  } catch (error) {
+    console.error('❌ Error resetting password:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
 
 // @desc    Transfer ownership
 // @route   POST /api/users/transfer-ownership
