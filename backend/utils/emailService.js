@@ -2,8 +2,8 @@ const emailjs = require('@emailjs/nodejs');
 
 // Initialize EmailJS
 emailjs.init({
-  publicKey: 'JWu1RIU-g47xdem1Z',
-  privateKey: process.env.EMAILJS_PRIVATE_KEY // Store private key in Railway env
+  publicKey: process.env.EMAILJS_PUBLIC_KEY,
+  privateKey: process.env.EMAILJS_PRIVATE_KEY
 });
 
 // Send email function
@@ -11,33 +11,28 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
     
-    // Extract plan name from subject
-    let plan = 'plan';
-    if (subject.includes('→')) {
-      const match = subject.match(/→ (\w+)/);
-      if (match) plan = match[1];
-    }
-    
-    // Extract amount from html
-    let amount = '0';
-    if (html) {
-      const match = html.match(/Total Amount:<\/strong>\s*([\d,]+)/i);
-      if (match) amount = match[1].replace(/,/g, '');
+    // Make sure 'to' is not empty
+    if (!to) {
+      console.error('❌ Recipient email is empty!');
+      return { error: 'Recipient email is empty' };
     }
     
     const templateParams = {
-      to_email: to,
+      to_email: to,  // This MUST match exactly what's in your EmailJS template
+      to_name: to.split('@')[0],
       subject: subject,
-      plan: plan.toUpperCase(),
-      amount: amount,
-      duration: '1',
-      organization_name: 'Your Organization',
-      message_html: html || text
+      message_html: html || text,
+      message_text: text || html?.replace(/<[^>]*>/g, '')
     };
     
+    console.log('📧 Template params:', { 
+      to_email: templateParams.to_email, 
+      subject: templateParams.subject 
+    });
+    
     const response = await emailjs.send(
-      process.env.EMAILJS_SERVICE_ID, // service_n2rbr8a
-      process.env.EMAILJS_TEMPLATE_ID, // your template ID
+      process.env.EMAILJS_SERVICE_ID,
+      process.env.EMAILJS_TEMPLATE_ID,
       templateParams
     );
     
@@ -48,7 +43,6 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     return { error: error.message };
   }
 };
-
 
 
 
