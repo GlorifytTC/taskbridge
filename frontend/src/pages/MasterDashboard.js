@@ -384,30 +384,43 @@ const MasterDashboard = ({ onLogout }) => {
   }
 };
 
-  const handleResetPassword = async () => {
-    if (!selectedUser) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedUser._id}/reset-password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ password: newPassword })
-      });
-      
-      if (response.ok) {
-        showToastMessage(lang.resetPassword, 'success');
-        setShowResetPasswordModal(false);
-        setSelectedUser(null);
-        setNewPassword('');
-      }
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      showToastMessage('Error resetting password', 'error');
+  const handleResetUserPassword = async () => {
+  if (!selectedUser) return;
+  
+  if (newPassword !== confirmPassword) {
+    showToastMessage('Passwords do not match', 'error');
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedUser._id}/reset-password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        password: newPassword  // ✅ Use 'password' not 'newPassword'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToastMessage('Password reset successfully', 'success');
+      setShowResetPasswordModal(false);
+      setSelectedUser(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      showToastMessage(data.message || 'Failed to reset password', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    showToastMessage('Error resetting password', 'error');
+  }
+};
 
   const handleDeleteUser = async (userId, userRole, userName) => {
   // Prevent deleting master users

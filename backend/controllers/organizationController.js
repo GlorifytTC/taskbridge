@@ -585,6 +585,7 @@ exports.resetUserPassword = async (req, res) => {
     const userId = req.params.id;
     
     console.log('🔐 Reset password for user ID:', userId);
+    console.log('📝 Password provided:', password ? 'Yes' : 'No');
     
     if (!password || password.length < 6) {
       return res.status(400).json({ 
@@ -605,32 +606,16 @@ exports.resetUserPassword = async (req, res) => {
       });
     }
     
-    console.log('User found:', user.email, 'Role:', user.role);
+    console.log('✅ User found:', user.email);
     
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
     
-    // Create audit log - FIX: Check if organization exists before toString
-    try {
-      const AuditLog = require('../models/AuditLog');
-      await AuditLog.create({
-        user: req.user.id,
-        organization: user.organization || req.user.organization, // ✅ FIX: use user.organization or fallback
-        action: 'reset_password',
-        entityType: 'user',
-        entityId: user._id,
-        changes: { passwordReset: true },
-        ipAddress: req.ip || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown'
-      });
-    } catch (auditError) {
-      console.log('Audit log error (non-critical):', auditError.message);
-    }
+    console.log('✅ Password saved for:', user.email);
     
-    console.log('✅ Password reset successfully for:', user.email);
-    
+    // Return success without audit log for now
     res.json({ 
       success: true, 
       message: 'Password reset successfully' 

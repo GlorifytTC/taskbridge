@@ -349,43 +349,7 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// @desc    Reset user password
-// @route   PUT /api/users/:id/reset-password
-// @access  Private/Admin
-exports.resetUserPassword = async (req, res) => {
-  try {
-    const { newPassword } = req.body;
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    // Check authorization
-    if (user.organization.toString() !== req.user.organization.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-    
-    user.password = newPassword;
-    await user.save();
-    
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'update',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { passwordReset: true },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
-    res.json({ message: 'Password reset successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+
 
 // @desc    Transfer ownership
 // @route   POST /api/users/transfer-ownership
