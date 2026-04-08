@@ -31,7 +31,7 @@ router.get('/:id', getUser);
 router.put('/:id', authorize('admin', 'superadmin', 'master'), updateUser);
 router.delete('/:id', authorize('admin', 'superadmin', 'master'), deleteUser);
 
-router.put('/:id/reset-password', authorize('admin', 'superadmin', 'master'), resetUserPassword);
+router.put('/:id/reset-password', protect, authorize('admin', 'superadmin', 'master'), resetUserPassword);
 router.put('/:id/assign-branch', authorize('master', 'superadmin'), assignBranch);
 router.put('/:id/remove-branch', authorize('master', 'superadmin'), removeBranch);
 router.post('/transfer-ownership', authorize('superadmin'), transferOwnership);

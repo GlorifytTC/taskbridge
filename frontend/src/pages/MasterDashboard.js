@@ -404,21 +404,35 @@ const MasterDashboard = ({ onLogout }) => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      showToastMessage('User deleted', 'success');
+  const handleDeleteUser = async (userId, userRole, userName) => {
+  // Prevent deleting master users
+  if (userRole === 'master') {
+    showToastMessage('Cannot delete master user', 'error');
+    return;
+  }
+  
+  if (!window.confirm(`Are you sure you want to delete ${userName}?`)) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToastMessage('User deleted successfully', 'success');
       fetchOrganizationUsers(selectedOrg._id);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      showToastMessage('Error deleting user', 'error');
+    } else {
+      showToastMessage(data.message || 'Error deleting user', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    showToastMessage('Error deleting user', 'error');
+  }
+};
 
   const handleExtendSubscription = async () => {
     if (!selectedOrg) return;

@@ -284,34 +284,48 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleResetUserPassword = async () => {
-    if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
-      alert('Passwords do not match');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedUser._id}/reset-password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ password: resetPasswordData.newPassword })
-      });
-      
-      if (response.ok) {
-        alert(`Password for ${selectedUser.name} has been reset!`);
-        setShowResetPasswordModal(false);
-        setSelectedUser(null);
-        setResetPasswordData({ newPassword: '', confirmPassword: '' });
-      } else {
-        alert('Failed to reset password');
+  if (!selectedUser) return;
+  
+  if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
+    showToastMessage(language === 'en' ? 'Passwords do not match' : 'Lösenorden matchar inte', 'error');
+    return;
+  }
+  
+  if (resetPasswordData.newPassword.length < 6) {
+    showToastMessage('Password must be at least 6 characters', 'error');
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedUser._id}/reset-password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ password: resetPasswordData.newPassword })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToastMessage(`Password for ${selectedUser.name} reset!`, 'success');
+      setShowResetPasswordModal(false);
+      setSelectedUser(null);
+      setResetPasswordData({ newPassword: '', confirmPassword: '' });
+      // Refresh users list
+      if (selectedOrg) {
+        fetchOrganizationUsers(selectedOrg._id);
       }
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      alert('Error resetting password');
+    } else {
+      showToastMessage(data.message || 'Failed to reset password', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    showToastMessage('Error resetting password', 'error');
+  }
+};
 
   const handleDeleteEmployee = async (empId, empName) => {
   if (!confirm(`Delete ${empName}? This cannot be undone.`)) return;

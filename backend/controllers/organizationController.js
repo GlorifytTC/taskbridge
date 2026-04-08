@@ -567,7 +567,7 @@ exports.resetUserPassword = async (req, res) => {
     const { password } = req.body;
     const userId = req.params.id;
     
-    console.log('🔐 Resetting password for user:', userId);
+    console.log('🔐 Reset password request for user:', userId);
     
     if (!password || password.length < 6) {
       return res.status(400).json({ 
@@ -575,6 +575,9 @@ exports.resetUserPassword = async (req, res) => {
         message: 'Password must be at least 6 characters' 
       });
     }
+    
+    const User = require('../models/User');
+    const bcrypt = require('bcryptjs');
     
     const user = await User.findById(userId);
     
@@ -585,21 +588,33 @@ exports.resetUserPassword = async (req, res) => {
       });
     }
     
-    // Check authorization
-    if (user.organization && user.organization.toString() !== req.user.organization?.toString() && req.user.role !== 'master') {
+    // Prevent resetting master password via this endpoint
+    if (user.role === 'master' && req.user.role !== 'master') {
       return res.status(403).json({ 
         success: false, 
-        message: 'Not authorized' 
+        message: 'Cannot reset master user password' 
       });
     }
     
     // Hash new password
-    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
     
     console.log('✅ Password reset successfully for:', user.email);
+    
+    // Create audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      user: req.user.id,
+      organization: user.organization,
+      action: 'reset_password',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { passwordReset: true },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     
     res.json({ 
       success: true, 
