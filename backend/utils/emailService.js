@@ -6,40 +6,49 @@ emailjs.init({
   privateKey: process.env.EMAILJS_PRIVATE_KEY
 });
 
-// Send email function
-exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
+exports.sendEmail = async ({ to, subject, html, text, templateParams, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
     
-    // Make sure 'to' is not empty
     if (!to) {
       console.error('❌ Recipient email is empty!');
       return { error: 'Recipient email is empty' };
     }
     
-    const templateParams = {
-      to_email: to,  // This MUST match exactly what's in your EmailJS template
+    // If templateParams provided, use those for EmailJS template
+    const params = templateParams || {
+      to_email: to,
       to_name: to.split('@')[0],
       subject: subject,
       message_html: html || text,
       message_text: text || html?.replace(/<[^>]*>/g, '')
     };
     
+    // Make sure subject is in params
+    if (!params.subject && subject) {
+      params.subject = subject;
+    }
+    if (!params.to_email) {
+      params.to_email = to;
+    }
+    
     console.log('📧 Template params:', { 
-      to_email: templateParams.to_email, 
-      subject: templateParams.subject 
+      to_email: params.to_email, 
+      subject: params.subject,
+      old_plan: params.old_plan,
+      new_plan: params.new_plan
     });
     
     const response = await emailjs.send(
       process.env.EMAILJS_SERVICE_ID,
       process.env.EMAILJS_TEMPLATE_ID,
-      templateParams
+      params
     );
     
     console.log('✅ Email sent!', response.status);
     return response;
   } catch (error) {
-    console.error('❌ Email error:', error);
+    console.error('❌ Email error:', error.text || error.message);
     return { error: error.message };
   }
 };
@@ -184,92 +193,47 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
   });
 };
 
-// Send plan change notification email (SINGLE VERSION - NO DUPLICATE)
+// Send plan change notification email
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
   console.log('📧 Preparing plan change email for:', organization.email);
   console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
-  
-  const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
-  console.log('   Subject:', subject);
   
   // Get plan features for the new plan
   const Subscription = require('../models/Subscription');
   const planFeatures = Subscription.PLAN_FEATURES[newPlan];
   
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0;">Plan Update Confirmation</h1>
-      </div>
-      
-      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Dear ${organization.name} Administrator,</p>
-        
-        <p style="color: #334155;">Your subscription plan has been successfully updated.</p>
-        
-        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 15px 0; color: #1e293b;">Plan Details:</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0;"><strong>Previous Plan:</strong></td>
-              <td style="padding: 8px 0; text-align: right;">${oldPlan?.toUpperCase() || 'Trial'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0;"><strong>New Plan:</strong></td>
-              <td style="padding: 8px 0; text-align: right; color: #00d1ff; font-weight: bold;">${newPlan.toUpperCase()}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0;"><strong>Duration:</strong></td>
-              <td style="padding: 8px 0; text-align: right;">${duration} month(s)</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0;"><strong>Total Amount:</strong></td>
-              <td style="padding: 8px 0; text-align: right;">${totalAmount.toLocaleString()} SEK</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0;"><strong>VAT (25%):</strong></td>
-              <td style="padding: 8px 0; text-align: right;">${(totalAmount * 0.25).toLocaleString()} SEK</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 15px 0; color: #1e40af;">New Plan Features:</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>👥 Up to ${planFeatures?.maxEmployees || 0} employees</li>
-            <li>🏢 Up to ${planFeatures?.maxBranches || 0} branches</li>
-            <li>📧 Up to ${planFeatures?.maxEmailsPerMonth || 0} emails/month</li>
-            <li>👔 Up to ${planFeatures?.maxAdmins || 0} administrators</li>
-            ${planFeatures?.exportReports ? '<li>📊 Advanced report exports</li>' : ''}
-            ${planFeatures?.prioritySupport ? '<li>⭐ Priority support</li>' : ''}
-            ${planFeatures?.apiAccess ? '<li>🔌 API access</li>' : ''}
-          </ul>
-        </div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'https://taskbridge-five.vercel.app'}/billing" 
-             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-            View Billing Details
-          </a>
-        </div>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #cbd5e1;" />
-        
-        <p style="color: #64748b; font-size: 12px;">If you did not authorize this change, please contact us immediately at support@taskbridge.com</p>
-        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
-      </div>
-    </div>
-  `;
+  const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
   
-  if (!subject) {
-    console.error('❌ Subject is undefined!');
-    return;
-  }
+  // Calculate VAT
+  const vatAmount = (totalAmount * 0.25).toFixed(2);
+  
+  // Prepare template parameters for EmailJS
+  const templateParams = {
+    to_email: organization.email,
+    to_name: organization.name || 'Administrator',
+    old_plan: oldPlan?.toUpperCase() || 'TRIAL',
+    new_plan: newPlan.toUpperCase(),
+    duration: duration.toString(),
+    total_amount: totalAmount.toString(),
+    vat_amount: vatAmount,
+    max_employees: planFeatures?.maxEmployees || 0,
+    max_branches: planFeatures?.maxBranches || 0,
+    max_emails: planFeatures?.maxEmailsPerMonth || 0,
+    max_admins: planFeatures?.maxAdmins || 0,
+    subject: subject,
+    message_html: `
+      <h2>Plan Update Confirmation</h2>
+      <p>Your plan has been changed from ${oldPlan?.toUpperCase() || 'TRIAL'} to ${newPlan.toUpperCase()}.</p>
+      <p>Total: ${totalAmount} SEK</p>
+    `
+  };
+  
+  console.log('📧 Template params:', templateParams);
   
   await exports.sendEmail({ 
     to: organization.email, 
     subject: subject,
-    html: html,
+    templateParams: templateParams,
     organizationId: organization._id 
   });
 };
