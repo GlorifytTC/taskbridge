@@ -25,6 +25,7 @@ const MasterDashboard = ({ onLogout }) => {
   const [selectedOrgUsers, setSelectedOrgUsers] = useState([]);
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [newUserData, setNewUserData] = useState({
     name: '',
     email: '',
@@ -387,8 +388,11 @@ const MasterDashboard = ({ onLogout }) => {
   const handleResetUserPassword = async () => {
   if (!selectedUser) return;
   
-  if (newPassword !== confirmPassword) {
-    showToastMessage('Passwords do not match', 'error');
+  // You need to add confirmPassword state or just check newPassword
+  // Since you only have one password field, remove the confirm check
+  
+  if (!newPassword || newPassword.length < 6) {
+    showToastMessage('Password must be at least 6 characters', 'error');
     return;
   }
   
@@ -401,7 +405,7 @@ const MasterDashboard = ({ onLogout }) => {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ 
-        password: newPassword  // ✅ Use 'password' not 'newPassword'
+        password: newPassword
       })
     });
     
@@ -412,7 +416,6 @@ const MasterDashboard = ({ onLogout }) => {
       setShowResetPasswordModal(false);
       setSelectedUser(null);
       setNewPassword('');
-      setConfirmPassword('');
     } else {
       showToastMessage(data.message || 'Failed to reset password', 'error');
     }
