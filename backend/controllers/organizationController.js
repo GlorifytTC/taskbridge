@@ -584,9 +584,18 @@ exports.resetUserPassword = async (req, res) => {
     const { password } = req.body;
     const userId = req.params.id;
     
-    console.log('🔐 Reset password request for user:', userId);
+    console.log('🔐 Reset password request for user ID:', userId);
+    console.log('📝 New password length:', password?.length);
     
-    if (!password || password.length < 6) {
+    // Validate password
+    if (!password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password is required' 
+      });
+    }
+    
+    if (password.length < 6) {
       return res.status(400).json({ 
         success: false, 
         message: 'Password must be at least 6 characters' 
@@ -596,6 +605,7 @@ exports.resetUserPassword = async (req, res) => {
     const User = require('../models/User');
     const bcrypt = require('bcryptjs');
     
+    // Find user
     const user = await User.findById(userId);
     
     if (!user) {
@@ -605,22 +615,15 @@ exports.resetUserPassword = async (req, res) => {
       });
     }
     
-    // ✅ ADD THIS BLOCK - Prevent resetting master user password
+    console.log('✅ User found:', user.email, 'Role:', user.role);
+    
+    // Prevent resetting master user password (optional safety)
     if (user.role === 'master') {
       return res.status(403).json({ 
         success: false, 
         message: 'Cannot reset master user password' 
       });
     }
-    
-    // Prevent resetting master password via this endpoint
-    if (user.role === 'master' && req.user.role !== 'master') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Cannot reset master user password' 
-      });
-    }
-
     
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -629,18 +632,22 @@ exports.resetUserPassword = async (req, res) => {
     
     console.log('✅ Password reset successfully for:', user.email);
     
-    // Create audit log
-    const AuditLog = require('../models/AuditLog');
-    await AuditLog.create({
-      user: req.user.id,
-      organization: user.organization,
-      action: 'reset_password',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { passwordReset: true },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    // Create audit log (optional - don't fail if this errors)
+    try {
+      const AuditLog = require('../models/AuditLog');
+      await AuditLog.create({
+        user: req.user.id,
+        organization: user.organization,
+        action: 'reset_password',
+        entityType: 'user',
+        entityId: user._id,
+        changes: { passwordReset: true },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      });
+    } catch (auditError) {
+      console.log('Audit log error (non-critical):', auditError.message);
+    }
     
     res.json({ 
       success: true, 
@@ -648,7 +655,7 @@ exports.resetUserPassword = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error resetting password:', error);
+    console.error('❌ Error resetting password:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
