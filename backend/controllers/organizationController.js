@@ -185,17 +185,19 @@ function getPlanPrice(plan, months) {
 
 
 
-// In your user controller, when fetching users
+// @desc    Get organization users
+// @route   GET /api/organizations/:orgId/users
+// @access  Private/Master
 exports.getOrganizationUsers = async (req, res) => {
   try {
     const users = await User.find({ 
       organization: req.params.orgId,
-      // Only get users that are NOT soft-deleted
-      deletedAt: { $eq: null }  // Add this line!
-    });
+      role: { $ne: 'master' }  // ✅ Exclude master users
+    }).select('-password');
     
     res.json({ success: true, data: users });
   } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -261,7 +263,7 @@ exports.createOrganization = async (req, res) => {
       organization: organization._id,
       branch: defaultBranch._id,
       isActive: true,
-      mustChangePassword: true // Force password change on first login
+      mustChangePassword: true 
     });
     
     const priceAmount = planFeatures.price || 0;
@@ -588,6 +590,14 @@ exports.resetUserPassword = async (req, res) => {
       });
     }
     
+    // ✅ ADD THIS BLOCK - Prevent resetting master user password
+    if (user.role === 'master') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Cannot reset master user password' 
+      });
+    }
+    
     // Prevent resetting master password via this endpoint
     if (user.role === 'master' && req.user.role !== 'master') {
       return res.status(403).json({ 
@@ -595,6 +605,7 @@ exports.resetUserPassword = async (req, res) => {
         message: 'Cannot reset master user password' 
       });
     }
+
     
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);

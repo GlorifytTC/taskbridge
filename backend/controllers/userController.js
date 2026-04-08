@@ -251,6 +251,14 @@ exports.deleteUser = async (req, res) => {
     
     console.log('Found user to delete:', user.name, user.email);
     
+    // ✅ ADD THIS BLOCK - Prevent deleting master users
+    if (user.role === 'master') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Cannot delete master user. Master accounts are system administrators.' 
+      });
+    }
+    
     // Check if user is trying to delete themselves
     if (user._id.toString() === req.user.id.toString()) {
       return res.status(400).json({ 
@@ -267,6 +275,7 @@ exports.deleteUser = async (req, res) => {
         message: 'Admins cannot delete other admins' 
       });
     }
+
     
     // Delete ALL related data (wrap in try-catch to avoid breaking)
     try {
