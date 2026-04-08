@@ -17,118 +17,67 @@ const JobDescription = require('../models/JobDescription');
 // @desc    Change organization subscription plan
 // @route   PUT /api/organizations/:id/plan
 // @access  Private/Master
+// In your changePlan function
 exports.changePlan = async (req, res) => {
   try {
     const { plan, duration = 1 } = req.body;
-    const organizationId = req.params.id;
+    const organization = await Organization.findById(req.params.id);
     
-    console.log('🔄 Changing plan for organization:', organizationId, 'to:', plan, 'duration:', duration);
+    const currentPlan = organization.subscription?.plan || 'trial';
+    const currentPrice = getPlanPrice(currentPlan);
+    const newPrice = getPlanPrice(plan);
     
-    const organization = await Organization.findById(organizationId);
+    let effectiveDate = new Date();
+    let newEndDate;
     
-    if (!organization) {
-      return res.status(404).json({ success: false, message: 'Organization not found' });
+    // UPGRADE (new price > current price) → Apply immediately
+    if (newPrice > currentPrice) {
+      // Calculate prorated amount or charge full new price
+      newEndDate = new Date(effectiveDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
+      console.log('⬆️ UPGRADE: Applying immediately');
+    } 
+    // DOWNGRADE (new price < current price) → Apply at next billing cycle
+    else if (newPrice < currentPrice) {
+      // Keep current plan until current period ends
+      newEndDate = organization.subscription?.endDate || new Date();
+      console.log('⬇️ DOWNGRADE: Will apply at end of current billing cycle');
+      
+      // Store pending plan change
+      organization.pendingPlan = {
+        plan: plan,
+        effectiveDate: organization.subscription?.endDate,
+        duration: duration
+      };
+      await organization.save();
+      
+      return res.json({ 
+        success: true, 
+        message: `Plan will change to ${plan} on ${newEndDate.toLocaleDateString()}`,
+        effectiveDate: newEndDate
+      });
+    }
+    // SAME PRICE → Apply immediately
+    else {
+      newEndDate = new Date(effectiveDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
     }
     
-    // ✅ DEFINE oldPlan BEFORE using it
-    const oldPlan = organization.subscription?.plan || 'trial';
-    console.log('📋 Old plan:', oldPlan, '→ New plan:', plan);
-    
-    // Get plan features
-    const Subscription = require('../models/Subscription');
-    const planFeatures = Subscription.PLAN_FEATURES[plan];
-    
-    if (!planFeatures) {
-      return res.status(400).json({ success: false, message: 'Invalid plan selected' });
-    }
-    
-    const monthlyPrice = planFeatures.price;
-    const totalAmount = monthlyPrice * duration;
-    const vatAmount = totalAmount * 0.25;
-    
-    // Calculate new end date
-    const currentEndDate = organization.subscription?.endDate || new Date();
-    const newEndDate = new Date(currentEndDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
-    
-    // Update organization subscription
+    // Update subscription with new end date
     organization.subscription = {
       ...organization.subscription,
       plan: plan,
-      status: 'active',
       endDate: newEndDate
     };
     await organization.save();
     
-    // Update or create subscription record
-    await Subscription.findOneAndUpdate(
-      { organization: organization._id },
-      { 
-        plan: plan,
-        status: 'active',
-        endDate: newEndDate,
-        price: {
-          amount: totalAmount,
-          currency: 'SEK',
-          vat: { rate: 25, amount: vatAmount },
-          monthlyPrice: monthlyPrice
-        },
-        features: {
-          maxEmployees: planFeatures.maxEmployees,
-          maxBranches: planFeatures.maxBranches,
-          maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
-          maxAdmins: planFeatures.maxAdmins,
-          reportLevel: planFeatures.reportLevel,
-          exportReports: planFeatures.exportReports || false,
-          customReports: planFeatures.customReports || false,
-          apiAccess: planFeatures.apiAccess || false,
-          prioritySupport: planFeatures.prioritySupport || false,
-          dedicatedSupport: planFeatures.dedicatedSupport || false
-        }
-      },
-      { upsert: true, new: true }
-    );
-    
-    // ✅ SEND EMAIL NOTIFICATION (with proper error handling)
-    try {
-      const { sendPlanChangeEmail } = require('../utils/emailService');
-      await sendPlanChangeEmail(organization, oldPlan, plan, duration, totalAmount);
-      console.log(`✅ Plan change email sent to ${organization.email}`);
-    } catch (emailError) {
-      console.error('⚠️ Failed to send email:', emailError.message);
-      // Don't fail the request if email fails
-    }
-    
-    // Create audit log
-    const AuditLog = require('../models/AuditLog');
-    await AuditLog.create({
-      user: req.user.id,
-      organization: organization._id,
-      action: 'change_plan',
-      entityType: 'subscription',
-      entityId: organization._id,
-      changes: { oldPlan, newPlan: plan, duration, totalAmount, newEndDate },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
-    console.log('✅ Plan changed successfully to:', plan);
-    
     res.json({ 
       success: true, 
-      message: `Plan changed to ${plan} successfully`,
-      data: {
-        plan: plan,
-        endDate: newEndDate,
-        totalAmount: totalAmount
-      }
+      message: `Plan changed to ${plan} immediately`,
+      endDate: newEndDate
     });
     
   } catch (error) {
-    console.error('❌ Error changing plan:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
-    });
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -616,10 +565,18 @@ exports.deleteOrganization = async (req, res) => {
 exports.resetUserPassword = async (req, res) => {
   try {
     const { password } = req.body;
-    const User = require('../models/User');
-    const bcrypt = require('bcryptjs');
+    const userId = req.params.id;
     
-    const user = await User.findById(req.params.id);
+    console.log('🔐 Resetting password for user:', userId);
+    
+    if (!password || password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters' 
+      });
+    }
+    
+    const user = await User.findById(userId);
     
     if (!user) {
       return res.status(404).json({ 
@@ -629,7 +586,7 @@ exports.resetUserPassword = async (req, res) => {
     }
     
     // Check authorization
-    if (user.organization.toString() !== req.user.organization.toString() && req.user.role !== 'master') {
+    if (user.organization && user.organization.toString() !== req.user.organization?.toString() && req.user.role !== 'master') {
       return res.status(403).json({ 
         success: false, 
         message: 'Not authorized' 
@@ -637,32 +594,23 @@ exports.resetUserPassword = async (req, res) => {
     }
     
     // Hash new password
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     await user.save();
     
-    // Create audit log
-    const AuditLog = require('../models/AuditLog');
-    await AuditLog.create({
-      user: req.user.id,
-      organization: user.organization,
-      action: 'reset_password',
-      entityType: 'user',
-      entityId: user._id,
-      changes: { passwordReset: true },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+    console.log('✅ Password reset successfully for:', user.email);
     
     res.json({ 
       success: true, 
       message: 'Password reset successfully' 
     });
+    
   } catch (error) {
     console.error('Error resetting password:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Server error' 
+      message: 'Server error: ' + error.message 
     });
   }
 };

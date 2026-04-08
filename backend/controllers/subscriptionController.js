@@ -9,13 +9,17 @@ const Task = require('../models/Task');
 // Plan pricing mapping (SEK)
 const PLAN_PRICES = {
   trial: 0,
-  basic: 500,
-  standard: 1000,
-  professional: 1750,
-  business: 2500,
-  enterprise: 5000,
-  unlimited: 15000
+  basic: 399,
+  standard: 799,
+  pro: 1299,
+  business: 2499,
+  enterprise: 4999,
+  corporate: 9999
 };
+
+function getPlanPrice(plan) {
+  return PLAN_PRICES[plan] || 0;
+}
 
 const PLAN_FEATURES = {
   trial: { maxEmployees: 10, maxBranches: 2, maxEmailsPerMonth: 50, maxAdmins: 1 },
