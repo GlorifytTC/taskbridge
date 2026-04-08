@@ -192,8 +192,10 @@ exports.getOrganizationUsers = async (req, res) => {
   try {
     const users = await User.find({ 
       organization: req.params.orgId,
-      role: { $ne: 'master' }  // ✅ Exclude master users
+      role: { $in: ['superadmin', 'admin', 'employee'] }  // ✅ Include superadmin, admin, employee
     }).select('-password');
+    
+    console.log('Found users:', users.length);
     
     res.json({ success: true, data: users });
   } catch (error) {
