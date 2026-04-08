@@ -746,10 +746,19 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const handleResetUserPassword = async () => {
-    if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
-      showToast(language === 'en' ? 'Passwords do not match' : 'Lösenorden matchar inte', 'error');
-      return;
-    }
+  // Debug log to see what's in resetPasswordData
+  console.log('resetPasswordData:', resetPasswordData);
+  
+  if (!resetPasswordData.confirmPassword) {
+    showToast('Confirm password is required', 'error');
+    return;
+  }
+  
+  if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
+    showToast(language === 'en' ? 'Passwords do not match' : 'Lösenorden matchar inte', 'error');
+    return;
+  }
+  
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedUser._id}/reset-password`, {
