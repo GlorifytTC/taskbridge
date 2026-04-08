@@ -190,17 +190,32 @@ function getPlanPrice(plan, months) {
 // @access  Private/Master
 exports.getOrganizationUsers = async (req, res) => {
   try {
+    const orgId = req.params.orgId;
+    console.log('🔍 Fetching users for organization:', orgId);
+    
+    // First, find ALL users with this organization ID (no role filter)
+    const allUsers = await User.find({ organization: orgId });
+    console.log('📊 All users in organization:', allUsers.length);
+    
+    // Also check if any users have null organization
+    const usersWithNullOrg = await User.find({ organization: null });
+    console.log('📊 Users with null organization:', usersWithNullOrg.length);
+    
+    // Find users that might have the organization as string instead of ObjectId
+    const usersWithStringOrg = await User.find({ organization: orgId.toString() });
+    console.log('📊 Users with string organization:', usersWithStringOrg.length);
+    
+    // Return all users for this organization (include superadmin, admin, employee)
     const users = await User.find({ 
-      organization: req.params.orgId,
-      role: { $in: ['superadmin', 'admin', 'employee'] }  // ✅ Include superadmin, admin, employee
+      organization: orgId
     }).select('-password');
     
-    console.log('Found users:', users.length);
+    console.log('✅ Returning users:', users.map(u => ({ name: u.name, email: u.email, role: u.role })));
     
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 

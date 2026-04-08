@@ -364,21 +364,17 @@ const MasterDashboard = ({ onLogout }) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        name: newUserData.name,
-        email: newUserData.email,
-        password: newUserData.password,
-        role: newUserData.role  // Should be 'superadmin' or 'admin'
-      })
+      body: JSON.stringify(newUserData)
     });
     
     const data = await response.json();
     
     if (response.ok) {
-      showToastMessage(data.message || 'User created successfully', 'success');
+      showToastMessage('User created successfully', 'success');
       setShowCreateUserModal(false);
       setNewUserData({ name: '', email: '', password: '', role: 'superadmin' });
-      fetchOrganizationUsers(selectedOrg._id);
+      // ✅ Refresh the users list
+      await fetchOrganizationUsers(selectedOrg._id);
     } else {
       showToastMessage(data.message || 'Error creating user', 'error');
     }
