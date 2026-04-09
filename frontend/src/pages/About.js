@@ -5,8 +5,19 @@ const About = ({ onNavigate, user }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
   const [isVisible, setIsVisible] = useState({});
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+      if (window.innerWidth > 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -24,7 +35,10 @@ const About = ({ onNavigate, user }) => {
       if (element) observer.observe(element);
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   const getDashboardRoute = () => {
@@ -36,9 +50,9 @@ const About = ({ onNavigate, user }) => {
 
   const t = {
     en: {
+      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
       title: 'About TaskBridge',
       subtitle: 'Smart Workforce Management for Modern Organizations',
-      backToDashboard: 'Back to Dashboard',
       missionTitle: 'Our Mission',
       missionText: 'TaskBridge empowers schools, hospitals, and organizations with intelligent shift management, real-time attendance tracking, and seamless communication — all in one platform.',
       whoItServes: 'Who It Serves',
@@ -72,17 +86,14 @@ const About = ({ onNavigate, user }) => {
       shiftsLabel: 'Shifts Completed',
       ownerTitle: 'Project Owner & Lead Developer',
       developedBy: 'Developed by',
-      pic1Alt: 'TaskBridge Dashboard Interface',
-      pic2Alt: 'Shift Management Calendar',
-      pic3Alt: 'Analytics Dashboard',
       pic1Caption: 'Centralized Dashboard',
       pic2Caption: 'Smart Calendar View',
       pic3Caption: 'Real-Time Analytics'
     },
     sv: {
+      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
       title: 'Om TaskBridge',
       subtitle: 'Smart Personalhantering för Moderna Organisationer',
-      backToDashboard: 'Tillbaka till Dashboard',
       missionTitle: 'Vårt Uppdrag',
       missionText: 'TaskBridge ger skolor, sjukhus och organisationer intelligent schemaläggning, realtidsnärvaro och sömlös kommunikation — allt i en plattform.',
       whoItServes: 'Vem Det Tjänar',
@@ -116,9 +127,6 @@ const About = ({ onNavigate, user }) => {
       shiftsLabel: 'Genomförda Skift',
       ownerTitle: 'Projektägare & Lead Utvecklare',
       developedBy: 'Utvecklad av',
-      pic1Alt: 'TaskBridge Dashboard Gränssnitt',
-      pic2Alt: 'Smart Kalendervy',
-      pic3Alt: 'Analysinstrumentpanel',
       pic1Caption: 'Centraliserad Dashboard',
       pic2Caption: 'Smart Kalendervy',
       pic3Caption: 'Realtidsanalyser'
@@ -132,6 +140,10 @@ const About = ({ onNavigate, user }) => {
     localStorage.setItem('taskbridge_language', langCode);
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   return (
     <div style={styles.container}>
       {/* Animated Background */}
@@ -139,20 +151,59 @@ const About = ({ onNavigate, user }) => {
         <div style={styles.bgCircle1}></div>
         <div style={styles.bgCircle2}></div>
         <div style={styles.bgCircle3}></div>
+        <div style={styles.bgGrid}></div>
       </div>
 
-      {/* Language Switcher */}
-      <div style={styles.languageSwitcher}>
-        <button onClick={() => changeLanguage('en')} style={{...styles.langBtn, background: language === 'en' ? '#00d1ff' : 'rgba(255,255,255,0.1)'}}>EN</button>
-        <button onClick={() => changeLanguage('sv')} style={{...styles.langBtn, background: language === 'sv' ? '#00d1ff' : 'rgba(255,255,255,0.1)'}}>SV</button>
-      </div>
+      {/* Navigation Bar */}
+      <nav style={styles.navbar}>
+        <div style={styles.logo}>
+          <div style={styles.logoIcon}>T</div>
+          <span style={styles.logoText}>TaskBridge</span>
+        </div>
 
-      {/* Back Button */}
-      <div style={styles.backButtonContainer}>
-        <button onClick={() => onNavigate(getDashboardRoute())} style={styles.backButton}>
-          ← {lang.backToDashboard}
-        </button>
-      </div>
+        {/* Desktop Navigation */}
+        {!isMobile && (
+          <>
+            <div style={styles.navLinks}>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); }} style={styles.navLink}>{lang.nav.home}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); }} style={{...styles.navLink, color: '#00d1ff'}}>{lang.nav.about}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{lang.nav.pricing}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{lang.nav.contact}</a>
+            </div>
+            <div style={styles.navActions}>
+              <button onClick={() => changeLanguage('en')} style={{...styles.langButton, background: language === 'en' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>EN</button>
+              <button onClick={() => changeLanguage('sv')} style={{...styles.langButton, background: language === 'sv' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>SV</button>
+              <button onClick={() => onNavigate(getDashboardRoute())} style={styles.dashboardButton}>
+                Dashboard
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Mobile Controls */}
+        {isMobile && (
+          <div style={styles.mobileControls}>
+            <button onClick={() => changeLanguage('en')} style={{...styles.langButtonMobile, background: language === 'en' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>EN</button>
+            <button onClick={() => changeLanguage('sv')} style={{...styles.langButtonMobile, background: language === 'sv' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>SV</button>
+            <button onClick={toggleMobileMenu} style={styles.menuButton}>
+              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+            </button>
+          </div>
+        )}
+      </nav>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobile && mobileMenuOpen && (
+        <div style={styles.mobileMenu}>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.home}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={{...styles.mobileNavLink, color: '#00d1ff'}}>{lang.nav.about}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.pricing}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.contact}</a>
+          <button onClick={() => { onNavigate(getDashboardRoute()); setMobileMenuOpen(false); }} style={styles.mobileDashboardButton}>
+            Dashboard
+          </button>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div id="hero" style={{...styles.section, ...styles.heroSection, opacity: isVisible.hero ? 1 : 0, transform: `translateY(${isVisible.hero ? 0 : '30px'})`, transition: 'all 0.6s ease' }}>
@@ -171,29 +222,29 @@ const About = ({ onNavigate, user }) => {
         </div>
       </div>
 
-      {/* Who It Serves - 3 Cards */}
+      {/* Who It Serves */}
       <div id="features" style={{...styles.section, opacity: isVisible.features ? 1 : 0, transform: `translateY(${isVisible.features ? 0 : '30px'})`, transition: 'all 0.6s ease 0.2s' }}>
         <h2 style={styles.sectionTitle}>{lang.whoItServes}</h2>
         <div style={styles.servicesGrid}>
           <div style={styles.serviceCard}>
             <div style={styles.serviceIcon}>🏫</div>
-            <h3>{lang.schools}</h3>
-            <p>{lang.schoolsDesc}</p>
+            <h3 style={styles.serviceTitle}>{lang.schools}</h3>
+            <p style={styles.serviceDesc}>{lang.schoolsDesc}</p>
           </div>
           <div style={styles.serviceCard}>
             <div style={styles.serviceIcon}>🏥</div>
-            <h3>{lang.hospitals}</h3>
-            <p>{lang.hospitalsDesc}</p>
+            <h3 style={styles.serviceTitle}>{lang.hospitals}</h3>
+            <p style={styles.serviceDesc}>{lang.hospitalsDesc}</p>
           </div>
           <div style={styles.serviceCard}>
             <div style={styles.serviceIcon}>🏢</div>
-            <h3>{lang.organizations}</h3>
-            <p>{lang.organizationsDesc}</p>
+            <h3 style={styles.serviceTitle}>{lang.organizations}</h3>
+            <p style={styles.serviceDesc}>{lang.organizationsDesc}</p>
           </div>
         </div>
       </div>
 
-      {/* Feature Images Section - You can add your pics here */}
+      {/* Feature Images */}
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>{lang.featuresTitle}</h2>
         <div style={styles.featureImagesGrid}>
@@ -221,49 +272,49 @@ const About = ({ onNavigate, user }) => {
         </div>
       </div>
 
-      {/* Features List Grid */}
+      {/* Features List */}
       <div style={styles.section}>
         <div style={styles.featuresGrid}>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>📅</div>
             <div>
-              <h4>{lang.shiftManagement}</h4>
-              <p>{lang.shiftManagementDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.shiftManagement}</h4>
+              <p style={styles.featureItemDesc}>{lang.shiftManagementDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>🏪</div>
             <div>
-              <h4>{lang.multiBranch}</h4>
-              <p>{lang.multiBranchDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.multiBranch}</h4>
+              <p style={styles.featureItemDesc}>{lang.multiBranchDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>📊</div>
             <div>
-              <h4>{lang.realtimeAnalytics}</h4>
-              <p>{lang.realtimeAnalyticsDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.realtimeAnalytics}</h4>
+              <p style={styles.featureItemDesc}>{lang.realtimeAnalyticsDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>🔔</div>
             <div>
-              <h4>{lang.smartNotifications}</h4>
-              <p>{lang.smartNotificationsDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.smartNotifications}</h4>
+              <p style={styles.featureItemDesc}>{lang.smartNotificationsDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>📱</div>
             <div>
-              <h4>{lang.employeeApp}</h4>
-              <p>{lang.employeeAppDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.employeeApp}</h4>
+              <p style={styles.featureItemDesc}>{lang.employeeAppDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
             <div style={styles.featureItemIcon}>📋</div>
             <div>
-              <h4>{lang.reporting}</h4>
-              <p>{lang.reportingDesc}</p>
+              <h4 style={styles.featureItemTitle}>{lang.reporting}</h4>
+              <p style={styles.featureItemDesc}>{lang.reportingDesc}</p>
             </div>
           </div>
         </div>
@@ -322,11 +373,10 @@ const About = ({ onNavigate, user }) => {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
-    fontFamily: 'Inter, sans-serif',
+    background: '#0f172a',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     position: 'relative',
     overflowX: 'hidden',
-    padding: '80px 40px 40px',
   },
   bgAnimation: {
     position: 'fixed',
@@ -369,53 +419,174 @@ const styles = {
     transform: 'translate(-50%, -50%)',
     animation: 'pulse 15s ease-in-out infinite',
   },
-  languageSwitcher: {
+  bgGrid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundImage: 'linear-gradient(rgba(0, 209, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 209, 255, 0.03) 1px, transparent 1px)',
+    backgroundSize: '50px 50px',
+    zIndex: 0,
+  },
+  navbar: {
     position: 'fixed',
-    top: '20px',
-    right: '120px',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 100,
     display: 'flex',
-    gap: '8px',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 40px',
+    background: 'rgba(15, 23, 42, 0.95)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+    '@media (max-width: 768px)': {
+      padding: '12px 20px',
+    },
   },
-  langBtn: {
-    padding: '6px 12px',
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  logoIcon: {
+    width: '36px',
+    height: '36px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  logoText: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+  },
+  navLinks: {
+    display: 'flex',
+    gap: '32px',
+  },
+  navLink: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'color 0.3s ease',
+    cursor: 'pointer',
+  },
+  navActions: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+  },
+  langButton: {
+    padding: '6px 14px',
     borderRadius: '20px',
     border: '1px solid rgba(255,255,255,0.2)',
-    background: 'rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.05)',
     color: 'white',
     cursor: 'pointer',
     fontSize: '12px',
-    fontWeight: '600',
+    fontWeight: '500',
+    transition: 'all 0.3s ease',
   },
-  backButtonContainer: {
-    position: 'fixed',
-    top: '20px',
-    left: '40px',
-    zIndex: 100,
-  },
-  backButton: {
-    padding: '8px 16px',
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '20px',
+  dashboardButton: {
+    padding: '8px 20px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '25px',
     color: 'white',
     cursor: 'pointer',
     fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.3s ease',
+  },
+  mobileControls: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+  },
+  langButtonMobile: {
+    padding: '6px 12px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255,255,255,0.2)',
+    background: 'rgba(255,255,255,0.05)',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontWeight: '500',
+  },
+  menuButton: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '10px',
+    color: 'white',
+    fontSize: '18px',
+    cursor: 'pointer',
+    padding: '8px 14px',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    justifyContent: 'center',
+  },
+  mobileMenu: {
+    position: 'fixed',
+    top: '60px',
+    left: 0,
+    right: 0,
+    zIndex: 99,
+    background: 'rgba(15, 23, 42, 0.98)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+    padding: '16px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  mobileNavLink: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    textDecoration: 'none',
+    fontSize: '16px',
+    fontWeight: '500',
+    padding: '10px 0',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    cursor: 'pointer',
+  },
+  mobileDashboardButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    marginTop: '8px',
   },
   section: {
     position: 'relative',
     zIndex: 10,
     maxWidth: '1200px',
     margin: '0 auto',
-    marginBottom: '60px',
+    padding: '0 20px',
+    marginBottom: '80px',
   },
   heroSection: {
     textAlign: 'center',
-    marginTop: '20px',
+    paddingTop: '100px',
     marginBottom: '60px',
+    '@media (max-width: 768px)': {
+      paddingTop: '80px',
+    },
   },
   heroIcon: {
     width: '80px',
@@ -440,27 +611,40 @@ const styles = {
     backgroundClip: 'text',
     color: 'transparent',
     marginBottom: '16px',
+    '@media (max-width: 768px)': {
+      fontSize: '36px',
+    },
   },
   subtitle: {
     fontSize: '18px',
     color: 'rgba(255,255,255,0.7)',
     maxWidth: '600px',
     margin: '0 auto',
+    '@media (max-width: 768px)': {
+      fontSize: '16px',
+    },
   },
   sectionTitle: {
     fontSize: '32px',
     fontWeight: '700',
     color: 'white',
     textAlign: 'center',
-    marginBottom: '40px',
+    marginBottom: '48px',
+    '@media (max-width: 768px)': {
+      fontSize: '28px',
+      marginBottom: '32px',
+    },
   },
   missionCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'rgba(255,255,255,0.03)',
     backdropFilter: 'blur(10px)',
-    borderRadius: '28px',
-    padding: '40px',
+    borderRadius: '24px',
+    padding: '48px',
     textAlign: 'center',
-    border: '1px solid rgba(0,209,255,0.3)',
+    border: '1px solid rgba(0,209,255,0.2)',
+    '@media (max-width: 768px)': {
+      padding: '32px 20px',
+    },
   },
   missionText: {
     fontSize: '18px',
@@ -468,6 +652,9 @@ const styles = {
     color: 'rgba(255,255,255,0.8)',
     maxWidth: '800px',
     margin: '0 auto',
+    '@media (max-width: 768px)': {
+      fontSize: '16px',
+    },
   },
   servicesGrid: {
     display: 'grid',
@@ -478,13 +665,24 @@ const styles = {
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '20px',
-    padding: '32px',
+    padding: '32px 24px',
     textAlign: 'center',
     transition: 'transform 0.3s ease',
   },
   serviceIcon: {
     fontSize: '48px',
-    marginBottom: '16px',
+    marginBottom: '20px',
+  },
+  serviceTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: '12px',
+  },
+  serviceDesc: {
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: '1.5',
   },
   featureImagesGrid: {
     display: 'grid',
@@ -507,7 +705,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '16px',
+    marginBottom: '20px',
   },
   imageCaption: {
     fontSize: '16px',
@@ -532,14 +730,27 @@ const styles = {
     padding: '20px',
   },
   featureItemIcon: {
-    fontSize: '32px',
+    fontSize: '28px',
+    minWidth: '40px',
+  },
+  featureItemTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: '8px',
+  },
+  featureItemDesc: {
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: '1.5',
   },
   statsSection: {
     position: 'relative',
     zIndex: 10,
     maxWidth: '1200px',
     margin: '0 auto',
-    marginBottom: '60px',
+    padding: '0 20px',
+    marginBottom: '80px',
   },
   statsGrid: {
     display: 'grid',
@@ -547,16 +758,20 @@ const styles = {
     gap: '24px',
   },
   statCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'rgba(255,255,255,0.03)',
     borderRadius: '20px',
-    padding: '32px',
+    padding: '32px 24px',
     textAlign: 'center',
+    transition: 'transform 0.3s ease',
   },
   statNumber: {
     fontSize: '42px',
     fontWeight: '800',
     color: '#00d1ff',
     marginBottom: '8px',
+    '@media (max-width: 768px)': {
+      fontSize: '36px',
+    },
   },
   statLabel: {
     fontSize: '14px',
@@ -567,26 +782,31 @@ const styles = {
     zIndex: 10,
     maxWidth: '800px',
     margin: '0 auto',
-    marginBottom: '40px',
+    padding: '0 20px',
+    marginBottom: '60px',
   },
   ownerCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'rgba(255,255,255,0.03)',
     backdropFilter: 'blur(10px)',
-    borderRadius: '28px',
-    padding: '32px',
+    borderRadius: '24px',
+    padding: '40px',
     display: 'flex',
     alignItems: 'center',
-    gap: '32px',
-    border: '1px solid rgba(0,209,255,0.3)',
+    gap: '40px',
+    border: '1px solid rgba(0,209,255,0.2),
     flexWrap: 'wrap',
     justifyContent: 'center',
     textAlign: 'center',
+    '@media (max-width: 768px)': {
+      padding: '32px 24px',
+      gap: '24px',
+    },
   },
   ownerLogo: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '8px',
+    gap: '10px',
   },
   ownerLogoIcon: {
     width: '70px',
@@ -600,6 +820,11 @@ const styles = {
     fontWeight: 'bold',
     color: 'white',
     boxShadow: '0 0 25px rgba(0,209,255,0.35)',
+    '@media (max-width: 768px)': {
+      width: '60px',
+      height: '60px',
+      fontSize: '32px',
+    },
   },
   ownerLogoText: {
     fontSize: '20px',
@@ -608,6 +833,9 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+    },
   },
   ownerInfo: {
     textAlign: 'center',
@@ -616,24 +844,28 @@ const styles = {
     fontSize: '20px',
     fontWeight: '600',
     color: '#00d1ff',
-    marginBottom: '12px',
+    marginBottom: '16px',
+    '@media (max-width: 768px)': {
+      fontSize: '18px',
+    },
   },
   ownerContact: {
     display: 'flex',
-    gap: '20px',
+    gap: '24px',
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
   ownerLink: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.7)',
     textDecoration: 'none',
     fontSize: '14px',
+    transition: 'color 0.3s ease',
   },
   footer: {
     position: 'relative',
     zIndex: 10,
     textAlign: 'center',
-    padding: '24px',
+    padding: '30px 20px',
     borderTop: '1px solid rgba(255,255,255,0.05)',
     color: 'rgba(255,255,255,0.4)',
     fontSize: '12px',
@@ -665,6 +897,13 @@ styleSheet.textContent = `
   }
   .ownerLink:hover {
     color: #00d1ff;
+  }
+  .dashboardButton:hover, .mobileDashboardButton:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+  }
+  .langButton:hover, .langButtonMobile:hover {
+    background: rgba(0,209,255,0.2) !important;
   }
 `;
 document.head.appendChild(styleSheet);

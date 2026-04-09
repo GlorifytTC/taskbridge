@@ -3,14 +3,12 @@ import React, { useEffect, useState } from 'react';
 const Landing = ({ onLoginClick, onNavigate }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
-  const [language, setLanguage] = useState('en'); // 'en' or 'sv'
+  const [language, setLanguage] = useState('en');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Check if device is mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
-      // Close mobile menu when resizing to desktop
       if (window.innerWidth > 768) {
         setMobileMenuOpen(false);
       }
@@ -21,11 +19,9 @@ const Landing = ({ onLoginClick, onNavigate }) => {
   }, []);
 
   const handleSignIn = () => {
-    console.log('Sign In button clicked');
     if (onLoginClick) {
       onLoginClick();
     }
-    // Close mobile menu if open
     setMobileMenuOpen(false);
   };
 
@@ -37,13 +33,12 @@ const Landing = ({ onLoginClick, onNavigate }) => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Get dynamic current date for calendar
+  // Calendar data
   const currentDate = new Date();
   const today = currentDate.getDate();
   const currentMonth = currentDate.toLocaleString(language === 'en' ? 'default' : 'sv-SE', { month: 'long' });
   const currentYear = currentDate.getFullYear();
 
-  // Generate dynamic calendar days
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -64,7 +59,6 @@ const Landing = ({ onLoginClick, onNavigate }) => {
     days.push(i);
   }
 
-  // Translations
   const t = {
     en: {
       nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact Us' },
@@ -114,7 +108,6 @@ const Landing = ({ onLoginClick, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      {/* Animated Background */}
       <div style={styles.bgAnimation}>
         <div style={styles.bgCircle1}></div>
         <div style={styles.bgCircle2}></div>
@@ -122,63 +115,49 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         <div style={styles.bgGrid}></div>
       </div>
 
+      {/* Navigation */}
+      <nav style={styles.navbar}>
+        <div style={styles.logo}>
+          <div style={styles.logoIcon}><span>T</span></div>
+          <span style={styles.logoText}>TaskBridge</span>
+        </div>
+        
+        {!isMobile && (
+          <>
+            <div style={styles.navLinks}>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{content.nav.home}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.pricing}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.contact}</a>
+            </div>
+            <div style={styles.navActions}>
+              <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
+              <button onClick={handleSignIn} style={styles.navButton}>{content.signIn}</button>
+            </div>
+          </>
+        )}
 
-{/* Navigation */}
-<nav style={styles.navbar}>
-  <div style={styles.logo}>
-    <div style={styles.logoIcon}>
-      <span>T</span>
-    </div>
-    <span style={styles.logoText}>TaskBridge</span>
-  </div>
-  
-  {/* Desktop Navigation */}
-  {!isMobile && (
-    <>
-      <div style={styles.navLinks}>
-        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{content.nav.home}</a>
-        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
-        <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.pricing}</a>
-        <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.contact}</a>
-      </div>
-      <div style={styles.navActions}>
-        <button onClick={toggleLanguage} style={styles.langButton}>
-          {language === 'en' ? 'SV' : 'EN'}
-        </button>
-        <button onClick={handleSignIn} style={styles.navButton}>
-          {content.signIn}
-        </button>
-      </div>
-    </>
-  )}
+        {isMobile && (
+          <div style={styles.mobileControls}>
+            <button onClick={toggleLanguage} style={styles.langButtonMobile}>{language === 'en' ? 'SV' : 'EN'}</button>
+            <button onClick={toggleMobileMenu} style={styles.menuButton}>
+              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+            </button>
+          </div>
+        )}
+      </nav>
 
-  {/* Mobile Menu Button */}
-  {isMobile && (
-    <div style={styles.mobileControls}>
-      <button onClick={toggleLanguage} style={styles.langButtonMobile}>
-        {language === 'en' ? 'SV' : 'EN'}
-      </button>
-      <button onClick={toggleMobileMenu} style={styles.menuButton}>
-        <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
-      </button>
-    </div>
-  )}
-</nav>
+      {isMobile && mobileMenuOpen && (
+        <div style={styles.mobileMenu}>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.home}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
+          <button onClick={handleSignIn} style={styles.mobileSignInButton}>{content.signIn}</button>
+        </div>
+      )}
 
-{/* Mobile Menu Dropdown */}
-{isMobile && mobileMenuOpen && (
-  <div style={styles.mobileMenu}>
-    <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.home}</a>
-    <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
-    <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
-    <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
-    <button onClick={handleSignIn} style={styles.mobileSignInButton}>
-      {content.signIn}
-    </button>
-  </div>
-)}
-
-      {/* Hero Section */}
+      {/* Hero Section - Calendar now VISIBLE on mobile */}
       <div style={styles.hero}>
         <div style={styles.heroContent}>
           <div style={styles.tag}>
@@ -203,29 +182,18 @@ const Landing = ({ onLoginClick, onNavigate }) => {
           </div>
         </div>
 
-        {/* Dynamic Calendar - Fully visible on all devices */}
+        {/* CALENDAR - FIXED: Always visible on mobile */}
         <div style={styles.calendarContainer}>
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
-              <div style={styles.calendarMonth}>
-                {currentMonth} {currentYear}
-              </div>
+              <div style={styles.calendarMonth}>{currentMonth} {currentYear}</div>
             </div>
             <div style={styles.calendarWeekdays}>
-              {content.weekdays.map(day => (
-                <div key={day} style={styles.weekday}>{day}</div>
-              ))}
+              {content.weekdays.map(day => <div key={day} style={styles.weekday}>{day}</div>)}
             </div>
             <div style={styles.calendarDays}>
               {days.map((day, index) => (
-                <div 
-                  key={index} 
-                  style={{
-                    ...styles.calendarDay,
-                    ...(day === today ? styles.today : {}),
-                    ...(day && day % 2 === 0 ? styles.blinkingEye : {})
-                  }}
-                >
+                <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {})}}>
                   {day}
                 </div>
               ))}
@@ -240,51 +208,40 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         <h2 style={styles.featuresTitle}>
           {content.featuresTitle.split(' ').map((word, i) => 
             word === 'Modern' || word === 'Moderna' ? 
-              <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
-              word + ' '
+              <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : word + ' '
           )}
         </h2>
         <div style={styles.featuresGrid}>
           <div style={styles.featureCard}>
-            <div style={styles.featureIcon}>
-              <i className="fas fa-clock"></i>
-            </div>
+            <div style={styles.featureIcon}><i className="fas fa-clock"></i></div>
             <h3 style={styles.featureTitle}>{content.shiftMgmt}</h3>
             <p style={styles.featureDesc}>{content.shiftDesc}</p>
           </div>
           <div style={styles.featureCard}>
-            <div style={styles.featureIcon}>
-              <i className="fas fa-users"></i>
-            </div>
+            <div style={styles.featureIcon}><i className="fas fa-users"></i></div>
             <h3 style={styles.featureTitle}>{content.multiBranch}</h3>
             <p style={styles.featureDesc}>{content.branchDesc}</p>
           </div>
           <div style={styles.featureCard}>
-            <div style={styles.featureIcon}>
-              <i className="fas fa-chart-line"></i>
-            </div>
+            <div style={styles.featureIcon}><i className="fas fa-chart-line"></i></div>
             <h3 style={styles.featureTitle}>{content.realtimeAnalytics}</h3>
             <p style={styles.featureDesc}>{content.analyticsDesc}</p>
           </div>
           <div style={styles.featureCard}>
-            <div style={styles.featureIcon}>
-              <i className="fas fa-bell"></i>
-            </div>
+            <div style={styles.featureIcon}><i className="fas fa-bell"></i></div>
             <h3 style={styles.featureTitle}>{content.smartNotif}</h3>
             <p style={styles.featureDesc}>{content.notifDesc}</p>
           </div>
         </div>
       </div>
 
-      {/* Company Owner Section - Fixed for mobile */}
+      {/* Owner Section - FIXED: Text no longer cut off */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
             <div style={styles.ownerLogo}>
               <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
-                <div style={styles.glorifyLogoIcon}>
-                  <span>G</span>
-                </div>
+                <div style={styles.glorifyLogoIcon}><span>G</span></div>
                 <div style={styles.glorifyLogoText}>GlorifyTC</div>
               </a>
             </div>
@@ -312,13 +269,11 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         </div>
       </footer>
 
-      {/* Add Font Awesome */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     </div>
   );
 };
 
-// Complete styles with all sections - Fixed for mobile calendar and owner section
 const styles = {
   container: {
     minHeight: '100vh',
@@ -470,7 +425,6 @@ const styles = {
     fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
   },
   navButton: {
     padding: '10px 24px',
@@ -480,7 +434,6 @@ const styles = {
     color: 'white',
     fontSize: '14px',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
   },
   mobileControls: {
     display: 'flex',
@@ -496,7 +449,6 @@ const styles = {
     fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
   },
   menuButton: {
     background: 'rgba(255, 255, 255, 0.05)',
@@ -506,7 +458,6 @@ const styles = {
     fontSize: '18px',
     cursor: 'pointer',
     padding: '8px 16px',
-    transition: 'all 0.3s ease',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -530,10 +481,6 @@ const styles = {
     padding: '12px 0',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     cursor: 'pointer',
-    transition: 'color 0.3s ease',
-    '&:hover': {
-      color: '#00d1ff',
-    },
   },
   mobileSignInButton: {
     width: '100%',
@@ -625,7 +572,6 @@ const styles = {
     marginBottom: '32px',
     '@media (max-width: 768px)': {
       fontSize: '16px',
-      marginBottom: '28px',
     },
     '@media (max-width: 480px)': {
       fontSize: '14px',
@@ -637,10 +583,6 @@ const styles = {
     marginBottom: '48px',
     '@media (max-width: 1024px)': {
       justifyContent: 'center',
-    },
-    '@media (max-width: 768px)': {
-      marginBottom: '32px',
-      gap: '12px',
     },
     '@media (max-width: 480px)': {
       flexDirection: 'column',
@@ -657,14 +599,9 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '12px 24px',
-      fontSize: '14px',
-    },
     '@media (max-width: 480px)': {
       width: '100%',
-      padding: '10px 20px',
+      padding: '12px 20px',
     },
   },
   secondaryButton: {
@@ -676,16 +613,12 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '12px 24px',
-      fontSize: '14px',
-    },
     '@media (max-width: 480px)': {
       width: '100%',
-      padding: '10px 20px',
+      padding: '12px 20px',
     },
   },
+  // CALENDAR - FIXED for mobile visibility
   calendarContainer: {
     display: 'flex',
     justifyContent: 'center',
@@ -705,11 +638,11 @@ const styles = {
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
     '@media (max-width: 768px)': {
-      maxWidth: '340px',
+      maxWidth: '320px',
       padding: '20px',
     },
     '@media (max-width: 480px)': {
-      maxWidth: '280px',
+      maxWidth: '300px',
       padding: '16px',
       margin: '0 auto',
     },
@@ -727,9 +660,6 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    '@media (max-width: 768px)': {
-      fontSize: '20px',
-    },
     '@media (max-width: 480px)': {
       fontSize: '18px',
     },
@@ -746,10 +676,6 @@ const styles = {
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     padding: '8px 0',
-    '@media (max-width: 768px)': {
-      fontSize: '12px',
-      padding: '6px 0',
-    },
     '@media (max-width: 480px)': {
       fontSize: '10px',
       padding: '4px 0',
@@ -768,10 +694,6 @@ const styles = {
     borderRadius: '8px',
     transition: 'all 0.2s ease',
     cursor: 'pointer',
-    '@media (max-width: 768px)': {
-      fontSize: '13px',
-      padding: '8px 0',
-    },
     '@media (max-width: 480px)': {
       fontSize: '11px',
       padding: '6px 0',
@@ -817,16 +739,11 @@ const styles = {
     textAlign: 'center',
     marginBottom: '48px',
     color: 'white',
-    '@media (max-width: 1024px)': {
-      fontSize: '32px',
-    },
     '@media (max-width: 768px)': {
       fontSize: '28px',
-      marginBottom: '32px',
     },
     '@media (max-width: 480px)': {
       fontSize: '24px',
-      marginBottom: '24px',
     },
   },
   featuresGrid: {
@@ -840,10 +757,6 @@ const styles = {
     borderRadius: '24px',
     padding: '32px',
     textAlign: 'center',
-    transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '24px',
-    },
     '@media (max-width: 480px)': {
       padding: '20px',
     },
@@ -859,16 +772,10 @@ const styles = {
     margin: '0 auto 20px',
     fontSize: '28px',
     color: '#00d1ff',
-    '@media (max-width: 768px)': {
-      width: '56px',
-      height: '56px',
-      fontSize: '24px',
-    },
     '@media (max-width: 480px)': {
       width: '50px',
       height: '50px',
       fontSize: '22px',
-      borderRadius: '16px',
     },
   },
   featureTitle: {
@@ -876,9 +783,6 @@ const styles = {
     fontWeight: '600',
     marginBottom: '12px',
     color: 'white',
-    '@media (max-width: 768px)': {
-      fontSize: '18px',
-    },
     '@media (max-width: 480px)': {
       fontSize: '16px',
     },
@@ -919,10 +823,6 @@ const styles = {
     gap: '50px',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
-    '@media (max-width: 1024px)': {
-      padding: '35px',
-      gap: '35px',
-    },
     '@media (max-width: 768px)': {
       flexDirection: 'column',
       textAlign: 'center',
@@ -932,17 +832,12 @@ const styles = {
     '@media (max-width: 480px)': {
       flexDirection: 'column',
       textAlign: 'center',
-      padding: '24px 20px',
+      padding: '24px 16px',
       gap: '20px',
     },
   },
   ownerLogo: {
     flexShrink: 0,
-    '@media (max-width: 480px)': {
-      width: '100%',
-      display: 'flex',
-      justifyContent: 'center',
-    },
   },
   glorifyLogoLink: {
     textDecoration: 'none',
@@ -964,11 +859,6 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '70px',
-      height: '70px',
-      fontSize: '38px',
-    },
     '@media (max-width: 480px)': {
       width: '60px',
       height: '60px',
@@ -985,9 +875,6 @@ const styles = {
     backgroundClip: 'text',
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
-    '@media (max-width: 768px)': {
-      fontSize: '22px',
-    },
     '@media (max-width: 480px)': {
       fontSize: '20px',
     },
@@ -996,10 +883,6 @@ const styles = {
     flex: 1,
     '@media (max-width: 768px)': {
       width: '100%',
-    },
-    '@media (max-width: 480px)': {
-      width: '100%',
-      textAlign: 'center',
     },
   },
   ownerTitle: {
@@ -1022,10 +905,6 @@ const styles = {
     '@media (max-width: 768px)': {
       alignItems: 'center',
     },
-    '@media (max-width: 480px)': {
-      alignItems: 'center',
-      gap: '8px',
-    },
   },
   contactItem: {
     display: 'flex',
@@ -1035,17 +914,21 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.8)',
     '@media (max-width: 480px)': {
       fontSize: '12px',
-      gap: '6px',
-      flexWrap: 'wrap',
+      gap: '8px',
       justifyContent: 'center',
+      flexWrap: 'wrap',
     },
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
     transition: 'color 0.3s ease',
-    wordBreak: 'break-all',
-    fontSize: 'inherit',
+    wordBreak: 'keep-all',
+    whiteSpace: 'nowrap',
+    '@media (max-width: 480px)': {
+      whiteSpace: 'normal',
+      wordBreak: 'break-all',
+    },
     '&:hover': {
       color: '#00d1ff',
     },
@@ -1082,7 +965,6 @@ const styles = {
   },
 };
 
-// Add animations and responsive styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes float1 {
@@ -1102,46 +984,21 @@ styleSheet.textContent = `
     50% { transform: translateY(-10px); }
   }
   @keyframes calendarBlink {
-    0%, 90%, 100% {
-      opacity: 1;
-      background: rgba(0, 209, 255, 0);
-    }
-    95% {
-      opacity: 0.5;
-      background: rgba(0, 209, 255, 0.2);
-    }
+    0%, 90%, 100% { opacity: 1; background: rgba(0, 209, 255, 0); }
+    95% { opacity: 0.5; background: rgba(0, 209, 255, 0.2); }
   }
   @keyframes softGlow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 40px rgba(0, 209, 255, 0.5);
-    }
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 209, 255, 0.5); }
   }
   @keyframes shimmer {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
   
-  .glorifyLogoIcon:hover {
-    transform: scale(1.03);
-  }
-  .primaryButton:hover, .secondaryButton:hover {
+  .primaryButton:hover, .secondaryButton:hover, .navButton:hover, .langButton:hover {
     transform: translateY(-2px);
-  }
-  .navButton:hover, .langButton:hover, .langButtonMobile:hover, .menuButton:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-  .navLink:hover, .mobileNavLink:hover {
-    color: #00d1ff !important;
   }
   .featureCard:hover {
     transform: translateY(-5px);
@@ -1152,13 +1009,6 @@ styleSheet.textContent = `
   }
   .contactLink:hover {
     color: #00d1ff;
-  }
-  
-  /* Mobile specific adjustments */
-  @media (max-width: 480px) {
-    .calendar {
-      animation: floatCalendar 4s ease-in-out infinite !important;
-    }
   }
 `;
 document.head.appendChild(styleSheet);
