@@ -202,7 +202,7 @@ const Landing = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* Dynamic Calendar - Now always visible on all devices */}
+        {/* Dynamic Calendar - Fully visible on all devices */}
         <div style={styles.calendarContainer}>
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
@@ -275,7 +275,7 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* Company Owner Section - GlorifyTC - Vertically stacked on mobile */}
+      {/* Company Owner Section - Fixed for mobile */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
@@ -317,7 +317,7 @@ const Landing = ({ onLoginClick }) => {
   );
 };
 
-// Complete styles with all sections - Fixed for mobile
+// Complete styles with all sections - Fixed for mobile calendar and owner section
 const styles = {
   container: {
     minHeight: '100vh',
@@ -708,7 +708,7 @@ const styles = {
       padding: '20px',
     },
     '@media (max-width: 480px)': {
-      maxWidth: '100%',
+      maxWidth: '280px',
       padding: '16px',
       margin: '0 auto',
     },
@@ -1010,8 +1010,8 @@ const styles = {
       fontSize: '20px',
     },
     '@media (max-width: 480px)': {
-      fontSize: '18px',
-      marginBottom: '16px',
+      fontSize: '16px',
+      marginBottom: '12px',
     },
   },
   ownerDetails: {
@@ -1023,7 +1023,7 @@ const styles = {
     },
     '@media (max-width: 480px)': {
       alignItems: 'center',
-      gap: '10px',
+      gap: '8px',
     },
   },
   contactItem: {
@@ -1033,8 +1033,8 @@ const styles = {
     fontSize: '15px',
     color: 'rgba(255, 255, 255, 0.8)',
     '@media (max-width: 480px)': {
-      fontSize: '13px',
-      gap: '8px',
+      fontSize: '12px',
+      gap: '6px',
       flexWrap: 'wrap',
       justifyContent: 'center',
     },
@@ -1044,6 +1044,7 @@ const styles = {
     textDecoration: 'none',
     transition: 'color 0.3s ease',
     wordBreak: 'break-all',
+    fontSize: 'inherit',
     '&:hover': {
       color: '#00d1ff',
     },
@@ -1071,7 +1072,7 @@ const styles = {
       fontSize: '12px',
     },
     '@media (max-width: 480px)': {
-      fontSize: '11px',
+      fontSize: '10px',
     },
   },
   glorifyHighlight: {
@@ -1155,7 +1156,7 @@ styleSheet.textContent = `
   /* Mobile specific adjustments */
   @media (max-width: 480px) {
     .calendar {
-      animation: floatCalendar 4s ease-in-out infinite;
+      animation: floatCalendar 4s ease-in-out infinite !important;
     }
   }
 `;
