@@ -62,7 +62,7 @@ exports.getUser = async (req, res) => {
 
 // @desc    Assign branch to admin
 // @route   PUT /api/users/:id/assign-branch
-// @access  Private/Master/SuperAdmin
+// @access  Private/SuperAdmin/Master
 exports.assignBranch = async (req, res) => {
   try {
     const { branchId } = req.body;
@@ -72,33 +72,28 @@ exports.assignBranch = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
-      return res.status(400).json({ message: 'Only admins can be assigned to branches' });
-    }
-    
-    // Initialize assignedBranches if it doesn't exist
-    if (!user.assignedBranches) {
-      user.assignedBranches = [];
-    }
-    
-    // Check if branch already assigned
-    const alreadyAssigned = user.assignedBranches.some(id => id.toString() === branchId);
-    
-    if (!alreadyAssigned) {
+    // Add branch to assignedBranches if not already there
+    if (!user.assignedBranches.includes(branchId)) {
       user.assignedBranches.push(branchId);
       await user.save();
     }
     
-    res.json({ success: true, message: 'Branch assigned successfully' });
+    // Also update the main branch field if not set
+    if (!user.branch) {
+      user.branch = branchId;
+      await user.save();
+    }
+    
+    res.json({ success: true, message: 'Branch assigned successfully', assignedBranches: user.assignedBranches });
   } catch (error) {
     console.error('Error assigning branch:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 // @desc    Remove branch from admin
 // @route   PUT /api/users/:id/remove-branch
-// @access  Private/Master/SuperAdmin
+// @access  Private/SuperAdmin/Master
 exports.removeBranch = async (req, res) => {
   try {
     const { branchId } = req.body;
@@ -108,18 +103,16 @@ exports.removeBranch = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    if (user.assignedBranches) {
-      user.assignedBranches = user.assignedBranches.filter(id => id.toString() !== branchId);
-      await user.save();
-    }
+    // Remove branch from assignedBranches
+    user.assignedBranches = user.assignedBranches.filter(b => b.toString() !== branchId);
+    await user.save();
     
-    res.json({ success: true, message: 'Branch removed successfully' });
+    res.json({ success: true, message: 'Branch removed successfully', assignedBranches: user.assignedBranches });
   } catch (error) {
     console.error('Error removing branch:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 
 // @desc    Update user
