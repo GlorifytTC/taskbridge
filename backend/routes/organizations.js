@@ -32,7 +32,7 @@ router.post('/:id/users', createOrganizationUser);
 router.put('/:id/pause', pauseOrganization);
 router.put('/:id/resume', resumeOrganization);
 router.put('/:id/extend', extendSubscription);
-router.put('/:id/plan', changePlan);  // ✅ Now changePlan is defined
+router.put('/:id/plan', changePlan); 
 
 // Generic :id route - MUST BE LAST
 router.route('/:id')
