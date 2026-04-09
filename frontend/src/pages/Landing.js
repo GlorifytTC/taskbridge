@@ -160,7 +160,7 @@ const Landing = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* Dynamic Calendar - Now always visible */}
+        {/* Dynamic Calendar - Now always visible on all devices */}
         <div style={styles.calendarContainer}>
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
@@ -233,7 +233,7 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* Company Owner Section - GlorifyTC */}
+      {/* Company Owner Section - GlorifyTC - Fixed for mobile */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
@@ -275,7 +275,7 @@ const Landing = ({ onLoginClick }) => {
   );
 };
 
-// Complete styles with all sections
+// Complete styles with all sections - Fixed for mobile calendar and owner section
 const styles = {
   container: {
     minHeight: '100vh',
@@ -610,6 +610,8 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    // Ensure calendar is always visible
+    overflow: 'visible',
   },
   calendar: {
     width: '100%',
@@ -622,13 +624,15 @@ const styles = {
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
+    // Mobile adjustments to ensure visibility
     '@media (max-width: 768px)': {
-      maxWidth: '340px',
+      maxWidth: '320px',
       padding: '20px',
     },
     '@media (max-width: 480px)': {
       maxWidth: '280px',
       padding: '16px',
+      margin: '0 auto',
     },
   },
   calendarHeader: {
@@ -847,11 +851,19 @@ const styles = {
       gap: '25px',
     },
     '@media (max-width: 480px)': {
-      padding: '24px',
+      flexDirection: 'column',
+      textAlign: 'center',
+      padding: '24px 20px',
+      gap: '20px',
     },
   },
   ownerLogo: {
     flexShrink: 0,
+    '@media (max-width: 480px)': {
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'center',
+    },
   },
   glorifyLogoLink: {
     textDecoration: 'none',
@@ -906,6 +918,10 @@ const styles = {
     '@media (max-width: 768px)': {
       width: '100%',
     },
+    '@media (max-width: 480px)': {
+      width: '100%',
+      textAlign: 'center',
+    },
   },
   ownerTitle: {
     fontSize: '24px',
@@ -917,6 +933,7 @@ const styles = {
     },
     '@media (max-width: 480px)': {
       fontSize: '18px',
+      marginBottom: '16px',
     },
   },
   ownerDetails: {
@@ -925,6 +942,10 @@ const styles = {
     gap: '12px',
     '@media (max-width: 768px)': {
       alignItems: 'center',
+    },
+    '@media (max-width: 480px)': {
+      alignItems: 'center',
+      gap: '10px',
     },
   },
   contactItem: {
@@ -935,12 +956,16 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.8)',
     '@media (max-width: 480px)': {
       fontSize: '13px',
+      gap: '8px',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
     },
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
     transition: 'color 0.3s ease',
+    wordBreak: 'break-all',
     '&:hover': {
       color: '#00d1ff',
     },
