@@ -802,26 +802,7 @@ const [customPlanData, setCustomPlanData] = useState({
     </table>
   )}
 </div>
-<div onClick={() => setSelectedPlan('custom')} style={{...styles.planCard, borderColor: selectedPlan === 'custom' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'custom' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-  <h3>✏️ Custom</h3>
-  <div style={styles.planPrice}>Set Your Own<span>Price</span></div>
-  <ul style={styles.planFeatures}>
-    <li>✓ Custom employee limit</li>
-    <li>✓ Custom branch limit</li>
-    <li>✓ Custom email limit</li>
-    <li>✓ Custom admin limit</li>
-    <li>✓ Tailored pricing</li>
-  </ul>
-  <button 
-    onClick={(e) => {
-      e.stopPropagation();
-      setShowCustomPlanModal(true);
-    }} 
-    style={styles.customButton}
-  >
-    Configure Custom Plan
-  </button>
-</div>
+
 
       {/* Create Organization Modal */}
 {showOrgModal && (
@@ -999,7 +980,26 @@ const [customPlanData, setCustomPlanData] = useState({
             <li>✓ 24/7 dedicated support</li>
           </ul>
         </div>
-        
+        <div onClick={() => setSelectedPlan('custom')} style={{...styles.planCard, borderColor: selectedPlan === 'custom' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'custom' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+  <h3>✏️ Custom</h3>
+  <div style={styles.planPrice}>Set Your Own<span>Price</span></div>
+  <ul style={styles.planFeatures}>
+    <li>✓ Custom employee limit</li>
+    <li>✓ Custom branch limit</li>
+    <li>✓ Custom email limit</li>
+    <li>✓ Custom admin limit</li>
+    <li>✓ Tailored pricing</li>
+  </ul>
+  <button 
+    onClick={(e) => {
+      e.stopPropagation();
+      setShowCustomPlanModal(true);
+    }} 
+    style={styles.customButton}
+  >
+    Configure Custom Plan
+  </button>
+</div>
       </div>
       
       <div style={styles.durationSelector}>
