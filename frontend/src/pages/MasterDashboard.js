@@ -999,8 +999,7 @@ const [customPlanData, setCustomPlanData] = useState({
             <li>✓ 24/7 dedicated support</li>
           </ul>
         </div>
-        <div onClick={() => setSelectedPlan('custom')} style={{...styles.planCard, borderColor: selectedPlan === 'custom' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'custom' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
-  
+        
       </div>
       
       <div style={styles.durationSelector}>
