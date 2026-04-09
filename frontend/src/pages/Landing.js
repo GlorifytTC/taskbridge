@@ -4,11 +4,16 @@ const Landing = ({ onLoginClick }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
   const [language, setLanguage] = useState('en'); // 'en' or 'sv'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
+      // Close mobile menu when resizing to desktop
+      if (window.innerWidth > 768) {
+        setMobileMenuOpen(false);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -20,10 +25,16 @@ const Landing = ({ onLoginClick }) => {
     if (onLoginClick) {
       onLoginClick();
     }
+    // Close mobile menu if open
+    setMobileMenuOpen(false);
   };
 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'sv' : 'en');
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   // Get dynamic current date for calendar
@@ -119,21 +130,52 @@ const Landing = ({ onLoginClick }) => {
           </div>
           <span style={styles.logoText}>TaskBridge</span>
         </div>
-        <div style={styles.navLinks}>
-          <a href="#" style={styles.navLink}>{content.nav.home}</a>
-          <a href="#" style={styles.navLink}>{content.nav.about}</a>
-          <a href="#" style={styles.navLink}>{content.nav.pricing}</a>
-          <a href="#" style={styles.navLink}>{content.nav.contact}</a>
-        </div>
-        <div style={styles.navActions}>
-          <button onClick={toggleLanguage} style={styles.langButton}>
-            {language === 'en' ? 'SV' : 'EN'}
-          </button>
-          <button onClick={handleSignIn} style={styles.navButton}>
+        
+        {/* Desktop Navigation */}
+        {!isMobile && (
+          <>
+            <div style={styles.navLinks}>
+              <a href="#" style={styles.navLink}>{content.nav.home}</a>
+              <a href="#" style={styles.navLink}>{content.nav.about}</a>
+              <a href="#" style={styles.navLink}>{content.nav.pricing}</a>
+              <a href="#" style={styles.navLink}>{content.nav.contact}</a>
+            </div>
+            <div style={styles.navActions}>
+              <button onClick={toggleLanguage} style={styles.langButton}>
+                {language === 'en' ? 'SV' : 'EN'}
+              </button>
+              <button onClick={handleSignIn} style={styles.navButton}>
+                {content.signIn}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Mobile Menu Button */}
+        {isMobile && (
+          <div style={styles.mobileControls}>
+            <button onClick={toggleLanguage} style={styles.langButtonMobile}>
+              {language === 'en' ? 'SV' : 'EN'}
+            </button>
+            <button onClick={toggleMobileMenu} style={styles.menuButton}>
+              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+            </button>
+          </div>
+        )}
+      </nav>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobile && mobileMenuOpen && (
+        <div style={styles.mobileMenu}>
+          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.home}</a>
+          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.about}</a>
+          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.pricing}</a>
+          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.contact}</a>
+          <button onClick={handleSignIn} style={styles.mobileSignInButton}>
             {content.signIn}
           </button>
         </div>
-      </nav>
+      )}
 
       {/* Hero Section */}
       <div style={styles.hero}>
@@ -233,7 +275,7 @@ const Landing = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* Company Owner Section - GlorifyTC - Fixed for mobile */}
+      {/* Company Owner Section - GlorifyTC - Vertically stacked on mobile */}
       <div style={styles.ownerSection}>
         <div style={styles.ownerContainer}>
           <div style={styles.ownerCard}>
@@ -275,7 +317,7 @@ const Landing = ({ onLoginClick }) => {
   );
 };
 
-// Complete styles with all sections - Fixed for mobile calendar and owner section
+// Complete styles with all sections - Fixed for mobile
 const styles = {
   container: {
     minHeight: '100vh',
@@ -337,7 +379,7 @@ const styles = {
   },
   navbar: {
     position: 'relative',
-    zIndex: 10,
+    zIndex: 20,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -401,17 +443,6 @@ const styles = {
   navLinks: {
     display: 'flex',
     gap: '32px',
-    '@media (max-width: 768px)': {
-      order: 3,
-      width: '100%',
-      justifyContent: 'center',
-      gap: '24px',
-      marginTop: '8px',
-    },
-    '@media (max-width: 480px)': {
-      gap: '16px',
-      flexWrap: 'wrap',
-    },
   },
   navLink: {
     color: 'rgba(255, 255, 255, 0.8)',
@@ -419,14 +450,9 @@ const styles = {
     fontSize: '16px',
     fontWeight: '500',
     transition: 'color 0.3s ease',
+    cursor: 'pointer',
     '&:hover': {
       color: '#00d1ff',
-    },
-    '@media (max-width: 768px)': {
-      fontSize: '14px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '13px',
     },
   },
   navActions: {
@@ -444,10 +470,6 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '6px 12px',
-      fontSize: '12px',
-    },
   },
   navButton: {
     padding: '10px 24px',
@@ -458,14 +480,71 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    '@media (max-width: 768px)': {
-      padding: '8px 20px',
-      fontSize: '13px',
+  },
+  mobileControls: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+  },
+  langButtonMobile: {
+    padding: '8px 16px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+  },
+  menuButton: {
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '18px',
+    cursor: 'pointer',
+    padding: '8px 16px',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileMenu: {
+    position: 'relative',
+    zIndex: 19,
+    background: 'rgba(15, 23, 42, 0.98)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+    padding: '16px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  mobileNavLink: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    textDecoration: 'none',
+    fontSize: '18px',
+    fontWeight: '500',
+    padding: '12px 0',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    cursor: 'pointer',
+    transition: 'color 0.3s ease',
+    '&:hover': {
+      color: '#00d1ff',
     },
-    '@media (max-width: 480px)': {
-      padding: '6px 16px',
-      fontSize: '12px',
-    },
+  },
+  mobileSignInButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    marginTop: '8px',
   },
   hero: {
     position: 'relative',
@@ -485,6 +564,7 @@ const styles = {
     },
     '@media (max-width: 480px)': {
       padding: '30px 16px',
+      gap: '30px',
     },
   },
   heroContent: {
@@ -610,7 +690,6 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    // Ensure calendar is always visible
     overflow: 'visible',
   },
   calendar: {
@@ -624,13 +703,12 @@ const styles = {
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
-    // Mobile adjustments to ensure visibility
     '@media (max-width: 768px)': {
-      maxWidth: '320px',
+      maxWidth: '340px',
       padding: '20px',
     },
     '@media (max-width: 480px)': {
-      maxWidth: '280px',
+      maxWidth: '100%',
       padding: '16px',
       margin: '0 auto',
     },
@@ -1057,10 +1135,10 @@ styleSheet.textContent = `
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
   }
-  .navButton:hover, .langButton:hover {
+  .navButton:hover, .langButton:hover, .langButtonMobile:hover, .menuButton:hover {
     background: rgba(255, 255, 255, 0.1);
   }
-  .navLink:hover {
+  .navLink:hover, .mobileNavLink:hover {
     color: #00d1ff !important;
   }
   .featureCard:hover {
