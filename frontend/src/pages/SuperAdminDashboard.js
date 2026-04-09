@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -90,21 +89,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     return () => clearTimeout(timer);
   }, [debouncedSearchTerm]);
 
-  // Show custom confirmation modal instead of browser confirm
-  const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
-    setConfirmationModal({
-      isOpen: true,
-      title,
-      message,
-      onConfirm: () => {
-        onConfirm(itemId, itemName);
-        setConfirmationModal({ ...confirmationModal, isOpen: false });
-      },
-      itemId,
-      itemName,
-      type
-    });
-  };
 
   const t = {
     en: {
@@ -333,26 +317,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       return;
     }
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head><title>TaskBridge Report</title>
-        <style>
-          body { font-family: Arial; padding: 20px; }
-          h1 { color: #00d1ff; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-        </style>
-        </head>
-        <body>
-          <h1>TaskBridge Report</h1>
-          <p>Generated: ${new Date().toLocaleString()}</p>
-          <pre>${JSON.stringify(reportData, null, 2)}</pre>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    if (printWindow) {
+      const content = `
+        <html>
+          <head><title>TaskBridge Report</title>
+          <style>
+            body { font-family: Arial; padding: 20px; }
+            h1 { color: #00d1ff; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+          </head>
+          <body>
+            <h1>TaskBridge Report</h1>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+            <pre>${JSON.stringify(reportData, null, 2)}</pre>
+          </body>
+        </html>
+      `;
+      printWindow.document.open();
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const exportToExcel = () => {
@@ -829,7 +817,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const handleDeleteAdmin = async (adminId, adminName) => {
+  const handleDeleteAdmin = async (adminId) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
@@ -851,7 +839,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const handleDeleteEmployee = async (empId, empName) => {
+  const handleDeleteEmployee = async (empId) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
@@ -876,7 +864,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const handleDeleteBranch = async (branchId, branchName) => {
+  const handleDeleteBranch = async (branchId) => {
     try {
       const token = localStorage.getItem('token');
       
@@ -934,7 +922,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const handleDeleteTask = async (taskId, taskTitle) => {
+  const handleDeleteTask = async (taskId) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
@@ -1662,6 +1650,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
                 <option value="">Select Job Role</option>
                 {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
+              </select>
               <select 
                   value={formData.branch || ''} 
                   onChange={(e) => setFormData({...formData, branch: e.target.value})} 
@@ -1899,7 +1888,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             {isAiTyping && <div style={styles.typingIndicator}>AI is typing...</div>}
           </div>
           <div style={styles.chatInputContainer}>
-            <input type="text" placeholder="Ask me..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={styles.chatInput} />
+            <input type="text" placeholder="Ask me..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()} style={styles.chatInput} />
             <button onClick={sendChatMessage} style={styles.chatSend}>➤</button>
           </div>
         </div>
