@@ -793,7 +793,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '40px',
-    border: '1px solid rgba(0,209,255,0.2),
+    border: '1px solid rgba(0,209,255,0.2)',
     flexWrap: 'wrap',
     justifyContent: 'center',
     textAlign: 'center',
