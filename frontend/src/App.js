@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
 import CreateAccount from './components/CreateAccount';
+import About from './pages/About'; // Import About page
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -98,6 +99,11 @@ function App() {
     return <CreateAccount onBack={() => setCurrentPage('login')} onLogin={handleLogin} />;
   }
 
+  // About page (public)
+  if (currentPage === 'about') {
+    return <About user={user} onNavigate={handleNavigate} />;
+  }
+
   // Protected routes with role-based dashboards
   if (currentPage === 'master' && user) {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
@@ -138,7 +144,7 @@ function App() {
   }
 
   // Default landing page
-  return <Landing onLoginClick={goToLogin} />;
+  return <Landing onLoginClick={goToLogin} onNavigate={handleNavigate} />;
 }
 
 export default App;

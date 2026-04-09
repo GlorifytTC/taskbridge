@@ -67,7 +67,7 @@ const Landing = ({ onLoginClick }) => {
   // Translations
   const t = {
     en: {
-      nav: { home: 'Home', about: 'About Program', pricing: 'Pricing', contact: 'Contact Us' },
+      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact Us' },
       signIn: 'Sign In',
       tag: 'Smart Staff Management',
       title: 'Manage Your Workforce with Intelligence',
@@ -122,60 +122,62 @@ const Landing = ({ onLoginClick }) => {
         <div style={styles.bgGrid}></div>
       </div>
 
-      {/* Navigation */}
-      <nav style={styles.navbar}>
-        <div style={styles.logo}>
-          <div style={styles.logoIcon}>
-            <span>T</span>
-          </div>
-          <span style={styles.logoText}>TaskBridge</span>
-        </div>
-        
-        {/* Desktop Navigation */}
-        {!isMobile && (
-          <>
-            <div style={styles.navLinks}>
-              <a href="#" style={styles.navLink}>{content.nav.home}</a>
-              <a href="#" style={styles.navLink}>{content.nav.about}</a>
-              <a href="#" style={styles.navLink}>{content.nav.pricing}</a>
-              <a href="#" style={styles.navLink}>{content.nav.contact}</a>
-            </div>
-            <div style={styles.navActions}>
-              <button onClick={toggleLanguage} style={styles.langButton}>
-                {language === 'en' ? 'SV' : 'EN'}
-              </button>
-              <button onClick={handleSignIn} style={styles.navButton}>
-                {content.signIn}
-              </button>
-            </div>
-          </>
-        )}
+      // In Landing.js, update the navigation links section:
 
-        {/* Mobile Menu Button */}
-        {isMobile && (
-          <div style={styles.mobileControls}>
-            <button onClick={toggleLanguage} style={styles.langButtonMobile}>
-              {language === 'en' ? 'SV' : 'EN'}
-            </button>
-            <button onClick={toggleMobileMenu} style={styles.menuButton}>
-              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
-            </button>
-          </div>
-        )}
-      </nav>
+{/* Navigation */}
+<nav style={styles.navbar}>
+  <div style={styles.logo}>
+    <div style={styles.logoIcon}>
+      <span>T</span>
+    </div>
+    <span style={styles.logoText}>TaskBridge</span>
+  </div>
+  
+  {/* Desktop Navigation */}
+  {!isMobile && (
+    <>
+      <div style={styles.navLinks}>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{content.nav.home}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.pricing}</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.contact}</a>
+      </div>
+      <div style={styles.navActions}>
+        <button onClick={toggleLanguage} style={styles.langButton}>
+          {language === 'en' ? 'SV' : 'EN'}
+        </button>
+        <button onClick={handleSignIn} style={styles.navButton}>
+          {content.signIn}
+        </button>
+      </div>
+    </>
+  )}
 
-      {/* Mobile Menu Dropdown */}
-      {isMobile && mobileMenuOpen && (
-        <div style={styles.mobileMenu}>
-          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.home}</a>
-          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.about}</a>
-          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.pricing}</a>
-          <a href="#" style={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>{content.nav.contact}</a>
-          <button onClick={handleSignIn} style={styles.mobileSignInButton}>
-            {content.signIn}
-          </button>
-        </div>
-      )}
+  {/* Mobile Menu Button */}
+  {isMobile && (
+    <div style={styles.mobileControls}>
+      <button onClick={toggleLanguage} style={styles.langButtonMobile}>
+        {language === 'en' ? 'SV' : 'EN'}
+      </button>
+      <button onClick={toggleMobileMenu} style={styles.menuButton}>
+        <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+      </button>
+    </div>
+  )}
+</nav>
+
+{/* Mobile Menu Dropdown */}
+{isMobile && mobileMenuOpen && (
+  <div style={styles.mobileMenu}>
+    <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.home}</a>
+    <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
+    <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
+    <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
+    <button onClick={handleSignIn} style={styles.mobileSignInButton}>
+      {content.signIn}
+    </button>
+  </div>
+)}
 
       {/* Hero Section */}
       <div style={styles.hero}>
