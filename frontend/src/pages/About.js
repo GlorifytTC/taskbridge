@@ -4,9 +4,9 @@ const About = ({ onNavigate, user }) => {
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
-  const [isVisible, setIsVisible] = useState({});
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState({});
 
   useEffect(() => {
     const checkMobile = () => {
@@ -17,7 +17,10 @@ const About = ({ onNavigate, user }) => {
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -29,16 +32,13 @@ const About = ({ onNavigate, user }) => {
       { threshold: 0.2 }
     );
 
-    const elements = ['hero', 'mission', 'features', 'stats', 'owner'];
+    const elements = ['hero', 'mission', 'services', 'features', 'stats', 'owner'];
     elements.forEach((id) => {
       const element = document.getElementById(id);
       if (element) observer.observe(element);
     });
 
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', checkMobile);
-    };
+    return () => observer.disconnect();
   }, []);
 
   const getDashboardRoute = () => {
@@ -48,101 +48,104 @@ const About = ({ onNavigate, user }) => {
     return 'dashboard';
   };
 
-  const t = {
-    en: {
-      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
-      title: 'About TaskBridge',
-      subtitle: 'Smart Workforce Management for Modern Organizations',
-      missionTitle: 'Our Mission',
-      missionText: 'TaskBridge empowers schools, hospitals, and organizations with intelligent shift management, real-time attendance tracking, and seamless communication — all in one platform.',
-      whoItServes: 'Who It Serves',
-      schools: 'Schools',
-      schoolsDesc: 'Manage teacher schedules, substitute coverage, and extracurricular activities',
-      hospitals: 'Hospitals',
-      hospitalsDesc: 'Coordinate nursing shifts, doctor rotations, and emergency coverage',
-      organizations: 'Organizations',
-      organizationsDesc: 'Streamline workforce operations across multiple branches and departments',
-      featuresTitle: 'Key Features',
-      shiftManagement: 'Smart Shift Management',
-      shiftManagementDesc: 'Create, assign, and track shifts with automated conflict detection and approval workflows.',
-      multiBranch: 'Multi-Branch Support',
-      multiBranchDesc: 'Centralized control with branch-specific settings, roles, and reporting.',
-      realtimeAnalytics: 'Real-Time Analytics',
-      realtimeAnalyticsDesc: 'Live dashboards showing attendance, hours worked, and labor costs.',
-      smartNotifications: 'Smart Notifications',
-      smartNotificationsDesc: 'Automated alerts for shift reminders, approvals, and schedule changes.',
-      employeeApp: 'Employee Mobile App',
-      employeeAppDesc: 'Employees can view shifts, apply for openings, and track their hours.',
-      reporting: 'Advanced Reporting',
-      reportingDesc: 'Export detailed reports on attendance, payroll, and branch performance.',
-      statsTitle: 'Trusted By',
-      organizationsCount: '500+',
-      organizationsLabel: 'Active Organizations',
-      employeesCount: '10K+',
-      employeesLabel: 'Employees Managed',
-      satisfactionCount: '98%',
-      satisfactionLabel: 'Satisfaction Rate',
-      shiftsCount: '50K+',
-      shiftsLabel: 'Shifts Completed',
-      ownerTitle: 'Project Owner & Lead Developer',
-      developedBy: 'Developed by',
-      pic1Caption: 'Centralized Dashboard',
-      pic2Caption: 'Smart Calendar View',
-      pic3Caption: 'Real-Time Analytics'
-    },
-    sv: {
-      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
-      title: 'Om TaskBridge',
-      subtitle: 'Smart Personalhantering för Moderna Organisationer',
-      missionTitle: 'Vårt Uppdrag',
-      missionText: 'TaskBridge ger skolor, sjukhus och organisationer intelligent schemaläggning, realtidsnärvaro och sömlös kommunikation — allt i en plattform.',
-      whoItServes: 'Vem Det Tjänar',
-      schools: 'Skolor',
-      schoolsDesc: 'Hantera lärarscheman, vikarietäckning och extracurricular aktiviteter',
-      hospitals: 'Sjukhus',
-      hospitalsDesc: 'Koordinera skift för sjuksköterskor, läkarrotationer och akuttäckning',
-      organizations: 'Organisationer',
-      organizationsDesc: 'Effektivisera personalverksamhet över flera filialer och avdelningar',
-      featuresTitle: 'Huvudfunktioner',
-      shiftManagement: 'Smart Skifthallning',
-      shiftManagementDesc: 'Skapa, tilldela och spåra skift med automatisk konfliktdetektering och godkännandeprocesser.',
-      multiBranch: 'Stöd för Flera Filialer',
-      multiBranchDesc: 'Central kontroll med filialspecifika inställningar, roller och rapporter.',
-      realtimeAnalytics: 'Realtidsanalyser',
-      realtimeAnalyticsDesc: 'Live-instrumentpaneler som visar närvaro, arbetade timmar och personalkostnader.',
-      smartNotifications: 'Smarta Notiser',
-      smartNotificationsDesc: 'Automatiska aviseringar för skiftpåminnelser, godkännanden och schemaändringar.',
-      employeeApp: 'Mobilapp för Anställda',
-      employeeAppDesc: 'Anställda kan se skift, söka lediga pass och följa sina timmar.',
-      reporting: 'Avancerad Rapportering',
-      reportingDesc: 'Exportera detaljerade rapporter om närvaro, löner och filialprestanda.',
-      statsTitle: 'Lita På Av',
-      organizationsCount: '500+',
-      organizationsLabel: 'Aktiva Organisationer',
-      employeesCount: '10K+',
-      employeesLabel: 'Hanterade Anställda',
-      satisfactionCount: '98%',
-      satisfactionLabel: 'Nöjdhetsgrad',
-      shiftsCount: '50K+',
-      shiftsLabel: 'Genomförda Skift',
-      ownerTitle: 'Projektägare & Lead Utvecklare',
-      developedBy: 'Utvecklad av',
-      pic1Caption: 'Centraliserad Dashboard',
-      pic2Caption: 'Smart Kalendervy',
-      pic3Caption: 'Realtidsanalyser'
-    }
-  };
-
-  const lang = t[language];
-
-  const changeLanguage = (langCode) => {
-    setLanguage(langCode);
-    localStorage.setItem('taskbridge_language', langCode);
+  const toggleLanguage = () => {
+    const newLang = language === 'en' ? 'sv' : 'en';
+    setLanguage(newLang);
+    localStorage.setItem('taskbridge_language', newLang);
   };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  const t = {
+    en: {
+      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
+      signIn: 'Sign In',
+      title: 'About TaskBridge',
+      subtitle: 'Smart Workforce Management for Modern Organizations',
+      missionTitle: 'Our Mission',
+      missionText: 'TaskBridge empowers schools, hospitals, and organizations with intelligent shift management, real-time attendance tracking, and seamless communication — all in one platform.',
+      whoItServes: 'Who We Serve',
+      schools: 'Schools',
+      schoolsDesc: 'Manage teacher schedules, substitute coverage, and extracurricular activities',
+      hospitals: 'Hospitals',
+      hospitalsDesc: 'Coordinate nursing shifts, doctor rotations, and emergency coverage',
+      organizations: 'Enterprises',
+      organizationsDesc: 'Streamline workforce operations across multiple branches and departments',
+      featuresTitle: 'Platform Capabilities',
+      shiftManagement: 'Shift Management',
+      shiftManagementDesc: 'Create, assign, and track shifts with automated conflict detection and approval workflows.',
+      multiBranch: 'Multi-Branch Support',
+      multiBranchDesc: 'Centralized control with branch-specific settings, roles, and reporting.',
+      realtimeAnalytics: 'Analytics',
+      realtimeAnalyticsDesc: 'Live dashboards showing attendance, hours worked, and labor costs.',
+      smartNotifications: 'Smart Notifications',
+      smartNotificationsDesc: 'Automated alerts for shift reminders, approvals, and schedule changes.',
+      employeeApp: 'Employee Portal',
+      employeeAppDesc: 'Employees can view shifts, apply for openings, and track their hours.',
+      reporting: 'Reporting',
+      reportingDesc: 'Export detailed reports on attendance, payroll, and branch performance.',
+      statsTitle: 'Trusted By',
+      organizationsCount: '500+',
+      organizationsLabel: 'Organizations',
+      employeesCount: '10K+',
+      employeesLabel: 'Employees',
+      satisfactionCount: '98%',
+      satisfactionLabel: 'Satisfaction',
+      shiftsCount: '50K+',
+      shiftsLabel: 'Shifts Completed',
+      ownerTitle: 'Project Owner & Lead Developer',
+      developedBy: 'Developed by',
+      pic1Caption: 'Central Dashboard',
+      pic2Caption: 'Smart Calendar',
+      pic3Caption: 'Analytics'
+    },
+    sv: {
+      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
+      signIn: 'Logga in',
+      title: 'Om TaskBridge',
+      subtitle: 'Smart Personalhantering för Moderna Organisationer',
+      missionTitle: 'Vårt Uppdrag',
+      missionText: 'TaskBridge ger skolor, sjukhus och organisationer intelligent schemaläggning, realtidsnärvaro och sömlös kommunikation — allt i en plattform.',
+      whoItServes: 'Vem Vi Tjänar',
+      schools: 'Skolor',
+      schoolsDesc: 'Hantera lärarscheman, vikarietäckning och extracurricular aktiviteter',
+      hospitals: 'Sjukhus',
+      hospitalsDesc: 'Koordinera skift för sjuksköterskor, läkarrotationer och akuttäckning',
+      organizations: 'Företag',
+      organizationsDesc: 'Effektivisera personalverksamhet över flera filialer och avdelningar',
+      featuresTitle: 'Plattformsfunktioner',
+      shiftManagement: 'Skifthallning',
+      shiftManagementDesc: 'Skapa, tilldela och spåra skift med automatisk konfliktdetektering och godkännandeprocesser.',
+      multiBranch: 'Filialstöd',
+      multiBranchDesc: 'Central kontroll med filialspecifika inställningar, roller och rapporter.',
+      realtimeAnalytics: 'Analyser',
+      realtimeAnalyticsDesc: 'Live-instrumentpaneler som visar närvaro, arbetade timmar och personalkostnader.',
+      smartNotifications: 'Notiser',
+      smartNotificationsDesc: 'Automatiska aviseringar för skiftpåminnelser, godkännanden och schemaändringar.',
+      employeeApp: 'Personalportal',
+      employeeAppDesc: 'Anställda kan se skift, söka lediga pass och följa sina timmar.',
+      reporting: 'Rapportering',
+      reportingDesc: 'Exportera detaljerade rapporter om närvaro, löner och filialprestanda.',
+      statsTitle: 'Lita På Av',
+      organizationsCount: '500+',
+      organizationsLabel: 'Organisationer',
+      employeesCount: '10K+',
+      employeesLabel: 'Anställda',
+      satisfactionCount: '98%',
+      satisfactionLabel: 'Nöjdhet',
+      shiftsCount: '50K+',
+      shiftsLabel: 'Genomförda Skift',
+      ownerTitle: 'Projektägare & Lead Utvecklare',
+      developedBy: 'Utvecklad av',
+      pic1Caption: 'Central Dashboard',
+      pic2Caption: 'Smart Kalender',
+      pic3Caption: 'Analys'
+    }
+  };
+
+  const lang = t[language];
 
   return (
     <div style={styles.container}>
@@ -157,34 +160,36 @@ const About = ({ onNavigate, user }) => {
       {/* Navigation Bar */}
       <nav style={styles.navbar}>
         <div style={styles.logo}>
-          <div style={styles.logoIcon}>T</div>
+          <div style={styles.logoIcon}>
+            <span>T</span>
+          </div>
           <span style={styles.logoText}>TaskBridge</span>
         </div>
-
-        {/* Desktop Navigation */}
+        
         {!isMobile && (
           <>
             <div style={styles.navLinks}>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); }} style={styles.navLink}>{lang.nav.home}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{lang.nav.home}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); }} style={{...styles.navLink, color: '#00d1ff'}}>{lang.nav.about}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{lang.nav.pricing}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{lang.nav.contact}</a>
             </div>
             <div style={styles.navActions}>
-              <button onClick={() => changeLanguage('en')} style={{...styles.langButton, background: language === 'en' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>EN</button>
-              <button onClick={() => changeLanguage('sv')} style={{...styles.langButton, background: language === 'sv' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>SV</button>
-              <button onClick={() => onNavigate(getDashboardRoute())} style={styles.dashboardButton}>
-                Dashboard
+              <button onClick={toggleLanguage} style={styles.langButton}>
+                {language === 'en' ? 'SV' : 'EN'}
+              </button>
+              <button onClick={() => onNavigate && onNavigate('login')} style={styles.navButton}>
+                {lang.signIn}
               </button>
             </div>
           </>
         )}
 
-        {/* Mobile Controls */}
         {isMobile && (
           <div style={styles.mobileControls}>
-            <button onClick={() => changeLanguage('en')} style={{...styles.langButtonMobile, background: language === 'en' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>EN</button>
-            <button onClick={() => changeLanguage('sv')} style={{...styles.langButtonMobile, background: language === 'sv' ? '#00d1ff' : 'rgba(255,255,255,0.05)'}}>SV</button>
+            <button onClick={toggleLanguage} style={styles.langButtonMobile}>
+              {language === 'en' ? 'SV' : 'EN'}
+            </button>
             <button onClick={toggleMobileMenu} style={styles.menuButton}>
               <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
             </button>
@@ -192,26 +197,29 @@ const About = ({ onNavigate, user }) => {
         )}
       </nav>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu */}
       {isMobile && mobileMenuOpen && (
         <div style={styles.mobileMenu}>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.home}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.home}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={{...styles.mobileNavLink, color: '#00d1ff'}}>{lang.nav.about}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.pricing}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.contact}</a>
-          <button onClick={() => { onNavigate(getDashboardRoute()); setMobileMenuOpen(false); }} style={styles.mobileDashboardButton}>
-            Dashboard
+          <button onClick={() => { onNavigate && onNavigate('login'); setMobileMenuOpen(false); }} style={styles.mobileSignInButton}>
+            {lang.signIn}
           </button>
         </div>
       )}
 
       {/* Hero Section */}
-      <div id="hero" style={{...styles.section, ...styles.heroSection, opacity: isVisible.hero ? 1 : 0, transform: `translateY(${isVisible.hero ? 0 : '30px'})`, transition: 'all 0.6s ease' }}>
-        <div style={styles.heroIcon}>
-          <span>T</span>
+      <div id="hero" style={{...styles.hero, opacity: isVisible.hero ? 1 : 0, transform: `translateY(${isVisible.hero ? 0 : '30px'})`, transition: 'all 0.6s ease' }}>
+        <div style={styles.heroContent}>
+          <div style={styles.tag}>
+            <span style={styles.tagDot}></span>
+            <span style={styles.tagText}>Company</span>
+          </div>
+          <h1 style={styles.title}>{lang.title}</h1>
+          <p style={styles.subtitle}>{lang.subtitle}</p>
         </div>
-        <h1 style={styles.title}>{lang.title}</h1>
-        <p style={styles.subtitle}>{lang.subtitle}</p>
       </div>
 
       {/* Mission Section */}
@@ -222,30 +230,36 @@ const About = ({ onNavigate, user }) => {
         </div>
       </div>
 
-      {/* Who It Serves */}
-      <div id="features" style={{...styles.section, opacity: isVisible.features ? 1 : 0, transform: `translateY(${isVisible.features ? 0 : '30px'})`, transition: 'all 0.6s ease 0.2s' }}>
+      {/* Who We Serve */}
+      <div id="services" style={{...styles.section, opacity: isVisible.services ? 1 : 0, transform: `translateY(${isVisible.services ? 0 : '30px'})`, transition: 'all 0.6s ease 0.2s' }}>
         <h2 style={styles.sectionTitle}>{lang.whoItServes}</h2>
         <div style={styles.servicesGrid}>
           <div style={styles.serviceCard}>
-            <div style={styles.serviceIcon}>🏫</div>
-            <h3 style={styles.serviceTitle}>{lang.schools}</h3>
-            <p style={styles.serviceDesc}>{lang.schoolsDesc}</p>
+            <div style={styles.serviceIcon}>
+              <i className="fas fa-graduation-cap"></i>
+            </div>
+            <h3>{lang.schools}</h3>
+            <p>{lang.schoolsDesc}</p>
           </div>
           <div style={styles.serviceCard}>
-            <div style={styles.serviceIcon}>🏥</div>
-            <h3 style={styles.serviceTitle}>{lang.hospitals}</h3>
-            <p style={styles.serviceDesc}>{lang.hospitalsDesc}</p>
+            <div style={styles.serviceIcon}>
+              <i className="fas fa-hospital"></i>
+            </div>
+            <h3>{lang.hospitals}</h3>
+            <p>{lang.hospitalsDesc}</p>
           </div>
           <div style={styles.serviceCard}>
-            <div style={styles.serviceIcon}>🏢</div>
-            <h3 style={styles.serviceTitle}>{lang.organizations}</h3>
-            <p style={styles.serviceDesc}>{lang.organizationsDesc}</p>
+            <div style={styles.serviceIcon}>
+              <i className="fas fa-building"></i>
+            </div>
+            <h3>{lang.organizations}</h3>
+            <p>{lang.organizationsDesc}</p>
           </div>
         </div>
       </div>
 
       {/* Feature Images */}
-      <div style={styles.section}>
+      <div id="features" style={{...styles.section, opacity: isVisible.features ? 1 : 0, transform: `translateY(${isVisible.features ? 0 : '30px'})`, transition: 'all 0.6s ease 0.3s' }}>
         <h2 style={styles.sectionTitle}>{lang.featuresTitle}</h2>
         <div style={styles.featureImagesGrid}>
           <div style={styles.featureImageCard}>
@@ -272,56 +286,68 @@ const About = ({ onNavigate, user }) => {
         </div>
       </div>
 
-      {/* Features List */}
+      {/* Features Grid */}
       <div style={styles.section}>
         <div style={styles.featuresGrid}>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>📅</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-clock"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.shiftManagement}</h4>
-              <p style={styles.featureItemDesc}>{lang.shiftManagementDesc}</p>
+              <h4>{lang.shiftManagement}</h4>
+              <p>{lang.shiftManagementDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>🏪</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-code-branch"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.multiBranch}</h4>
-              <p style={styles.featureItemDesc}>{lang.multiBranchDesc}</p>
+              <h4>{lang.multiBranch}</h4>
+              <p>{lang.multiBranchDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>📊</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-chart-simple"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.realtimeAnalytics}</h4>
-              <p style={styles.featureItemDesc}>{lang.realtimeAnalyticsDesc}</p>
+              <h4>{lang.realtimeAnalytics}</h4>
+              <p>{lang.realtimeAnalyticsDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>🔔</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-bell"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.smartNotifications}</h4>
-              <p style={styles.featureItemDesc}>{lang.smartNotificationsDesc}</p>
+              <h4>{lang.smartNotifications}</h4>
+              <p>{lang.smartNotificationsDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>📱</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-mobile-alt"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.employeeApp}</h4>
-              <p style={styles.featureItemDesc}>{lang.employeeAppDesc}</p>
+              <h4>{lang.employeeApp}</h4>
+              <p>{lang.employeeAppDesc}</p>
             </div>
           </div>
           <div style={styles.featureItem}>
-            <div style={styles.featureItemIcon}>📋</div>
+            <div style={styles.featureItemIcon}>
+              <i className="fas fa-file-alt"></i>
+            </div>
             <div>
-              <h4 style={styles.featureItemTitle}>{lang.reporting}</h4>
-              <p style={styles.featureItemDesc}>{lang.reportingDesc}</p>
+              <h4>{lang.reporting}</h4>
+              <p>{lang.reportingDesc}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Stats Section */}
-      <div id="stats" style={{...styles.statsSection, opacity: isVisible.stats ? 1 : 0, transform: `translateY(${isVisible.stats ? 0 : '30px'})`, transition: 'all 0.6s ease 0.3s' }}>
+      <div id="stats" style={{...styles.statsSection, opacity: isVisible.stats ? 1 : 0, transform: `translateY(${isVisible.stats ? 0 : '30px'})`, transition: 'all 0.6s ease 0.4s' }}>
         <h2 style={styles.sectionTitle}>{lang.statsTitle}</h2>
         <div style={styles.statsGrid}>
           <div style={styles.statCard}>
@@ -344,11 +370,15 @@ const About = ({ onNavigate, user }) => {
       </div>
 
       {/* Owner Section */}
-      <div id="owner" style={{...styles.ownerSection, opacity: isVisible.owner ? 1 : 0, transform: `translateY(${isVisible.owner ? 0 : '30px'})`, transition: 'all 0.6s ease 0.4s' }}>
+      <div id="owner" style={{...styles.ownerSection, opacity: isVisible.owner ? 1 : 0, transform: `translateY(${isVisible.owner ? 0 : '30px'})`, transition: 'all 0.6s ease 0.5s' }}>
         <div style={styles.ownerCard}>
           <div style={styles.ownerLogo}>
-            <div style={styles.ownerLogoIcon}>G</div>
-            <div style={styles.ownerLogoText}>GlorifyTC</div>
+            <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
+              <div style={styles.glorifyLogoIcon}>
+                <span>G</span>
+              </div>
+              <div style={styles.glorifyLogoText}>GlorifyTC</div>
+            </a>
           </div>
           <div style={styles.ownerInfo}>
             <h3 style={styles.ownerTitle}>{lang.ownerTitle}</h3>
@@ -362,7 +392,9 @@ const About = ({ onNavigate, user }) => {
 
       {/* Footer */}
       <footer style={styles.footer}>
-        <p>© 2026 TaskBridge. {lang.developedBy} <strong style={{ color: '#00d1ff' }}>GlorifyTC</strong></p>
+        <div style={styles.footerContent}>
+          <p>&copy; 2026 TaskBridge. {lang.developedBy} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
+        </div>
       </footer>
 
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -430,46 +462,58 @@ const styles = {
     zIndex: 0,
   },
   navbar: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
+    position: 'relative',
+    zIndex: 20,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px 40px',
-    background: 'rgba(15, 23, 42, 0.95)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
+    padding: '20px 40px',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    flexWrap: 'wrap',
+    gap: '16px',
     '@media (max-width: 768px)': {
-      padding: '12px 20px',
+      padding: '16px 20px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '12px 16px',
     },
   },
   logo: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+    textDecoration: 'none',
   },
   logoIcon: {
-    width: '36px',
-    height: '36px',
+    width: '40px',
+    height: '40px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '20px',
+    fontSize: '24px',
     fontWeight: 'bold',
     color: 'white',
+    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
+    animation: 'softGlow 3s ease-in-out infinite',
+    '@media (max-width: 768px)': {
+      width: '36px',
+      height: '36px',
+      fontSize: '20px',
+    },
   },
   logoText: {
-    fontSize: '20px',
+    fontSize: '24px',
     fontWeight: 'bold',
     background: 'linear-gradient(135deg, #fff, #00d1ff)',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    '@media (max-width: 768px)': {
+      fontSize: '20px',
+    },
   },
   navLinks: {
     display: 'flex',
@@ -478,10 +522,13 @@ const styles = {
   navLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: '500',
     transition: 'color 0.3s ease',
     cursor: 'pointer',
+    '&:hover': {
+      color: '#00d1ff',
+    },
   },
   navActions: {
     display: 'flex',
@@ -489,167 +536,190 @@ const styles = {
     alignItems: 'center',
   },
   langButton: {
-    padding: '6px 14px',
-    borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.2)',
-    background: 'rgba(255,255,255,0.05)',
+    padding: '8px 16px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
     color: 'white',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: '500',
-    transition: 'all 0.3s ease',
-  },
-  dashboardButton: {
-    padding: '8px 20px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '25px',
-    color: 'white',
-    cursor: 'pointer',
     fontSize: '13px',
     fontWeight: '600',
-    transition: 'all 0.3s ease',
+    cursor: 'pointer',
+  },
+  navButton: {
+    padding: '10px 24px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '14px',
+    cursor: 'pointer',
   },
   mobileControls: {
     display: 'flex',
-    gap: '10px',
+    gap: '12px',
     alignItems: 'center',
   },
   langButtonMobile: {
-    padding: '6px 12px',
-    borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.2)',
-    background: 'rgba(255,255,255,0.05)',
+    padding: '8px 16px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
     color: 'white',
+    fontSize: '13px',
+    fontWeight: '600',
     cursor: 'pointer',
-    fontSize: '11px',
-    fontWeight: '500',
   },
   menuButton: {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '10px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
     color: 'white',
     fontSize: '18px',
     cursor: 'pointer',
-    padding: '8px 14px',
+    padding: '8px 16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   mobileMenu: {
-    position: 'fixed',
-    top: '60px',
-    left: 0,
-    right: 0,
-    zIndex: 99,
+    position: 'relative',
+    zIndex: 19,
     background: 'rgba(15, 23, 42, 0.98)',
     backdropFilter: 'blur(10px)',
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
     padding: '16px 20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '16px',
   },
   mobileNavLink: {
     color: 'rgba(255, 255, 255, 0.9)',
     textDecoration: 'none',
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: '500',
-    padding: '10px 0',
+    padding: '12px 0',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     cursor: 'pointer',
   },
-  mobileDashboardButton: {
+  mobileSignInButton: {
     width: '100%',
     padding: '12px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
     border: 'none',
-    borderRadius: '12px',
+    borderRadius: '50px',
     color: 'white',
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
     marginTop: '8px',
   },
-  section: {
+  hero: {
     position: 'relative',
     zIndex: 10,
-    maxWidth: '1200px',
+    maxWidth: '1400px',
     margin: '0 auto',
-    padding: '0 20px',
-    marginBottom: '80px',
-  },
-  heroSection: {
+    padding: '80px 40px 60px',
     textAlign: 'center',
-    paddingTop: '100px',
-    marginBottom: '60px',
     '@media (max-width: 768px)': {
-      paddingTop: '80px',
+      padding: '60px 24px 40px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '40px 16px 30px',
     },
   },
-  heroIcon: {
-    width: '80px',
-    height: '80px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '24px',
-    display: 'flex',
+  heroContent: {
+    maxWidth: '800px',
+    margin: '0 auto',
+  },
+  tag: {
+    display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 24px',
-    fontSize: '44px',
-    fontWeight: 'bold',
-    color: 'white',
-    boxShadow: '0 0 40px rgba(0,209,255,0.4)',
-    animation: 'softGlow 3s ease-in-out infinite',
+    gap: '8px',
+    background: 'rgba(0, 209, 255, 0.1)',
+    border: '1px solid rgba(0, 209, 255, 0.3)',
+    borderRadius: '50px',
+    padding: '6px 16px',
+    marginBottom: '24px',
+  },
+  tagDot: {
+    width: '8px',
+    height: '8px',
+    background: '#00d1ff',
+    borderRadius: '50%',
+    animation: 'pulse 2s infinite',
+  },
+  tagText: {
+    fontSize: '14px',
+    color: '#00d1ff',
+    fontWeight: '500',
   },
   title: {
-    fontSize: '48px',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, #fff, #00d1ff)',
-    WebkitBackgroundClip: 'text',
-    backgroundClip: 'text',
-    color: 'transparent',
-    marginBottom: '16px',
+    fontSize: '56px',
+    fontWeight: '700',
+    lineHeight: '1.2',
+    marginBottom: '24px',
+    color: 'white',
     '@media (max-width: 768px)': {
-      fontSize: '36px',
+      fontSize: '42px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '32px',
     },
   },
   subtitle: {
     fontSize: '18px',
-    color: 'rgba(255,255,255,0.7)',
-    maxWidth: '600px',
-    margin: '0 auto',
+    lineHeight: '1.6',
+    color: 'rgba(255, 255, 255, 0.7)',
     '@media (max-width: 768px)': {
       fontSize: '16px',
+    },
+  },
+  section: {
+    position: 'relative',
+    zIndex: 10,
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: '40px',
+    '@media (max-width: 768px)': {
+      padding: '30px 24px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '30px 16px',
     },
   },
   sectionTitle: {
     fontSize: '32px',
     fontWeight: '700',
-    color: 'white',
     textAlign: 'center',
     marginBottom: '48px',
+    color: 'white',
     '@media (max-width: 768px)': {
       fontSize: '28px',
       marginBottom: '32px',
     },
+    '@media (max-width: 480px)': {
+      fontSize: '24px',
+      marginBottom: '24px',
+    },
   },
   missionCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'rgba(255, 255, 255, 0.03)',
     backdropFilter: 'blur(10px)',
-    borderRadius: '24px',
+    borderRadius: '28px',
     padding: '48px',
     textAlign: 'center',
-    border: '1px solid rgba(0,209,255,0.2)',
+    border: '1px solid rgba(0, 209, 255, 0.3)',
     '@media (max-width: 768px)': {
-      padding: '32px 20px',
+      padding: '32px',
+    },
+    '@media (max-width: 480px)': {
+      padding: '24px',
     },
   },
   missionText: {
     fontSize: '18px',
     lineHeight: '1.6',
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255, 255, 255, 0.8)',
     maxWidth: '800px',
     margin: '0 auto',
     '@media (max-width: 768px)': {
@@ -658,54 +728,61 @@ const styles = {
   },
   servicesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '24px',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    },
   },
   serviceCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '20px',
-    padding: '32px 24px',
+    padding: '32px',
     textAlign: 'center',
     transition: 'transform 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      borderColor: 'rgba(0, 209, 255, 0.3)',
+    },
+    '@media (max-width: 480px)': {
+      padding: '24px',
+    },
   },
   serviceIcon: {
-    fontSize: '48px',
-    marginBottom: '20px',
-  },
-  serviceTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '12px',
-  },
-  serviceDesc: {
-    fontSize: '14px',
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: '1.5',
+    fontSize: '40px',
+    marginBottom: '16px',
+    color: '#00d1ff',
   },
   featureImagesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '24px',
     marginBottom: '40px',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    },
   },
   featureImageCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'rgba(255, 255, 255, 0.03)',
     borderRadius: '20px',
     overflow: 'hidden',
     textAlign: 'center',
     padding: '24px',
+    transition: 'transform 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+    },
   },
   imagePlaceholder: {
     width: '100%',
     height: '180px',
-    background: 'rgba(0,209,255,0.05)',
+    background: 'rgba(0, 209, 255, 0.05)',
     borderRadius: '16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
   imageCaption: {
     fontSize: '16px',
@@ -715,54 +792,63 @@ const styles = {
   },
   imageDesc: {
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   featuresGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+    gridTemplateColumns: 'repeat(2, 1fr)',
     gap: '20px',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+    },
   },
   featureItem: {
     display: 'flex',
     gap: '16px',
-    background: 'rgba(255,255,255,0.03)',
+    background: 'rgba(255, 255, 255, 0.03)',
     borderRadius: '16px',
     padding: '20px',
+    transition: 'transform 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      borderColor: 'rgba(0, 209, 255, 0.3)',
+    },
   },
   featureItemIcon: {
     fontSize: '28px',
+    color: '#00d1ff',
     minWidth: '40px',
-  },
-  featureItemTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '8px',
-  },
-  featureItemDesc: {
-    fontSize: '13px',
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: '1.5',
   },
   statsSection: {
     position: 'relative',
     zIndex: 10,
-    maxWidth: '1200px',
+    maxWidth: '1400px',
     margin: '0 auto',
-    padding: '0 20px',
-    marginBottom: '80px',
+    padding: '40px',
+    '@media (max-width: 768px)': {
+      padding: '30px 24px',
+    },
   },
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '24px',
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+    },
+    '@media (max-width: 480px)': {
+      gridTemplateColumns: '1fr',
+    },
   },
   statCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'rgba(255, 255, 255, 0.03)',
     borderRadius: '20px',
-    padding: '32px 24px',
+    padding: '32px',
     textAlign: 'center',
     transition: 'transform 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+    },
   },
   statNumber: {
     fontSize: '42px',
@@ -775,104 +861,135 @@ const styles = {
   },
   statLabel: {
     fontSize: '14px',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   ownerSection: {
     position: 'relative',
     zIndex: 10,
-    maxWidth: '800px',
+    maxWidth: '1400px',
     margin: '0 auto',
-    padding: '0 20px',
-    marginBottom: '60px',
+    padding: '40px',
+    '@media (max-width: 768px)': {
+      padding: '30px 24px',
+    },
   },
   ownerCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'rgba(255, 255, 255, 0.05)',
     backdropFilter: 'blur(10px)',
-    borderRadius: '24px',
+    borderRadius: '28px',
     padding: '40px',
     display: 'flex',
     alignItems: 'center',
-    gap: '40px',
-    border: '1px solid rgba(0,209,255,0.2)',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    textAlign: 'center',
+    gap: '50px',
+    border: '1px solid rgba(0, 209, 255, 0.3)',
     '@media (max-width: 768px)': {
-      padding: '32px 24px',
-      gap: '24px',
+      flexDirection: 'column',
+      textAlign: 'center',
+      padding: '30px',
+      gap: '25px',
     },
   },
   ownerLogo: {
+    flexShrink: 0,
+  },
+  glorifyLogoLink: {
+    textDecoration: 'none',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '10px',
+    gap: '12px',
   },
-  ownerLogoIcon: {
-    width: '70px',
-    height: '70px',
+  glorifyLogoIcon: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '20px',
+    width: '80px',
+    height: '80px',
+    borderRadius: '24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '38px',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontSize: '44px',
     color: 'white',
-    boxShadow: '0 0 25px rgba(0,209,255,0.35)',
+    boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
+    animation: 'softGlow 3s ease-in-out infinite',
     '@media (max-width: 768px)': {
-      width: '60px',
-      height: '60px',
-      fontSize: '32px',
+      width: '70px',
+      height: '70px',
+      fontSize: '38px',
     },
   },
-  ownerLogoText: {
-    fontSize: '20px',
-    fontWeight: 'bold',
-    background: 'linear-gradient(135deg, #fff, #00d1ff)',
+  glorifyLogoText: {
+    fontWeight: '800',
+    fontSize: '24px',
+    background: 'linear-gradient(135deg, #fff, #00d1ff, #fff)',
+    backgroundSize: '200% auto',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    animation: 'shimmer 4s ease infinite',
     '@media (max-width: 768px)': {
-      fontSize: '18px',
+      fontSize: '22px',
     },
   },
   ownerInfo: {
-    textAlign: 'center',
+    flex: 1,
+    '@media (max-width: 768px)': {
+      width: '100%',
+    },
   },
   ownerTitle: {
-    fontSize: '20px',
+    fontSize: '24px',
     fontWeight: '600',
     color: '#00d1ff',
-    marginBottom: '16px',
+    marginBottom: '20px',
     '@media (max-width: 768px)': {
-      fontSize: '18px',
+      fontSize: '20px',
     },
   },
   ownerContact: {
     display: 'flex',
     gap: '24px',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    '@media (max-width: 768px)': {
+      justifyContent: 'center',
+      gap: '16px',
+    },
   },
   ownerLink: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
-    fontSize: '14px',
+    fontSize: '15px',
     transition: 'color 0.3s ease',
+    '&:hover': {
+      color: '#00d1ff',
+    },
   },
   footer: {
     position: 'relative',
     zIndex: 10,
+    background: '#0a0f1a',
+    padding: '30px 40px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+    '@media (max-width: 768px)': {
+      padding: '20px 24px',
+    },
+  },
+  footerContent: {
+    maxWidth: '1400px',
+    margin: '0 auto',
     textAlign: 'center',
-    padding: '30px 20px',
-    borderTop: '1px solid rgba(255,255,255,0.05)',
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: '12px',
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.5)',
+    '@media (max-width: 768px)': {
+      fontSize: '12px',
+    },
+  },
+  glorifyHighlight: {
+    color: '#00d1ff',
+    fontWeight: '600',
   },
 };
 
-// Add animations
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes float1 {
@@ -888,22 +1005,26 @@ styleSheet.textContent = `
     50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
   }
   @keyframes softGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(0,209,255,0.3); }
-    50% { box-shadow: 0 0 40px rgba(0,209,255,0.5); }
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 209, 255, 0.5); }
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .navButton:hover, .langButton:hover, .langButtonMobile:hover, .menuButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .navLink:hover, .mobileNavLink:hover {
+    color: #00d1ff !important;
   }
   .serviceCard:hover, .featureImageCard:hover, .featureItem:hover, .statCard:hover {
     transform: translateY(-4px);
-    transition: transform 0.3s ease;
   }
   .ownerLink:hover {
     color: #00d1ff;
-  }
-  .dashboardButton:hover, .mobileDashboardButton:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-  .langButton:hover, .langButtonMobile:hover {
-    background: rgba(0,209,255,0.2) !important;
   }
 `;
 document.head.appendChild(styleSheet);
