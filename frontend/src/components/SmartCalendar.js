@@ -309,8 +309,8 @@ const SmartCalendar = ({ user, onNavigate }) => {
   return (
     <div style={styles.container}>
       <div style={styles.backButtonContainer}>
-        <button onClick={() => onNavigate(getDashboardRoute())} style={styles.backButton}>
-          ← Back to Dashboard
+        <button onClick={() => onNavigate(getDashboardRoute())} style={styles.closeButton}>
+          ✕
         </button>
       </div>
 
@@ -484,8 +484,8 @@ const SmartCalendar = ({ user, onNavigate }) => {
 
 const styles = {
   container: { background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', minHeight: '100vh', padding: '20px', fontFamily: 'Inter, sans-serif' },
-  backButtonContainer: { marginBottom: '20px' },
-  backButton: { padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '14px' },
+  backButtonContainer: { display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' },
+  closeButton: { background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', color: '#ffffff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
   calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
