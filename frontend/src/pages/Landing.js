@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const Landing = ({ onLoginClick }) => {
+const Landing = ({ onLoginClick, onNavigate }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
   const [language, setLanguage] = useState('en'); // 'en' or 'sv'
@@ -122,7 +122,6 @@ const Landing = ({ onLoginClick }) => {
         <div style={styles.bgGrid}></div>
       </div>
 
-      // In Landing.js, update the navigation links section:
 
 {/* Navigation */}
 <nav style={styles.navbar}>
