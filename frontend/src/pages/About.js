@@ -160,10 +160,11 @@ const About = ({ onNavigate, user }) => {
       {/* Navigation Bar */}
       <nav style={styles.navbar}>
         <div style={styles.logo}>
-          <div style={styles.logoIcon}>
+          {/* FIX: added className for responsive CSS targeting */}
+          <div style={styles.logoIcon} className="tb-logo-icon">
             <span>T</span>
           </div>
-          <span style={styles.logoText}>TaskBridge</span>
+          <span style={styles.logoText} className="tb-logo-text">TaskBridge</span>
         </div>
         
         {!isMobile && (
@@ -461,6 +462,7 @@ const styles = {
     backgroundSize: '50px 50px',
     zIndex: 0,
   },
+  // FIX: removed dead @media keys — moved to styleSheet below
   navbar: {
     position: 'relative',
     zIndex: 20,
@@ -472,12 +474,6 @@ const styles = {
     margin: '0 auto',
     flexWrap: 'wrap',
     gap: '16px',
-    '@media (max-width: 768px)': {
-      padding: '16px 20px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '12px 16px',
-    },
   },
   logo: {
     display: 'flex',
@@ -485,6 +481,7 @@ const styles = {
     gap: '12px',
     textDecoration: 'none',
   },
+  // FIX: removed dead @media keys — tb-logo-icon class handles responsive sizing
   logoIcon: {
     width: '40px',
     height: '40px',
@@ -498,12 +495,8 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      width: '36px',
-      height: '36px',
-      fontSize: '20px',
-    },
   },
+  // FIX: removed dead @media keys — tb-logo-text class handles responsive sizing
   logoText: {
     fontSize: '24px',
     fontWeight: 'bold',
@@ -511,9 +504,6 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    '@media (max-width: 768px)': {
-      fontSize: '20px',
-    },
   },
   navLinks: {
     display: 'flex',
@@ -1025,6 +1015,18 @@ styleSheet.textContent = `
   }
   .ownerLink:hover {
     color: #00d1ff;
+  }
+
+  /* FIX: Responsive navbar rules that actually work in the browser */
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px !important; }
+    .tb-logo-icon { width: 34px !important; height: 34px !important; font-size: 19px !important; }
+    .tb-logo-text { font-size: 20px !important; }
+  }
+  @media (max-width: 480px) {
+    nav { padding: 12px 14px !important; }
+    .tb-logo-icon { width: 30px !important; height: 30px !important; font-size: 16px !important; border-radius: 8px !important; }
+    .tb-logo-text { font-size: 17px !important; }
   }
 `;
 document.head.appendChild(styleSheet);
