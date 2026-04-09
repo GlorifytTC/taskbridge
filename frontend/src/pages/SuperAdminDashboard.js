@@ -376,50 +376,59 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
+  // Only show loading on initial load, not on auto-refresh
+  if (!silent) {
     setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const usersData = await usersRes.json();
-      const branchesData = await branchesRes.json();
-      const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      
-      const allUsers = usersData.data || [];
-      const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
-      const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      
-      setAdmins(filteredAdmins);
-      setEmployees(filteredEmployees);
-      setBranches(branchesData.data || []);
-      setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setStats({
-        totalAdmins: filteredAdmins.length,
-        totalEmployees: filteredEmployees.length,
-        totalTasks: tasksData.data?.length || 0,
-        totalBranches: branchesData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        totalJobDescriptions: jobsData.data?.length || 0
-      });
-    } catch (error) {
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    
+    const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
+    ]);
+    
+    const usersData = await usersRes.json();
+    const branchesData = await branchesRes.json();
+    const tasksData = await tasksRes.json();
+    const appsData = await appsRes.json();
+    const jobsData = await jobsRes.json();
+    
+    const allUsers = usersData.data || [];
+    const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
+    const filteredEmployees = allUsers.filter(u => u.role === 'employee');
+    
+    // Update all states silently
+    setAdmins(filteredAdmins);
+    setEmployees(filteredEmployees);
+    setBranches(branchesData.data || []);
+    setTasks(tasksData.data || []);
+    setApplications(appsData.data || []);
+    setJobDescriptions(jobsData.data || []);
+    setStats({
+      totalAdmins: filteredAdmins.length,
+      totalEmployees: filteredEmployees.length,
+      totalTasks: tasksData.data?.length || 0,
+      totalBranches: branchesData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      totalJobDescriptions: jobsData.data?.length || 0
+    });
+  } catch (error) {
+    if (!silent) {
       console.error('Error fetching data:', error);
       showToast(language === 'en' ? 'Failed to load data' : 'Kunde inte ladda data', 'error');
-    } finally {
+    }
+  } finally {
+    if (!silent) {
       setLoading(false);
     }
-  };
+  }
+};
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
