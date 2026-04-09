@@ -36,6 +36,29 @@ exports.changePlan = async (req, res) => {
       newEndDate = new Date(effectiveDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
       console.log('⬆️ UPGRADE: Applying immediately');
     } 
+    // Handle custom plan
+if (plan === 'custom') {
+  const { customFeatures } = req.body;
+  
+  // Create custom plan features
+  const customPlanFeatures = {
+    name: 'Custom',
+    price: customFeatures.price,
+    maxEmployees: customFeatures.maxEmployees,
+    maxBranches: customFeatures.maxBranches,
+    maxEmailsPerMonth: customFeatures.maxEmailsPerMonth,
+    maxAdmins: customFeatures.maxAdmins,
+    reportLevel: 'custom',
+    exportReports: true,
+    customReports: true,
+    apiAccess: true,
+    prioritySupport: true,
+    dedicatedSupport: true
+  };
+  
+  // Add to PLAN_FEATURES dynamically
+  Subscription.PLAN_FEATURES.custom = customPlanFeatures;
+}
     // DOWNGRADE (new price < current price) → Apply at next billing cycle
     else if (newPrice < currentPrice) {
       // Keep current plan until current period ends
@@ -80,6 +103,7 @@ exports.changePlan = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // ============ ADD THESE NEW FUNCTIONS BELOW ============
 

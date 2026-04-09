@@ -40,6 +40,15 @@ const MasterDashboard = ({ onLogout }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showCustomPlanModal, setShowCustomPlanModal] = useState(false);
+const [customPlanData, setCustomPlanData] = useState({
+  maxEmployees: 100,
+  maxBranches: 10,
+  maxEmails: 5000,
+  maxAdmins: 10,
+  price: 0,
+  name: 'Custom Plan'
+});
 
   const planPrices = {
   trial: { price: 0, name: 'Trial', maxEmployees: 10, maxBranches: 2, maxEmails: 50, maxAdmins: 1 },
@@ -475,7 +484,43 @@ const MasterDashboard = ({ onLogout }) => {
       console.error('Error extending subscription:', error);
       showToastMessage('Error extending subscription', 'error');
     }
-  };
+  };const handleChangePlanCustom = async (customData) => {
+  if (!selectedOrg) return;
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/plan`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        plan: 'custom',
+        duration: selectedDuration,
+        customFeatures: {
+          maxEmployees: customData.maxEmployees,
+          maxBranches: customData.maxBranches,
+          maxEmailsPerMonth: customData.maxEmails,
+          maxAdmins: customData.maxAdmins,
+          price: customData.price
+        }
+      })
+    });
+    
+    if (response.ok) {
+      showToastMessage(`Custom plan applied: ${customData.price} SEK/month`, 'success');
+      setShowPlanModal(false);
+      setSelectedOrg(null);
+      fetchDashboardData();
+    } else {
+      const error = await response.json();
+      showToastMessage(error.message || 'Error applying custom plan', 'error');
+    }
+  } catch (error) {
+    console.error('Error applying custom plan:', error);
+    showToastMessage('Error applying custom plan', 'error');
+  }
+};
 
   const handlePauseOrg = async (orgId) => {
     try {
@@ -757,6 +802,26 @@ const MasterDashboard = ({ onLogout }) => {
     </table>
   )}
 </div>
+<div onClick={() => setSelectedPlan('custom')} style={{...styles.planCard, borderColor: selectedPlan === 'custom' ? '#00d1ff' : 'rgba(255,255,255,0.2)', background: selectedPlan === 'custom' ? 'rgba(0,209,255,0.1)' : 'rgba(255,255,255,0.05)'}}>
+  <h3>✏️ Custom</h3>
+  <div style={styles.planPrice}>Set Your Own<span>Price</span></div>
+  <ul style={styles.planFeatures}>
+    <li>✓ Custom employee limit</li>
+    <li>✓ Custom branch limit</li>
+    <li>✓ Custom email limit</li>
+    <li>✓ Custom admin limit</li>
+    <li>✓ Tailored pricing</li>
+  </ul>
+  <button 
+    onClick={(e) => {
+      e.stopPropagation();
+      setShowCustomPlanModal(true);
+    }} 
+    style={styles.customButton}
+  >
+    Configure Custom Plan
+  </button>
+</div>
 
       {/* Create Organization Modal */}
 {showOrgModal && (
@@ -970,7 +1035,94 @@ const MasterDashboard = ({ onLogout }) => {
     </div>
   </div>
 )}
-
+{/* Custom Plan Modal */}
+{showCustomPlanModal && (
+  <div style={styles.modalOverlay} onClick={() => setShowCustomPlanModal(false)}>
+    <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+      <h2 style={styles.modalTitle}>Custom Plan Configuration</h2>
+      <p style={{ marginBottom: '20px', fontSize: '14px', color: '#00d1ff' }}>
+        Set custom limits and pricing for <strong>{selectedOrg?.name}</strong>
+      </p>
+      
+      <div style={styles.customForm}>
+        <div style={styles.customField}>
+          <label style={styles.label}>Max Employees</label>
+          <input
+            type="number"
+            value={customPlanData.maxEmployees}
+            onChange={(e) => setCustomPlanData({...customPlanData, maxEmployees: parseInt(e.target.value) || 0})}
+            style={styles.input}
+            min="1"
+            max="10000"
+          />
+        </div>
+        
+        <div style={styles.customField}>
+          <label style={styles.label}>Max Branches</label>
+          <input
+            type="number"
+            value={customPlanData.maxBranches}
+            onChange={(e) => setCustomPlanData({...customPlanData, maxBranches: parseInt(e.target.value) || 0})}
+            style={styles.input}
+            min="1"
+            max="500"
+          />
+        </div>
+        
+        <div style={styles.customField}>
+          <label style={styles.label}>Max Emails / Month</label>
+          <input
+            type="number"
+            value={customPlanData.maxEmails}
+            onChange={(e) => setCustomPlanData({...customPlanData, maxEmails: parseInt(e.target.value) || 0})}
+            style={styles.input}
+            min="100"
+            max="100000"
+          />
+        </div>
+        
+        <div style={styles.customField}>
+          <label style={styles.label}>Max Admins</label>
+          <input
+            type="number"
+            value={customPlanData.maxAdmins}
+            onChange={(e) => setCustomPlanData({...customPlanData, maxAdmins: parseInt(e.target.value) || 0})}
+            style={styles.input}
+            min="1"
+            max="500"
+          />
+        </div>
+        
+        <div style={styles.customField}>
+          <label style={styles.label}>Monthly Price (SEK)</label>
+          <input
+            type="number"
+            value={customPlanData.price}
+            onChange={(e) => setCustomPlanData({...customPlanData, price: parseInt(e.target.value) || 0})}
+            style={styles.input}
+            min="0"
+            step="100"
+          />
+        </div>
+        
+        <div style={styles.pricePreview}>
+          <h4>Price Summary:</h4>
+          <p>Monthly: <strong>{customPlanData.price.toLocaleString()} SEK</strong></p>
+          <p>Yearly (12 months): <strong>{(customPlanData.price * 12).toLocaleString()} SEK</strong></p>
+          <p>VAT 25%: <strong>{(customPlanData.price * 0.25).toLocaleString()} SEK/month</strong></p>
+        </div>
+      </div>
+      
+      <div style={styles.modalButtons}>
+        <button onClick={() => setShowCustomPlanModal(false)} style={styles.cancelButton}>Cancel</button>
+        <button onClick={() => {
+          handleChangePlanCustom(customPlanData);
+          setShowCustomPlanModal(false);
+        }} style={styles.submitButton}>Apply Custom Plan</button>
+      </div>
+    </div>
+  </div>
+)}
       {showUsersModal && (
   <div style={styles.modalOverlay} onClick={() => setShowUsersModal(false)}>
     <div style={{...styles.modal, maxWidth: '800px'}} onClick={(e) => e.stopPropagation()}>
