@@ -246,21 +246,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchSubscriptionData();
-    const savedLogo = localStorage.getItem('organizationLogo');
-    if (savedLogo) setLogoPreview(savedLogo);
-    setChatMessages([{
-      text: language === 'en' ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
-      sender: 'ai',
-      time: new Date().toLocaleTimeString()
-    }]);
-    const interval = setInterval(() => {
-      fetchDashboardData();
-      fetchSubscriptionData();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Initial load with loading screen
+  fetchDashboardData(false);
+  fetchSubscriptionData();
+  
+  const savedLogo = localStorage.getItem('organizationLogo');
+  if (savedLogo) setLogoPreview(savedLogo);
+  
+  setChatMessages([{
+    text: language === 'en' ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
+    sender: 'ai',
+    time: new Date().toLocaleTimeString()
+  }]);
+  
+  // ✅ Auto-refresh every 30 seconds - SILENT (no loading screen)
+  const interval = setInterval(() => {
+  fetchDashboardData(true); 
+  fetchSubscriptionData(true);
+}, 30000);
+  
+  return () => clearInterval(interval);
+}, []);
 
   const fetchAuditLogs = async () => {
     setLoadingAudit(true);
@@ -280,23 +286,23 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const fetchSubscriptionData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSubscriptionData(data.data);
-        if (data.data.usage) {
-          setUsageData(data.data.usage);
-        }
+  const fetchSubscriptionData = async (silent = false) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      setSubscriptionData(data.data);
+      if (data.data.usage) {
+        setUsageData(data.data.usage);
       }
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
     }
-  };
+  } catch (error) {
+    if (!silent) console.error('Error fetching subscription:', error);
+  }
+};
 
   const generateAttendanceReport = async () => {
     try {
@@ -1952,7 +1958,7 @@ const styles = {
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'pointer' },
   checkbox: { width: '16px', height: '16px', cursor: 'pointer' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', zIndex: 1000 },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '300px', height: '450px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '300px', height: '450px', background: '#f1f2f3', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
   chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' },
   chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
   chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
