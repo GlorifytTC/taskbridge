@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 const Landing = ({ onLoginClick }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
+  const [language, setLanguage] = useState('en'); // 'en' or 'sv'
 
   useEffect(() => {
     // Check if device is mobile
@@ -21,10 +22,14 @@ const Landing = ({ onLoginClick }) => {
     }
   };
 
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'sv' : 'en');
+  };
+
   // Get dynamic current date for calendar
   const currentDate = new Date();
   const today = currentDate.getDate();
-  const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+  const currentMonth = currentDate.toLocaleString(language === 'en' ? 'default' : 'sv-SE', { month: 'long' });
   const currentYear = currentDate.getFullYear();
 
   // Generate dynamic calendar days
@@ -48,6 +53,54 @@ const Landing = ({ onLoginClick }) => {
     days.push(i);
   }
 
+  // Translations
+  const t = {
+    en: {
+      nav: { home: 'Home', about: 'About Program', pricing: 'Pricing', contact: 'Contact Us' },
+      signIn: 'Sign In',
+      tag: 'Smart Staff Management',
+      title: 'Manage Your Workforce with Intelligence',
+      subtitle: 'TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication with ease.',
+      getStarted: 'Get Started',
+      watchDemo: 'Watch Demo',
+      featuresTitle: 'Powerful Features for Modern Teams',
+      shiftMgmt: 'Shift Management',
+      shiftDesc: 'Create and manage shifts with flexible scheduling and approval workflows.',
+      multiBranch: 'Multi-branch Support',
+      branchDesc: 'Manage multiple locations with centralized control and branch-specific settings.',
+      realtimeAnalytics: 'Real-time Analytics',
+      analyticsDesc: 'Track attendance, hours worked, and generate comprehensive reports.',
+      smartNotif: 'Smart Notifications',
+      notifDesc: 'Automated alerts for shift assignments, approvals, and reminders.',
+      ownerTitle: 'Project Owner & Lead Developer',
+      footer: 'All rights reserved. Developed by',
+      weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    },
+    sv: {
+      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta Oss' },
+      signIn: 'Logga in',
+      tag: 'Smart Personalhantering',
+      title: 'Hantera Din Arbetsstyrka med Intelligens',
+      subtitle: 'TaskBridge hjälper skolor, sjukhus och organisationer att hantera pass, följa upp närvaro och effektivisera kommunikation.',
+      getStarted: 'Kom igång',
+      watchDemo: 'Titta Demo',
+      featuresTitle: 'Kraftfulla Funktioner för Moderna Team',
+      shiftMgmt: 'Passhantering',
+      shiftDesc: 'Skapa och hantera pass med flexibel schemaläggning och godkännandeprocesser.',
+      multiBranch: 'Stöd för Flera Filialer',
+      branchDesc: 'Hantera flera platser med central kontroll och filialspecifika inställningar.',
+      realtimeAnalytics: 'Realtidsanalyser',
+      analyticsDesc: 'Spåra närvaro, arbetade timmar och generera omfattande rapporter.',
+      smartNotif: 'Smarta Notiser',
+      notifDesc: 'Automatiska aviseringar för passtilldelningar, godkännanden och påminnelser.',
+      ownerTitle: 'Projektägare & Lead Utvecklare',
+      footer: 'Alla rättigheter förbehållna. Utvecklad av',
+      weekdays: ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
+    }
+  };
+
+  const content = t[language];
+
   return (
     <div style={styles.container}>
       {/* Animated Background */}
@@ -66,9 +119,20 @@ const Landing = ({ onLoginClick }) => {
           </div>
           <span style={styles.logoText}>TaskBridge</span>
         </div>
-        <button onClick={handleSignIn} style={styles.navButton}>
-          Sign In
-        </button>
+        <div style={styles.navLinks}>
+          <a href="#" style={styles.navLink}>{content.nav.home}</a>
+          <a href="#" style={styles.navLink}>{content.nav.about}</a>
+          <a href="#" style={styles.navLink}>{content.nav.pricing}</a>
+          <a href="#" style={styles.navLink}>{content.nav.contact}</a>
+        </div>
+        <div style={styles.navActions}>
+          <button onClick={toggleLanguage} style={styles.langButton}>
+            {language === 'en' ? 'SV' : 'EN'}
+          </button>
+          <button onClick={handleSignIn} style={styles.navButton}>
+            {content.signIn}
+          </button>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -76,45 +140,27 @@ const Landing = ({ onLoginClick }) => {
         <div style={styles.heroContent}>
           <div style={styles.tag}>
             <span style={styles.tagDot}></span>
-            <span style={styles.tagText}>Smart Staff Management</span>
+            <span style={styles.tagText}>{content.tag}</span>
           </div>
           <h1 style={styles.title}>
-            Manage Your <span style={styles.titleGradient}>Workforce</span>
-            <br />with Intelligence
+            {content.title.split(' ').map((word, i) => 
+              word === 'Workforce' || word === 'Arbetsstyrka' ? 
+                <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
+                word + ' '
+            )}
           </h1>
-          <p style={styles.subtitle}>
-            TaskBridge helps schools, hospitals, and organizations manage shifts,
-            track attendance, and streamline communication with ease.
-          </p>
+          <p style={styles.subtitle}>{content.subtitle}</p>
           <div style={styles.buttons}>
             <button onClick={handleSignIn} style={styles.primaryButton}>
-              Get Started <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
+              {content.getStarted} <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
             </button>
             <button style={styles.secondaryButton}>
-              Watch Demo <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
+              {content.watchDemo} <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
             </button>
-          </div>
-
-          {/* Stats Section */}
-          <div style={styles.stats}>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>500+</div>
-              <div style={styles.statLabel}>Active Organizations</div>
-            </div>
-            <div style={styles.statDivider}></div>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>10K+</div>
-              <div style={styles.statLabel}>Employees Managed</div>
-            </div>
-            <div style={styles.statDivider}></div>
-            <div style={styles.statItem}>
-              <div style={styles.statNumber}>98%</div>
-              <div style={styles.statLabel}>Satisfaction Rate</div>
-            </div>
           </div>
         </div>
 
-        {/* Dynamic Calendar Animation - Now visible on mobile */}
+        {/* Dynamic Calendar - Now always visible */}
         <div style={styles.calendarContainer}>
           <div style={styles.calendar}>
             <div style={styles.calendarHeader}>
@@ -123,7 +169,7 @@ const Landing = ({ onLoginClick }) => {
               </div>
             </div>
             <div style={styles.calendarWeekdays}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              {content.weekdays.map(day => (
                 <div key={day} style={styles.weekday}>{day}</div>
               ))}
             </div>
@@ -149,36 +195,40 @@ const Landing = ({ onLoginClick }) => {
       {/* Features Section */}
       <div style={styles.features}>
         <h2 style={styles.featuresTitle}>
-          Powerful Features for <span style={styles.titleGradient}>Modern Teams</span>
+          {content.featuresTitle.split(' ').map((word, i) => 
+            word === 'Modern' || word === 'Moderna' ? 
+              <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
+              word + ' '
+          )}
         </h2>
         <div style={styles.featuresGrid}>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-clock"></i>
             </div>
-            <h3 style={styles.featureTitle}>Shift Management</h3>
-            <p style={styles.featureDesc}>Create and manage shifts with flexible scheduling and approval workflows.</p>
+            <h3 style={styles.featureTitle}>{content.shiftMgmt}</h3>
+            <p style={styles.featureDesc}>{content.shiftDesc}</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-users"></i>
             </div>
-            <h3 style={styles.featureTitle}>Multi-branch Support</h3>
-            <p style={styles.featureDesc}>Manage multiple locations with centralized control and branch-specific settings.</p>
+            <h3 style={styles.featureTitle}>{content.multiBranch}</h3>
+            <p style={styles.featureDesc}>{content.branchDesc}</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-chart-line"></i>
             </div>
-            <h3 style={styles.featureTitle}>Real-time Analytics</h3>
-            <p style={styles.featureDesc}>Track attendance, hours worked, and generate comprehensive reports.</p>
+            <h3 style={styles.featureTitle}>{content.realtimeAnalytics}</h3>
+            <p style={styles.featureDesc}>{content.analyticsDesc}</p>
           </div>
           <div style={styles.featureCard}>
             <div style={styles.featureIcon}>
               <i className="fas fa-bell"></i>
             </div>
-            <h3 style={styles.featureTitle}>Smart Notifications</h3>
-            <p style={styles.featureDesc}>Automated alerts for shift assignments, approvals, and reminders.</p>
+            <h3 style={styles.featureTitle}>{content.smartNotif}</h3>
+            <p style={styles.featureDesc}>{content.notifDesc}</p>
           </div>
         </div>
       </div>
@@ -196,7 +246,7 @@ const Landing = ({ onLoginClick }) => {
               </a>
             </div>
             <div style={styles.ownerInfo}>
-              <h3 style={styles.ownerTitle}>Project Owner & Lead Developer</h3>
+              <h3 style={styles.ownerTitle}>{content.ownerTitle}</h3>
               <div style={styles.ownerDetails}>
                 <div style={styles.contactItem}>
                   <i className="fas fa-envelope"></i>
@@ -215,7 +265,7 @@ const Landing = ({ onLoginClick }) => {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerContent}>
-          <p>&copy; 2026 TaskBridge. All rights reserved. Developed by <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
+          <p>&copy; 2026 TaskBridge. {content.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
         </div>
       </footer>
 
@@ -294,6 +344,8 @@ const styles = {
     padding: '20px 40px',
     maxWidth: '1400px',
     margin: '0 auto',
+    flexWrap: 'wrap',
+    gap: '16px',
     '@media (max-width: 768px)': {
       padding: '16px 20px',
     },
@@ -344,6 +396,57 @@ const styles = {
     },
     '@media (max-width: 480px)': {
       fontSize: '18px',
+    },
+  },
+  navLinks: {
+    display: 'flex',
+    gap: '32px',
+    '@media (max-width: 768px)': {
+      order: 3,
+      width: '100%',
+      justifyContent: 'center',
+      gap: '24px',
+      marginTop: '8px',
+    },
+    '@media (max-width: 480px)': {
+      gap: '16px',
+      flexWrap: 'wrap',
+    },
+  },
+  navLink: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    textDecoration: 'none',
+    fontSize: '16px',
+    fontWeight: '500',
+    transition: 'color 0.3s ease',
+    '&:hover': {
+      color: '#00d1ff',
+    },
+    '@media (max-width: 768px)': {
+      fontSize: '14px',
+    },
+    '@media (max-width: 480px)': {
+      fontSize: '13px',
+    },
+  },
+  navActions: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+  },
+  langButton: {
+    padding: '8px 16px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
+    color: 'white',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    '@media (max-width: 768px)': {
+      padding: '6px 12px',
+      fontSize: '12px',
     },
   },
   navButton: {
@@ -500,58 +603,6 @@ const styles = {
     '@media (max-width: 480px)': {
       width: '100%',
       padding: '10px 20px',
-    },
-  },
-  stats: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '32px',
-    paddingTop: '32px',
-    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-    '@media (max-width: 1024px)': {
-      justifyContent: 'center',
-    },
-    '@media (max-width: 768px)': {
-      gap: '20px',
-    },
-    '@media (max-width: 480px)': {
-      flexDirection: 'column',
-      gap: '16px',
-      borderTop: 'none',
-      paddingTop: '0',
-    },
-  },
-  statItem: {
-    textAlign: 'center',
-    '@media (max-width: 480px)': {
-      width: '100%',
-      padding: '12px',
-      background: 'rgba(255, 255, 255, 0.03)',
-      borderRadius: '12px',
-    },
-  },
-  statNumber: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#00d1ff',
-    marginBottom: '4px',
-    '@media (max-width: 768px)': {
-      fontSize: '24px',
-    },
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.6)',
-    '@media (max-width: 768px)': {
-      fontSize: '12px',
-    },
-  },
-  statDivider: {
-    width: '1px',
-    height: '40px',
-    background: 'rgba(255, 255, 255, 0.2)',
-    '@media (max-width: 480px)': {
-      display: 'none',
     },
   },
   calendarContainer: {
@@ -981,8 +1032,11 @@ styleSheet.textContent = `
   .primaryButton:hover, .secondaryButton:hover {
     transform: translateY(-2px);
   }
-  .navButton:hover {
+  .navButton:hover, .langButton:hover {
     background: rgba(255, 255, 255, 0.1);
+  }
+  .navLink:hover {
+    color: #00d1ff !important;
   }
   .featureCard:hover {
     transform: translateY(-5px);
