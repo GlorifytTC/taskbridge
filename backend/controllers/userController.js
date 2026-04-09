@@ -18,7 +18,8 @@ exports.getUsers = async (req, res) => {
     
     const users = await User.find(query)
       .populate('branch', 'name')
-      .populate('jobDescription', 'name');
+      .populate('jobDescription', 'name')
+      .populate('assignedBranches', 'name');  // ✅ ADD THIS LINE
     
     res.json({
       success: true,
