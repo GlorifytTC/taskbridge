@@ -3,7 +3,9 @@ import React, { useEffect, useState } from 'react';
 const Landing = ({ onLoginClick, onNavigate }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState(() => {
+  return localStorage.getItem('taskbridge_language') || 'en';
+});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
 
