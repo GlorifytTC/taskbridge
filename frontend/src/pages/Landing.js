@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 const Landing = ({ onLoginClick, onNavigate }) => {
+  console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
   const [language, setLanguage] = useState('en');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -11,7 +12,9 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       const w = window.innerWidth;
       setScreenWidth(w);
       setIsMobile(w <= 768);
-      if (w > 768) setMobileMenuOpen(false);
+      if (w > 768) {
+        setMobileMenuOpen(false);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -19,12 +22,19 @@ const Landing = ({ onLoginClick, onNavigate }) => {
   }, []);
 
   const handleSignIn = () => {
-    if (onLoginClick) onLoginClick();
+    if (onLoginClick) {
+      onLoginClick();
+    }
     setMobileMenuOpen(false);
   };
 
-  const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'sv' : 'en');
-  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'sv' : 'en');
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
 
   // Calendar data
   const currentDate = new Date();
@@ -32,12 +42,25 @@ const Landing = ({ onLoginClick, onNavigate }) => {
   const currentMonth = currentDate.toLocaleString(language === 'en' ? 'default' : 'sv-SE', { month: 'long' });
   const currentYear = currentDate.getFullYear();
 
-  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+  
+  const getFirstDayOfMonth = (year, month) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const firstDay = getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
   const days = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+  
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
+  }
+  
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
 
   const t = {
     en: {
@@ -62,7 +85,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     },
     sv: {
-      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakta Oss' },
+      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta Oss' },
       signIn: 'Logga in',
       tag: 'Smart Personalhantering',
       title: 'Hantera Din Arbetsstyrka med Intelligens',
@@ -89,7 +112,6 @@ const Landing = ({ onLoginClick, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      {/* Animated Background */}
       <div style={styles.bgAnimation}>
         <div style={styles.bgCircle1}></div>
         <div style={styles.bgCircle2}></div>
@@ -97,7 +119,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         <div style={styles.bgGrid}></div>
       </div>
 
-      {/* Navigation Bar - MATCHES ABOUT PAGE */}
+      {/* Navigation */}
       <nav style={{
         ...styles.navbar,
         padding: isSmall ? '12px 14px' : isMobile ? '14px 18px' : '20px 40px',
@@ -115,7 +137,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
             fontSize: isSmall ? '18px' : isMobile ? '21px' : '24px',
           }} className="tb-logo-text">TaskBridge</span>
         </div>
-
+        
         {!isMobile && (
           <>
             <div style={styles.navLinks}>
@@ -151,22 +173,38 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         </div>
       )}
 
-      {/* Hero Section - MATCHES ABOUT PAGE STYLE */}
-      <div id="hero" style={{ ...styles.hero, padding: isSmall ? '40px 16px 30px' : isMobile ? '60px 20px 40px' : '80px 40px 60px' }}>
+      {/* Hero Section - Calendar now VISIBLE on mobile */}
+      <div style={{
+        ...styles.hero,
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        padding: isSmall ? '24px 16px' : isMobile ? '32px 20px' : '60px 40px',
+        gap: isSmall ? '28px' : isMobile ? '36px' : '60px',
+        textAlign: isMobile ? 'center' : 'left',
+      }}>
         <div style={styles.heroContent}>
           <div style={styles.tag}>
             <span style={styles.tagDot}></span>
             <span style={styles.tagText}>{content.tag}</span>
           </div>
-          <h1 style={{ ...styles.title, fontSize: isSmall ? '30px' : isMobile ? '36px' : '56px' }}>
+          <h1 style={{
+            ...styles.title,
+            fontSize: isSmall ? '30px' : isMobile ? '36px' : '56px',
+          }}>
             {content.title.split(' ').map((word, i) => 
               word === 'Workforce' || word === 'Arbetsstyrka' ? 
                 <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
                 word + ' '
             )}
           </h1>
-          <p style={{ ...styles.subtitle, fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px' }}>{content.subtitle}</p>
-          <div style={{ ...styles.buttons, justifyContent: 'center' }}>
+          <p style={{
+            ...styles.subtitle,
+            fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px',
+          }}>{content.subtitle}</p>
+          <div style={{
+            ...styles.buttons,
+            flexDirection: isSmall ? 'column' : 'row',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+          }}>
             <button onClick={handleSignIn} style={{
               ...styles.primaryButton,
               width: isSmall ? '100%' : 'auto',
@@ -183,46 +221,48 @@ const Landing = ({ onLoginClick, onNavigate }) => {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Calendar Section - SIMPLIFIED LIKE ABOUT PAGE */}
-      <div style={styles.calendarSection}>
+        {/* CALENDAR - FIXED: Always visible on mobile */}
         <div style={styles.calendarContainer}>
           <div style={{
             ...styles.calendar,
-            maxWidth: isSmall ? '100%' : isMobile ? '340px' : '450px',
-            padding: isSmall ? '20px' : '24px',
-            margin: '0 auto',
+            maxWidth: isSmall ? '100%' : isMobile ? '340px' : '380px',
+            padding: isSmall ? '16px' : '24px',
           }}>
             <div style={styles.calendarHeader}>
-              <div style={{ ...styles.calendarMonth, fontSize: isSmall ? '18px' : '22px' }}>
-                {currentMonth} {currentYear}
-              </div>
+              <div style={{
+                ...styles.calendarMonth,
+                fontSize: isSmall ? '16px' : '22px',
+              }}>{currentMonth} {currentYear}</div>
             </div>
             <div style={styles.calendarWeekdays}>
-              {content.weekdays.map(day => (
-                <div key={day} style={{ ...styles.weekday, fontSize: isSmall ? '11px' : '13px' }}>{day}</div>
-              ))}
+              {content.weekdays.map(day => <div key={day} style={{
+                ...styles.weekday,
+                fontSize: isSmall ? '10px' : '13px',
+                padding: isSmall ? '4px 0' : '8px 0',
+              }}>{day}</div>)}
             </div>
             <div style={styles.calendarDays}>
               {days.map((day, index) => (
-                <div key={index} style={{
-                  ...styles.calendarDay,
-                  ...(day === today ? styles.today : {}),
-                  fontSize: isSmall ? '12px' : '14px',
-                  padding: isSmall ? '8px 0' : '10px 0',
-                }}>
+                <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {}), fontSize: isSmall ? '11px' : '14px', padding: isSmall ? '6px 0' : '10px 0'}}>
                   {day}
                 </div>
               ))}
             </div>
+            <div style={styles.calendarGlow}></div>
           </div>
         </div>
       </div>
 
-      {/* Features Section - MATCHES ABOUT PAGE */}
-      <div style={{ ...styles.section, padding: isSmall ? '40px 16px' : isMobile ? '50px 20px' : '60px 40px' }}>
-        <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '22px' : isMobile ? '26px' : '32px' }}>
+      {/* Features Section */}
+      <div style={{
+        ...styles.features,
+        padding: isSmall ? '40px 16px' : isMobile ? '50px 20px' : '80px 40px',
+      }}>
+        <h2 style={{
+          ...styles.featuresTitle,
+          fontSize: isSmall ? '22px' : isMobile ? '26px' : '36px',
+        }}>
           {content.featuresTitle.split(' ').map((word, i) => 
             word === 'Modern' || word === 'Moderna' ? 
               <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : word + ' '
@@ -252,8 +292,11 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         </div>
       </div>
 
-      {/* Owner Section - MATCHES ABOUT PAGE */}
-      <div style={{ ...styles.ownerSection, padding: isSmall ? '40px 16px' : isMobile ? '40px 20px' : '60px 40px' }}>
+      {/* Owner Section - FIXED: Text no longer cut off */}
+      <div style={{
+        ...styles.ownerSection,
+        padding: isSmall ? '40px 16px' : isMobile ? '40px 20px' : '60px 40px',
+      }}>
         <div style={styles.ownerContainer}>
           <div style={{
             ...styles.ownerCard,
@@ -274,18 +317,33 @@ const Landing = ({ onLoginClick, onNavigate }) => {
               </a>
             </div>
             <div style={{ ...styles.ownerInfo, width: isMobile ? '100%' : 'auto' }}>
-              <h3 style={{ ...styles.ownerTitle, fontSize: isSmall ? '16px' : isMobile ? '18px' : '24px' }}>{content.ownerTitle}</h3>
-              <div style={{ ...styles.ownerContact, justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                <a href="mailto:info@glorifytc.se" style={styles.ownerLink}>info@glorifytc.se</a>
-                <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.ownerLink}>glorifytc.se</a>
+              <h3 style={{
+                ...styles.ownerTitle,
+                fontSize: isSmall ? '16px' : isMobile ? '18px' : '24px',
+              }}>{content.ownerTitle}</h3>
+              <div style={{
+                ...styles.ownerDetails,
+                alignItems: isMobile ? 'center' : 'flex-start',
+              }}>
+                <div style={styles.contactItem}>
+                  <i className="fas fa-envelope"></i>
+                  <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
+                </div>
+                <div style={styles.contactItem}>
+                  <i className="fas fa-globe"></i>
+                  <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Footer - MATCHES ABOUT PAGE */}
-      <footer style={{ ...styles.footer, padding: isSmall ? '20px 16px' : '30px 40px' }}>
+      {/* Footer */}
+      <footer style={{
+        ...styles.footer,
+        padding: isSmall ? '20px 16px' : '30px 40px',
+      }}>
         <div style={styles.footerContent}>
           <p>&copy; 2026 TaskBridge. {content.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
         </div>
@@ -493,11 +551,11 @@ const styles = {
     zIndex: 10,
     maxWidth: '1400px',
     margin: '0 auto',
-    textAlign: 'center',
+    display: 'grid',
+    alignItems: 'center',
   },
   heroContent: {
-    maxWidth: '800px',
-    margin: '0 auto',
+    width: '100%',
   },
   tag: {
     display: 'inline-flex',
@@ -562,13 +620,6 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
   },
-  calendarSection: {
-    position: 'relative',
-    zIndex: 10,
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '20px 40px 60px',
-  },
   calendarContainer: {
     display: 'flex',
     justifyContent: 'center',
@@ -581,7 +632,9 @@ const styles = {
     borderRadius: '24px',
     border: '2px solid rgba(0, 209, 255, 0.3)',
     boxShadow: '0 0 30px rgba(0, 209, 255, 0.2)',
+    position: 'relative',
     backdropFilter: 'blur(10px)',
+    animation: 'floatCalendar 6s ease-in-out infinite',
   },
   calendarHeader: {
     textAlign: 'center',
@@ -606,7 +659,6 @@ const styles = {
     textAlign: 'center',
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
-    padding: '8px 0',
   },
   calendarDays: {
     display: 'grid',
@@ -626,13 +678,28 @@ const styles = {
     fontWeight: 'bold',
     color: '#00d1ff',
   },
-  section: {
+  blinkingEye: {
+    animation: 'calendarBlink 2s infinite',
+  },
+  calendarGlow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '100%',
+    height: '100%',
+    background: 'radial-gradient(circle, rgba(0, 209, 255, 0.1) 0%, transparent 70%)',
+    transform: 'translate(-50%, -50%)',
+    borderRadius: '24px',
+    pointerEvents: 'none',
+    zIndex: -1,
+  },
+  features: {
     position: 'relative',
     zIndex: 10,
     maxWidth: '1400px',
     margin: '0 auto',
   },
-  sectionTitle: {
+  featuresTitle: {
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: '48px',
@@ -649,7 +716,6 @@ const styles = {
     borderRadius: '24px',
     padding: '32px',
     textAlign: 'center',
-    transition: 'transform 0.3s ease',
   },
   featureIcon: {
     width: '64px',
@@ -732,15 +798,21 @@ const styles = {
     color: '#00d1ff',
     marginBottom: '20px',
   },
-  ownerContact: {
+  ownerDetails: {
     display: 'flex',
-    gap: '24px',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
+    gap: '12px',
   },
-  ownerLink: {
+  contactItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '15px',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
-    fontSize: '15px',
     transition: 'color 0.3s ease',
   },
   footer: {
@@ -764,19 +836,57 @@ const styles = {
 
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-  @keyframes float1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, -50px); } }
-  @keyframes float2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, 40px); } }
-  @keyframes pulse { 0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); } }
-  @keyframes softGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); } 50% { box-shadow: 0 0 40px rgba(0, 209, 255, 0.5); } }
-  @keyframes shimmer { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes float1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(50px, -50px); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-40px, 40px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
+  }
+  @keyframes floatCalendar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes calendarBlink {
+    0%, 90%, 100% { opacity: 1; background: rgba(0, 209, 255, 0); }
+    95% { opacity: 0.5; background: rgba(0, 209, 255, 0.2); }
+  }
+  @keyframes softGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 209, 255, 0.5); }
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
   
-  .featureCard:hover { transform: translateY(-4px); border-color: rgba(0, 209, 255, 0.3); }
-  .calendarDay:hover { background: rgba(0, 209, 255, 0.15); }
-  .primaryButton:hover, .secondaryButton:hover { transform: translateY(-2px); }
-  .navLink:hover { color: #00d1ff !important; }
-  .mobileNavLink:hover { color: #00d1ff !important; }
-  .ownerLink:hover { color: #00d1ff !important; }
+  .primaryButton:hover, .secondaryButton:hover, .navButton:hover, .langButton:hover {
+    transform: translateY(-2px);
+  }
+  .featureCard:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 209, 255, 0.3);
+  }
+  .calendarDay:hover {
+    background: rgba(0, 209, 255, 0.15);
+  }
+  .contactLink:hover {
+    color: #00d1ff;
+  }
+  .navLink:hover {
+    color: #00d1ff !important;
+  }
+  .mobileNavLink:hover {
+    color: #00d1ff !important;
+  }
 
+  /* Responsive navbar rules */
   @media (max-width: 768px) {
     nav { padding: 16px 20px !important; }
     .tb-logo-icon { width: 34px !important; height: 34px !important; font-size: 19px !important; }
