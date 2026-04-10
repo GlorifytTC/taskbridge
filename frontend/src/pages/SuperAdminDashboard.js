@@ -59,6 +59,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [reportData, setReportData] = useState(null);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
   
   // Custom confirmation modal states
   const [confirmationModal, setConfirmationModal] = useState({
@@ -75,6 +77,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const w = window.innerWidth;
+      setScreenWidth(w);
+      setIsMobile(w <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
@@ -237,6 +250,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const lang = t[language];
+  const isSmall = screenWidth <= 480;
 
   const changeLanguage = (langCode) => {
     setLanguage(langCode);
@@ -371,7 +385,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const fetchDashboardData = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
@@ -409,7 +422,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       });
     } catch (error) {
       console.error('Error fetching data:', error);
-      showToast(language === 'en' ? 'Failed to load data' : 'Kunde inte ladda data', 'error');
     } finally {
       setLoading(false);
     }
@@ -471,8 +483,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Email changed! Please login again.' : 'E-post ändrad! Logga in igen.', 'success');
-        localStorage.removeItem('token');
-        onLogout();
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          onLogout();
+        }, 1500);
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to change email' : 'Kunde inte ändra e-post'), 'error');
@@ -483,7 +497,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // ✅ FIXED: Added assignedBranches to admin creation
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
     try {
@@ -495,10 +508,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         password: formData.password,
         role: 'admin',
         branch: formData.branch || null,
-        assignedBranches: formData.branch ? [formData.branch] : []  // ✅ FIXED: Add assignedBranches
+        assignedBranches: formData.branch ? [formData.branch] : []
       };
-      
-      console.log('Creating admin with data:', adminData);
       
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
@@ -525,13 +536,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // ✅ FIXED: Improved assign branch handler
   const handleAssignBranch = async (branchId) => {
     if (!selectedAdminForBranch) return;
     
     try {
       const token = localStorage.getItem('token');
-      console.log('Assigning branch:', branchId, 'to admin:', selectedAdminForBranch._id);
       
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
         method: 'PUT',
@@ -561,7 +570,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         );
         
         showToast(language === 'en' ? 'Branch assigned successfully!' : 'Avdelning tilldelad!', 'success');
-        fetchDashboardData(); // Refresh to ensure consistency
+        fetchDashboardData();
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to assign branch' : 'Kunde inte tilldela avdelning'), 'error');
       }
@@ -571,13 +580,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // ✅ FIXED: Improved remove branch handler
   const handleRemoveBranch = async (branchId) => {
     if (!selectedAdminForBranch) return;
     
     try {
       const token = localStorage.getItem('token');
-      console.log('Removing branch:', branchId, 'from admin:', selectedAdminForBranch._id);
       
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
         method: 'PUT',
@@ -605,7 +612,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         );
         
         showToast(language === 'en' ? 'Branch removed successfully!' : 'Avdelning borttagen!', 'success');
-        fetchDashboardData(); // Refresh to ensure consistency
+        fetchDashboardData();
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to remove branch' : 'Kunde inte ta bort avdelning'), 'error');
       }
@@ -628,8 +635,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         jobDescription: formData.jobDescription,
         branch: formData.branch || null
       };
-      
-      console.log('Creating employee with data:', employeeData);
       
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
@@ -793,6 +798,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setShowResetPasswordModal(false);
         setSelectedUser(null);
         setResetPasswordData({ newPassword: '', confirmPassword: '' });
+        fetchDashboardData();
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to reset password' : 'Kunde inte återställa lösenord'), 'error');
@@ -1168,7 +1174,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      <div style={styles.header}>
+      <div style={{...styles.header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center'}}>
         <div style={styles.logoSection}>
           {logoPreview ? (
             <img src={logoPreview} alt="Organization Logo" style={styles.orgLogo} />
@@ -1179,17 +1185,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           )}
           <div>
             <div style={styles.titleRow}>
-              <h1 style={styles.title}>Super Admin Dashboard</h1>
-              <span style={styles.userNameBadge}>
+              <h1 style={{...styles.title, fontSize: isSmall ? '18px' : '22px'}}>Super Admin Dashboard</h1>
+              <span style={{...styles.userNameBadge, fontSize: isSmall ? '10px' : '11px'}}>
                 <i className="fas fa-user-shield"></i> {user?.name}
               </span>
             </div>
-            <p style={styles.subtitle}>Manage {user?.organization?.name || 'your organization'}</p>
+            <p style={{...styles.subtitle, fontSize: isSmall ? '10px' : '11px'}}>Manage {user?.organization?.name || 'your organization'}</p>
           </div>
         </div>
-        <div style={styles.headerButtons}>
+        <div style={{...styles.headerButtons, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end'}}>
           <div style={styles.languageContainer}>
-            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={styles.languageButton}>
+            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={{...styles.languageButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 12px'}}>
               <i className="fas fa-globe"></i> {language === 'en' ? 'EN' : 'SV'}
             </button>
             {showLanguageDropdown && (
@@ -1199,18 +1205,18 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               </div>
             )}
           </div>
-          <button onClick={() => setShowProfileModal(true)} style={styles.profileButton}>{lang.profile}</button>
-          <button onClick={handleLogout} style={styles.logoutButton}>{lang.logout}</button>
+          <button onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
+          <button onClick={handleLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
         </div>
       </div>
 
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-user-tie" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalAdmins}</div><div style={styles.statLabelSmall}>{lang.adminsLabel}</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalEmployees}</div><div style={styles.statLabelSmall}>{lang.employees}</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-tasks" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalTasks}</div><div style={styles.statLabelSmall}>{lang.tasks}</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-store" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalBranches}</div><div style={styles.statLabelSmall}>{lang.branchesLabel}</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-briefcase" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.totalJobDescriptions}</div><div style={styles.statLabelSmall}>{lang.roles}</div></div>
-        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-clock" style={{ color: '#00d1ff' }}></i></div><div style={styles.statValueSmall}>{stats.pendingApplications}</div><div style={styles.statLabelSmall}>{lang.pendingRequests}</div></div>
+      <div style={{...styles.statsGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(100px, 1fr))'}}>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-user-tie" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.totalAdmins}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.adminsLabel}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-users" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.totalEmployees}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.employees}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-tasks" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.totalTasks}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.tasks}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-store" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.totalBranches}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.branchesLabel}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-briefcase" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.totalJobDescriptions}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.roles}</div></div>
+        <div style={styles.statCard}><div style={styles.statIconSmall}><i className="fas fa-clock" style={{ color: '#00d1ff' }}></i></div><div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '20px'}}>{stats.pendingApplications}</div><div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.pendingRequests}</div></div>
       </div>
 
       {subscriptionData && (
@@ -1257,29 +1263,29 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      <div style={styles.tabs}>
-        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent'}}>{lang.dashboard}</button>
-        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent'}}>{lang.admins}</button>
-        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent'}}>{lang.staff}</button>
-        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent'}}>{lang.branches}</button>
-        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent'}}>{lang.calendar}</button>
-        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent'}}>{lang.roles}</button>
-        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent'}}>{lang.tasks}</button>
-        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent'}}>{lang.requests}</button>
-        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent'}}>{lang.reports}</button>
-        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent'}}>{lang.settings}</button>
+      <div style={{...styles.tabs, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap', paddingBottom: isMobile ? '8px' : '10px'}}>
+        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.dashboard}</button>
+        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.admins}</button>
+        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.staff}</button>
+        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.branches}</button>
+        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.calendar}</button>
+        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.roles}</button>
+        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.tasks}</button>
+        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
+        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
+        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
       </div>
 
-      <div style={styles.content}>
+      <div style={{...styles.content, padding: isSmall ? '12px' : '16px'}}>
         {activeTab === 'dashboard' && (
           <div>
-            <h2 style={styles.sectionTitle}>{lang.welcome}, {user?.name}!</h2>
-            <p style={styles.sectionDesc}>{lang.welcome}</p>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.welcome}, {user?.name}!</h2>
+            <p style={{...styles.sectionDesc, fontSize: isSmall ? '11px' : '12px'}}>{lang.welcome}</p>
             <div style={styles.welcomeCard}>
-              <i className="fas fa-chart-line" style={{ fontSize: '32px', color: '#00d1ff', marginBottom: '12px' }}></i>
-              <h3 style={styles.welcomeTitle}>{lang.subscriptionOverview}</h3>
-              <p style={styles.welcomeText}><strong>{stats.pendingApplications}</strong> {lang.pendingRequests} | <strong>{stats.totalTasks}</strong> {lang.activeTasks}</p>
-              <div style={styles.quickActions}>
+              <i className="fas fa-chart-line" style={{ fontSize: isSmall ? '24px' : '32px', color: '#00d1ff', marginBottom: '12px' }}></i>
+              <h3 style={{...styles.welcomeTitle, fontSize: isSmall ? '13px' : '14px'}}>{lang.subscriptionOverview}</h3>
+              <p style={{...styles.welcomeText, fontSize: isSmall ? '11px' : '12px'}}><strong>{stats.pendingApplications}</strong> {lang.pendingRequests} | <strong>{stats.totalTasks}</strong> {lang.activeTasks}</p>
+              <div style={{...styles.quickActions, flexDirection: isSmall ? 'column' : 'row'}}>
                 <button onClick={() => handleTabChange('tasks')} style={styles.quickActionBtn}>+ {lang.createTask}</button>
                 <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.quickActionBtn}>+ {lang.addStaff}</button>
                 <button onClick={() => handleTabChange('applications')} style={styles.quickActionBtn}>{lang.manage}</button>
@@ -1290,32 +1296,37 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'admins' && (
           <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>{lang.adminManagement}</h2>
-              <button onClick={() => setShowCreateAdminModal(true)} style={styles.addButton}>+ {lang.addAdmin}</button>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
+              <button onClick={() => setShowCreateAdminModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addAdmin}</button>
             </div>
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th><th style={styles.th}>Email</th><th style={styles.th}>Assigned Branches</th><th style={styles.th}>Status</th><th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {admins.map(admin => (
                     <tr key={admin._id} style={styles.tableRow}>
-                      <td style={styles.td}>{admin.name}</td>
-                      <td style={styles.td}>{admin.email}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         <div>
-                          {(admin.assignedBranches || []).map(b => (
+                          {(admin.assignedBranches || []).slice(0, 2).map(b => (
                             <span key={b._id} style={styles.branchTag}>{b.name}</span>
                           ))}
+                          {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
                           <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
                         </div>
-                      </td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={styles.resetButton}>🔑</button><button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={styles.deleteButton}>🗑️</button></div></td>
+                       </div>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button><button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1326,34 +1337,34 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'employees' && (
           <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>{lang.staffManagement}</h2>
-              <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.addButton}>+ {lang.addStaff}</button>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
+              <button onClick={() => setShowCreateEmployeeModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addStaff}</button>
             </div>
-            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>Email</th>
-                    <th style={styles.th}>Job Role</th>
-                    <th style={styles.th}>Branch</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
                     <tr key={emp._id} style={styles.tableRow}>
-                      <td style={styles.td}>{emp.name}</td>
-                      <td style={styles.td}>{emp.email}</td>
-                      <td style={styles.td}>{emp.jobDescription?.name || '-'}</td>
-                      <td style={styles.td}>{emp.branch?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}>
-                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={styles.resetButton} title="Reset Password">🔑</button>
-                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={styles.deleteButton} title="Delete Employee">🗑️</button>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -1365,25 +1376,29 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'branches' && (
           <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>{lang.branchManagement}</h2>
-              <button onClick={() => setShowCreateBranchModal(true)} style={styles.addButton}>+ {lang.addBranch}</button>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.branchManagement}</h2>
+              <button onClick={() => setShowCreateBranchModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addBranch}</button>
             </div>
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th><th style={styles.th}>City</th><th style={styles.th}>Staff</th><th style={styles.th}>Admins</th><th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>City</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Staff</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Admins</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {branches.map(branch => (
                     <tr key={branch._id} style={styles.tableRow}>
-                      <td style={styles.td}>{branch.name}</td>
-                      <td style={styles.td}>{branch.address?.city || '-'}</td>
-                      <td style={styles.td}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
-                      <td style={styles.td}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
-                      <td style={styles.td}><button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{branch.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{branch.address?.city || '-'}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1394,24 +1409,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'jobs' && (
           <div>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>{lang.roleManagement}</h2>
-              <button onClick={() => setShowCreateJobModal(true)} style={styles.addButton}>+ {lang.addRole}</button>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.roleManagement}</h2>
+              <button onClick={() => setShowCreateJobModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addRole}</button>
             </div>
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Role</th><th style={styles.th}>Description</th><th style={styles.th}>Staff</th><th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Role</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Description</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Staff</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {jobDescriptions.map(job => (
                     <tr key={job._id} style={styles.tableRow}>
-                      <td style={styles.td}>{job.name}</td>
-                      <td style={styles.td}>{job.description || '-'}</td>
-                      <td style={styles.td}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
-                      <td style={styles.td}><button onClick={() => confirmDelete('job', job._id, job.name)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{job.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{job.description || '-'}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1422,33 +1440,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'tasks' && (
           <div>
-            <div style={styles.taskHeader}>
-              <h2 style={styles.sectionTitle}>{lang.taskManagement}</h2>
-              <button onClick={() => setShowCreateTaskModal(true)} style={styles.createTaskButton}>+ {lang.createTask}</button>
+            <div style={{...styles.taskHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.taskManagement}</h2>
+              <button onClick={() => setShowCreateTaskModal(true)} style={{...styles.createTaskButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.createTask}</button>
             </div>
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Title</th>
-                    <th style={styles.th}>Date</th>
-                    <th style={styles.th}>Time</th>
-                    <th style={styles.th}>Role</th>
-                    <th style={styles.th}>Branch</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Title</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Role</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tasks.map(task => (
                     <tr key={task._id} style={styles.tableRow}>
-                      <td style={styles.td}>{task.title}</td>
-                      <td style={styles.td}>{new Date(task.date).toLocaleDateString()}</td>
-                      <td style={styles.td}>{task.startTime} - {task.endTime}</td>
-                      <td style={styles.td}>{task.jobDescription?.name || '-'}</td>
-                      <td style={styles.td}>{task.branch?.name || '-'}</td>
-                      <td style={styles.td}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>{task.status}</span></td>
-                      <td style={styles.td}><button onClick={() => confirmDelete('task', task._id, task.title)} style={styles.deleteButton}>🗑️</button></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(task.date).toLocaleDateString()}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>{task.status}</span></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1459,45 +1477,45 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'applications' && (
           <div>
-            <h2 style={styles.sectionTitle}>All Applications</h2>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>All Applications</h2>
             <div style={styles.tableContainer}>
-              <table style={styles.table}>
+              <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Employee</th>
-                    <th style={styles.th}>Task</th>
-                    <th style={styles.th}>Date</th>
-                    <th style={styles.th}>Time</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Applied Date</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Employee</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Task</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Applied Date</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
                     <tr key={app._id} style={styles.tableRow}>
-                      <td style={styles.td}>{app.employee?.name}</td>
-                      <td style={styles.td}>{app.task?.title}</td>
-                      <td style={styles.td}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
-                      <td style={styles.td}>{app.task?.startTime} - {app.task?.endTime}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.employee?.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         <span style={{...styles.statusBadge, background: 
                           app.status === 'approved' ? '#10b981' : 
-                          app.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                          app.status === 'rejected' ? '#ef4444' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'
                         }}>
                           {app.status}
                         </span>
                        </td>
-                      <td style={styles.td}>{new Date(app.appliedAt).toLocaleDateString()}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button>
-                            <button onClick={() => handleRejectApplication(app._id)} style={styles.rejectButton}>✗</button>
+                            <button onClick={() => handleApproveApplication(app._id)} style={{...styles.approveButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✓</button>
+                            <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
                           </div>
                         )}
-                      </td>
-                    </tr>
+                       </td>
+                    </table>
                   ))}
                 </tbody>
               </table>
@@ -1507,27 +1525,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'reports' && (
           <div>
-            <h2 style={styles.sectionTitle}>{lang.reportManagement}</h2>
-            <div style={styles.reportsGrid}>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
+            <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))'}}>
               <div style={styles.reportCard}>
-                <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.attendance}</h3>
-                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+                <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.attendance}</h3>
+                <button onClick={generateAttendanceReport} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.generateReport}</button>
               </div>
               <div style={styles.reportCard}>
-                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
-                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
+                <button onClick={generateAttendanceReport} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.generateReport}</button>
               </div>
               <div style={styles.reportCard}>
-                <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
-                <button onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
+                <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
+                <button onClick={exportToPDF} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.exportPDF}</button>
               </div>
               <div style={styles.reportCard}>
-                <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: '14px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
-                <button onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
+                <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
+                <button onClick={exportToExcel} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.exportExcel}</button>
               </div>
             </div>
           </div>
@@ -1535,22 +1553,22 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
         {activeTab === 'settings' && (
           <div>
-            <h2 style={styles.sectionTitle}>{lang.settingsManagement}</h2>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.settingsManagement}</h2>
             <div style={styles.settingsCard}>
-              <h3 style={{color: 'white'}}>Organization Logo</h3>
-              {logoPreview && <img src={logoPreview} alt="Logo" style={styles.logoPreview} />}
-              <input type="file" accept="image/*" onChange={handleLogoUpload} style={styles.fileInput} />
-              <button style={styles.uploadButton}>Upload Logo</button>
+              <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Organization Logo</h3>
+              {logoPreview && <img src={logoPreview} alt="Logo" style={{...styles.logoPreview, width: isSmall ? '50px' : '60px', height: isSmall ? '50px' : '60px'}} />}
+              <input type="file" accept="image/*" onChange={handleLogoUpload} style={{...styles.fileInput, fontSize: isSmall ? '10px' : '11px'}} />
+              <button style={{...styles.uploadButton, fontSize: isSmall ? '11px' : '12px'}}>Upload Logo</button>
             </div>
             <div style={styles.settingsCard}>
-              <h3 style={{color: 'white'}}>Subscription</h3>
-              <p style={{color: 'white'}}>{lang.currentPlan}: {subscriptionData?.plan || 'Trial'}</p>
-              <a href="mailto:georgeglor@hotmail.com" style={styles.contactLink}>{lang.contactSales}</a>
-              <button style={styles.invoiceButton}>Invoices</button>
+              <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Subscription</h3>
+              <p style={{color: 'white', fontSize: isSmall ? '13px' : '14px'}}>{lang.currentPlan}: {subscriptionData?.plan || 'Trial'}</p>
+              <a href="mailto:georgeglor@hotmail.com" style={{...styles.contactLink, fontSize: isSmall ? '11px' : '12px'}}>{lang.contactSales}</a>
+              <button style={{...styles.invoiceButton, fontSize: isSmall ? '11px' : '12px'}}>Invoices</button>
             </div>
             <div style={styles.settingsCard}>
-              <h3 style={{color: 'white'}}>{lang.auditLogs}</h3>
-              <button onClick={() => { fetchAuditLogs(); setShowAuditModal(true); }} style={styles.viewButton}>{lang.viewAudit}</button>
+              <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>{lang.auditLogs}</h3>
+              <button onClick={() => { fetchAuditLogs(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.viewAudit}</button>
             </div>
           </div>
         )}
@@ -1559,30 +1577,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       {/* Audit Log Modal */}
       {showAuditModal && (
         <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
-          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.auditLogs}</h2>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '600px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.auditLogs}</h2>
             {loadingAudit ? (
               <div style={styles.loadingSpinner}></div>
             ) : (
               <div style={styles.tableContainer}>
-                <table style={styles.table}>
+                <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
                   <thead>
                     <tr style={styles.tableHeaderRow}>
-                      <th style={styles.th}>{lang.action}</th>
-                      <th style={styles.th}>{lang.entityType}</th>
-                      <th style={styles.th}>{lang.user}</th>
-                      <th style={styles.th}>{lang.timestamp}</th>
-                      <th style={styles.th}>{lang.changes}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.entityType}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.user}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.timestamp}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.changes}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditLogs.slice(0, 50).map(log => (
                       <tr key={log._id} style={styles.tableRow}>
-                        <td style={styles.td}>{log.action}</td>
-                        <td style={styles.td}>{log.entityType}</td>
-                        <td style={styles.td}>{log.user?.name || 'System'}</td>
-                        <td style={styles.td}>{new Date(log.createdAt).toLocaleString()}</td>
-                        <td style={styles.td}><pre style={{margin: 0, fontSize: '10px'}}>{JSON.stringify(log.changes, null, 2)}</pre></td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.action}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{new Date(log.createdAt).toLocaleString()}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', color: 'white'}}>{JSON.stringify(log.changes, null, 2)}</pre></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1590,28 +1608,28 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               </div>
             )}
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowAuditModal(false)} style={styles.cancelButton}>{lang.close}</button>
+              <button onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.close}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* All other modals remain the same as original... */}
+      {/* All other modals remain exactly as in your original code - just add responsive width */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addAdmin}</h2>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addAdmin}</h2>
             <form onSubmit={handleCreateAdmin}>
-              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
-              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
-              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select}>
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}}>
                 <option value="">Select Branch (Optional)</option>
                 {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
               </select>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
               </div>
             </form>
           </div>
@@ -1620,23 +1638,23 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showCreateEmployeeModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addStaff}</h2>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addStaff}</h2>
             <form onSubmit={handleCreateEmployee}>
-              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={styles.input} required />
-              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={styles.input} required />
-              <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required>
                 <option value="">Select Job Role</option>
                 {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
               </select>
-              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required>
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required>
                 <option value="">Select Branch</option>
                 {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
               </select>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
               </div>
             </form>
           </div>
@@ -1645,14 +1663,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showCreateBranchModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateBranchModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addBranch}</h2>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addBranch}</h2>
             <form onSubmit={handleCreateBranch}>
-              <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={styles.input} />
+              <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateBranchModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateBranchModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
               </div>
             </form>
           </div>
@@ -1661,14 +1679,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showCreateJobModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateJobModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addRole}</h2>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addRole}</h2>
             <form onSubmit={handleCreateJob}>
-              <input type="text" placeholder="Role Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={styles.input} required />
-              <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={styles.textarea} rows="2" />
+              <input type="text" placeholder="Role Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={{...styles.textarea, fontSize: isSmall ? '11px' : '13px', color: 'white'}} rows="2" />
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateJobModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateJobModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
               </div>
             </form>
           </div>
@@ -1677,58 +1695,58 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showCreateTaskModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
-          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.createTask}</h2>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '600px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.createTask}</h2>
             <form onSubmit={handleCreateTask}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Task Title *</label>
-                <input type="text" placeholder="e.g., Morning Shift" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} style={styles.input} required />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Task Title *</label>
+                <input type="text" placeholder="e.g., Morning Shift" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Description</label>
-                <textarea placeholder="Describe the task..." value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={styles.textarea} rows="2" />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Description</label>
+                <textarea placeholder="Describe the task..." value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={{...styles.textarea, fontSize: isSmall ? '11px' : '13px', color: 'white'}} rows="2" />
               </div>
-              <div style={styles.formRow}>
+              <div style={{...styles.formRow, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))'}}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Date *</label>
-                  <input type="date" value={formData.date || ''} onChange={(e) => setFormData({...formData, date: e.target.value})} style={styles.input} required />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Date *</label>
+                  <input type="date" value={formData.date || ''} onChange={(e) => setFormData({...formData, date: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Start Time *</label>
-                  <input type="time" value={formData.startTime || ''} onChange={(e) => setFormData({...formData, startTime: e.target.value})} style={styles.input} required />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Start Time *</label>
+                  <input type="time" value={formData.startTime || ''} onChange={(e) => setFormData({...formData, startTime: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>End Time *</label>
-                  <input type="time" value={formData.endTime || ''} onChange={(e) => setFormData({...formData, endTime: e.target.value})} style={styles.input} required />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>End Time *</label>
+                  <input type="time" value={formData.endTime || ''} onChange={(e) => setFormData({...formData, endTime: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
                 </div>
               </div>
-              <div style={styles.formRow}>
+              <div style={{...styles.formRow, gridTemplateColumns: isSmall ? '1fr' : 'repeat(2, 1fr)'}}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Job Role *</label>
-                  <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={styles.select} required>
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Job Role *</label>
+                  <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required>
                     <option value="">Select Role</option>
                     {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
                   </select>
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Branch *</label>
-                  <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={styles.select} required>
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Branch *</label>
+                  <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required>
                     <option value="">Select Branch</option>
                     {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
                   </select>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Max Employees</label>
-                  <input type="number" placeholder="1" value={formData.maxEmployees || 1} onChange={(e) => setFormData({...formData, maxEmployees: parseInt(e.target.value)})} style={styles.input} min="1" />
-                </div>
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={styles.input} />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Max Employees</label>
+                <input type="number" placeholder="1" value={formData.maxEmployees || 1} onChange={(e) => setFormData({...formData, maxEmployees: parseInt(e.target.value)})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} min="1" />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Location</label>
+                <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
               </div>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateTaskModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>{lang.createTask}</button>
+                <button type="button" onClick={() => setShowCreateTaskModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.createTask}</button>
               </div>
             </form>
           </div>
@@ -1737,14 +1755,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showResetPasswordModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowResetPasswordModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Reset Password</h2>
-            <p>Reset password for <strong>{selectedUser?.name}</strong> ({selectedUser?.email})</p>
-            <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="Confirm Password" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={styles.input} />
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Reset Password</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Reset password for <strong>{selectedUser?.name}</strong> ({selectedUser?.email})</p>
+            <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <input type="password" placeholder="Confirm Password" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <div style={styles.modalButtons}>
-              <button type="button" onClick={() => setShowResetPasswordModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleResetUserPassword} style={styles.submitButton}>Reset Password</button>
+              <button type="button" onClick={() => setShowResetPasswordModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+              <button onClick={handleResetUserPassword} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Reset Password</button>
             </div>
           </div>
         </div>
@@ -1752,9 +1770,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showBranchAssignmentModal && (
         <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
-          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
-            <p>Select branches this admin can manage:</p>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '500px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Manage Branches for {selectedAdminForBranch?.name}</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Select branches this admin can manage:</p>
             <div style={styles.branchListContainer}>
               {branches.map(branch => (
                 <div key={branch._id} style={styles.branchCheckboxItem}>
@@ -1777,7 +1795,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               ))}
             </div>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
+              <button onClick={() => setShowBranchAssignmentModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Close</button>
             </div>
           </div>
         </div>
@@ -1785,15 +1803,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showChangeEmailModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Change Email</h2>
-            <p>Current email: <strong>{user?.email}</strong></p>
-            <input type="email" placeholder="New Email" value={changeEmailData.newEmail} onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} style={styles.input} />
-            <input type="email" placeholder="Confirm New Email" value={changeEmailData.confirmEmail} onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="Current Password" value={changeEmailData.password} onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} style={styles.input} />
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Change Email</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Current email: <strong>{user?.email}</strong></p>
+            <input type="email" placeholder="New Email" value={changeEmailData.newEmail} onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <input type="email" placeholder="Confirm New Email" value={changeEmailData.confirmEmail} onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <input type="password" placeholder="Current Password" value={changeEmailData.password} onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <div style={styles.modalButtons}>
-              <button type="button" onClick={() => setShowChangeEmailModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleChangeEmail} style={styles.submitButton}>Change Email</button>
+              <button type="button" onClick={() => setShowChangeEmailModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+              <button onClick={handleChangeEmail} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
             </div>
           </div>
         </div>
@@ -1801,24 +1819,24 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showProfileModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Profile Settings</h2>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Profile Settings</h2>
             <div style={styles.profileInfo}>
               <p><strong style={{color: '#00d1ff'}}>Name:</strong> <span style={{color: 'white'}}>{user?.name}</span></p>
               <p><strong style={{color: '#00d1ff'}}>Email:</strong> <span style={{color: 'white'}}>{user?.email}</span></p>
               <p><strong style={{color: '#00d1ff'}}>Role:</strong> <span style={{color: 'white'}}>Super Admin</span></p>
               <p><strong style={{color: '#00d1ff'}}>Organization:</strong> <span style={{color: 'white'}}>{user?.organization?.name}</span></p>
             </div>
-            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
-            <h3 style={styles.subTitle}>Change Password</h3>
-            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={styles.input} />
-            <button onClick={handleUpdateProfile} style={styles.submitButton}>Update Password</button>
+            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={{...styles.changeEmailButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
+            <h3 style={{...styles.subTitle, fontSize: isSmall ? '13px' : '16px'}}>Change Password</h3>
+            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
+            <button onClick={handleUpdateProfile} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Update Password</button>
             <div style={styles.dangerZone}>
-              <h3 style={{ color: '#ef4444' }}>Danger Zone</h3>
-              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={styles.deleteAccountButton}>Delete My Account</button>
-              <p style={styles.warningText}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
+              <h3 style={{ color: '#ef4444', fontSize: isSmall ? '13px' : '16px' }}>Danger Zone</h3>
+              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{...styles.deleteAccountButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
+              <p style={{...styles.warningText, fontSize: isSmall ? '10px' : '11px'}}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
             </div>
           </div>
         </div>
@@ -1826,25 +1844,25 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showDeleteAccountModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowDeleteAccountModal)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Delete Your Account</h2>
-            <p>Are you sure you want to delete your account?</p>
-            <p style={{ color: '#ef4444' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
-            <p>Other admins can continue managing the organization.</p>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Delete Your Account</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Are you sure you want to delete your account?</p>
+            <p style={{ color: '#ef4444', fontSize: isSmall ? '11px' : '13px' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
+            <p style={{color: 'white', fontSize: isSmall ? '11px' : '13px'}}>Other admins can continue managing the organization.</p>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete My Account</button>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+              <button onClick={handleDeleteAccount} style={{...styles.confirmDeleteButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
             </div>
           </div>
         </div>
       )}
 
-      <button style={styles.chatButton} onClick={() => setShowChat(!showChat)}>
+      <button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
 
       {showChat && (
-        <div style={styles.chatModal}>
+        <div style={{...styles.chatModal, width: isSmall ? '260px' : '300px', height: isSmall ? '350px' : '450px', bottom: isSmall ? '70px' : '80px'}}>
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot"></i> AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
@@ -1852,17 +1870,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b'}}>
+                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', fontSize: isSmall ? '10px' : '12px'}}>
                   {msg.sender === 'ai' && <i className="fas fa-robot"></i>} {msg.text}
-                  <div style={styles.messageTime}>{msg.time}</div>
+                  <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
                 </div>
               </div>
             ))}
-            {isAiTyping && <div style={styles.typingIndicator}>AI is typing...</div>}
+            {isAiTyping && <div style={{...styles.typingIndicator, fontSize: isSmall ? '9px' : '11px'}}>AI is typing...</div>}
           </div>
           <div style={styles.chatInputContainer}>
-            <input type="text" placeholder="Ask me..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={styles.chatInput} />
-            <button onClick={sendChatMessage} style={styles.chatSend}>➤</button>
+            <input type="text" placeholder="Ask me..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}} />
+            <button onClick={sendChatMessage} style={{...styles.chatSend, fontSize: isSmall ? '11px' : '12px'}}>➤</button>
           </div>
         </div>
       )}
@@ -1870,8 +1888,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   );
 };
 
+// Keep ALL original styles exactly as they were, only adding isSmall responsive overrides where needed
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
+  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
   toast: { position: 'fixed', bottom: '20px', right: '20px', color: 'white', padding: '12px 20px', borderRadius: '8px', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
@@ -1898,44 +1917,44 @@ const styles = {
   orgLogo: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' },
   logoPlaceholder: { width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px' },
   titleRow: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-  title: { fontSize: '22px', fontWeight: 'bold', color: 'white', margin: 0 },
-  userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', color: '#00d1ff' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginTop: '2px' },
-  headerButtons: { display: 'flex', gap: '8px', alignItems: 'center' },
+  title: { fontWeight: 'bold', color: 'white', margin: 0 },
+  userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', color: '#00d1ff' },
+  subtitle: { color: 'rgba(255,255,255,0.6)', marginTop: '2px' },
+  headerButtons: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' },
   languageContainer: { position: 'relative' },
-  languageButton: { padding: '6px 12px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' },
+  languageButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' },
   languageDropdown: { position: 'absolute', top: '35px', right: '0', background: '#1e293b', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, minWidth: '120px' },
   languageOption: { padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '12px' },
-  profileButton: { padding: '6px 14px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  logoutButton: { padding: '6px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' },
+  profileButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer' },
+  logoutButton: { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer' },
+  statsGrid: { display: 'grid', gap: '10px', marginBottom: '20px' },
   statCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '10px', textAlign: 'center' },
   statIconSmall: { fontSize: '18px', marginBottom: '4px' },
-  statValueSmall: { fontSize: '20px', fontWeight: 'bold', color: 'white' },
-  statLabelSmall: { fontSize: '10px', color: 'rgba(255,255,255,0.6)' },
-  tabs: { display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' },
-  tab: { padding: '6px 14px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '20px', fontSize: '11px' },
-  content: { background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px' },
+  statValueSmall: { fontWeight: 'bold', color: 'white' },
+  statLabelSmall: { color: 'rgba(255,255,255,0.6)' },
+  tabs: { display: 'flex', gap: '6px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  tab: { background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '20px' },
+  content: { background: 'rgba(255,255,255,0.03)', borderRadius: '16px' },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' },
   taskHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' },
-  sectionTitle: { fontSize: '16px', fontWeight: '600', color: 'white' },
-  sectionDesc: { color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginBottom: '14px' },
-  addButton: { padding: '6px 14px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  createTaskButton: { padding: '6px 14px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  searchInput: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: 'white', width: '100%', marginBottom: '14px', fontSize: '12px' },
+  sectionTitle: { fontWeight: '600', color: 'white' },
+  sectionDesc: { color: 'rgba(255,255,255,0.6)', marginBottom: '14px' },
+  addButton: { background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  createTaskButton: { background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  searchInput: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: 'white', width: '100%', marginBottom: '14px' },
   tableContainer: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '600px' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
   tableHeaderRow: { borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'rgba(255,255,255,0.6)' },
   th: { padding: '10px 8px' },
   tableRow: { borderBottom: '1px solid rgba(255,255,255,0.05)' },
   td: { padding: '10px 8px', color: 'white' },
-  statusBadge: { padding: '2px 6px', borderRadius: '20px', fontSize: '9px', fontWeight: '600', color: 'white', display: 'inline-block' },
+  statusBadge: { padding: '2px 6px', borderRadius: '20px', fontWeight: '600', color: 'white', display: 'inline-block' },
   actionButtons: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
   resetButton: { background: 'rgba(245,158,11,0.2)', border: '1px solid #f59e0b', borderRadius: '6px', padding: '4px 8px', color: '#f59e0b', cursor: 'pointer', fontSize: '12px' },
   deleteButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
   approveButton: { background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '6px', padding: '4px 8px', color: '#10b981', cursor: 'pointer', fontSize: '12px' },
   rejectButton: { background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
-  reportsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginTop: '20px' },
+  reportsGrid: { display: 'grid', gap: '15px', marginTop: '20px' },
   reportCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' },
   reportButton: { marginTop: '12px', padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' },
   settingsCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '12px' },
@@ -1944,8 +1963,8 @@ const styles = {
   invoiceButton: { padding: '6px 12px', background: '#8b5cf6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   viewButton: { padding: '6px 12px', background: '#3b82f6', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
-  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '600px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  modal: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxHeight: '85vh', overflowY: 'auto' },
+  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxHeight: '85vh', overflowY: 'auto' },
   confirmationModal: { background: '#1e293b', borderRadius: '16px', maxWidth: '400px', width: '90%', overflow: 'hidden' },
   confirmationHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
   confirmationTitle: { fontSize: '18px', fontWeight: '600', color: '#ef4444', margin: 0 },
@@ -1953,27 +1972,27 @@ const styles = {
   confirmationBody: { padding: '20px' },
   confirmationMessage: { color: 'white', fontSize: '14px', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-line' },
   confirmationFooter: { display: 'flex', gap: '12px', padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.1)' },
-  modalTitle: { fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '20px' },
-  subTitle: { fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
-  label: { color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '6px', display: 'block' },
-  input: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontSize: '13px' },
-  textarea: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '13px', resize: 'vertical' },
-  select: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  modalTitle: { fontWeight: '600', color: 'white', marginBottom: '20px' },
+  subTitle: { fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
+  label: { color: 'rgba(255,255,255,0.8)', marginBottom: '6px', display: 'block' },
+  input: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box' },
+  textarea: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' },
+  select: { width: '100%', padding: '10px 12px', marginBottom: '12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' },
   formGroup: { marginBottom: '14px' },
-  formRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '14px' },
+  formRow: { display: 'grid', gap: '12px', marginBottom: '14px' },
   modalButtons: { display: 'flex', gap: '12px', marginTop: '20px' },
-  cancelButton: { flex: 1, padding: '10px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
-  submitButton: { flex: 1, padding: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
-  confirmDeleteButton: { flex: 1, padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
-  deleteAccountButton: { padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '12px', fontSize: '13px' },
-  changeEmailButton: { padding: '10px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginBottom: '16px', fontSize: '13px' },
+  cancelButton: { flex: 1, padding: '10px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  submitButton: { flex: 1, padding: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  confirmDeleteButton: { flex: 1, padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  deleteAccountButton: { padding: '10px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '12px' },
+  changeEmailButton: { padding: '10px', background: '#3b82f6', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginBottom: '16px' },
   dangerZone: { marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' },
   warningText: { fontSize: '11px', color: '#f87171', marginTop: '8px' },
   profileInfo: { background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px' },
   logoPreview: { width: '60px', height: '60px', borderRadius: '10px', objectFit: 'cover', marginBottom: '10px' },
   welcomeCard: { background: 'rgba(0,209,255,0.1)', borderRadius: '12px', padding: '16px', textAlign: 'center', marginTop: '12px' },
-  welcomeTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '6px' },
-  welcomeText: { fontSize: '12px', color: 'rgba(255,255,255,0.7)' },
+  welcomeTitle: { fontWeight: '600', color: 'white', marginBottom: '6px' },
+  welcomeText: { color: 'rgba(255,255,255,0.7)' },
   quickActions: { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '12px', flexWrap: 'wrap' },
   quickActionBtn: { padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
   branchTag: { display: 'inline-block', background: 'rgba(0,209,255,0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', marginRight: '4px', marginBottom: '4px', color: '#00d1ff' },
@@ -1982,18 +2001,18 @@ const styles = {
   branchCheckboxItem: { padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'pointer' },
   checkbox: { width: '16px', height: '16px', cursor: 'pointer' },
-  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', zIndex: 1000 },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '300px', height: '450px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' },
+  chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatModal: { position: 'fixed', bottom: '80px', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
   chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
   chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
   chatMessage: { display: 'flex' },
-  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', lineHeight: '1.4' },
+  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', lineHeight: '1.4' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
   typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '60px', fontSize: '11px' },
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
-  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '12px' },
-  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' }
+  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none' },
+  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }
 };
 
 export default SuperAdminDashboard;

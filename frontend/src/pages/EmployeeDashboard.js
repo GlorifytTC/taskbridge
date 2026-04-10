@@ -32,6 +32,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+  const [lastApprovedCount, setLastApprovedCount] = useState(0);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -66,8 +67,10 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       description: 'Description',
       confirmApplication: 'Confirm Application',
       cancel: 'Cancel',
-      shiftApproved: 'Shift Approved',
-      shiftApprovedMessage: 'You have been approved for this shift. Please arrive on time.',
+      shiftApproved: 'Shift Approved!',
+      shiftApprovedMessage: 'Your application for {taskTitle} has been approved!',
+      shiftRejected: 'Shift Rejected',
+      shiftRejectedMessage: 'Your application for {taskTitle} was rejected. Reason: {reason}',
       notesFromAdmin: 'Notes from Admin',
       profileSettings: 'Profile Settings',
       name: 'Name',
@@ -84,9 +87,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       deleteWarning: 'This will permanently delete your account and all your data.',
       notifications: 'Notifications',
       noNotifications: 'No new notifications',
-      newTasksAvailable: 'New Tasks Available',
-      applicationsPending: 'Applications Pending',
-      applyForShift: 'Apply for Shift',
+      newShiftApproved: 'New Shift Approved',
       language: 'Language',
       swedish: 'Svenska',
       english: 'English'
@@ -112,8 +113,10 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       description: 'Beskrivning',
       confirmApplication: 'Bekräfta Ansökan',
       cancel: 'Avbryt',
-      shiftApproved: 'Pass Godkänt',
-      shiftApprovedMessage: 'Du har blivit godkänd för detta pass. Var vänlig kom i tid.',
+      shiftApproved: 'Pass Godkänt!',
+      shiftApprovedMessage: 'Din ansökan för {taskTitle} har godkänts!',
+      shiftRejected: 'Pass Nekat',
+      shiftRejectedMessage: 'Din ansökan för {taskTitle} nekades. Anledning: {reason}',
       notesFromAdmin: 'Anteckningar från Admin',
       profileSettings: 'Profilinställningar',
       name: 'Namn',
@@ -130,9 +133,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       deleteWarning: 'Detta kommer att permanent radera ditt konto och all din data.',
       notifications: 'Notiser',
       noNotifications: 'Inga nya notiser',
-      newTasksAvailable: 'Nya Uppgifter Tillgängliga',
-      applicationsPending: 'Väntande Ansökningar',
-      applyForShift: 'Ansök om Pass',
+      newShiftApproved: 'Nytt Pass Godkänt',
       language: 'Språk',
       swedish: 'Svenska',
       english: 'Engelska'
@@ -165,7 +166,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     }, 10000);
     
     return () => clearInterval(interval);
-  }, [currentDate]);
+  }, []);
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
@@ -196,6 +197,32 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       return app;
     }));
     
+    // Check for NEW approved shifts (not previously approved)
+    const previousApprovedCount = lastApprovedCount;
+    const currentApprovedApps = appsWithTasks.filter(app => app.status === 'approved');
+    const currentApprovedCount = currentApprovedApps.length;
+    
+    // Only create notifications for NEW approved shifts
+    if (currentApprovedCount > previousApprovedCount && previousApprovedCount !== 0) {
+      const newApprovedApps = currentApprovedApps.filter(app => {
+        const wasNotApproved = !approvedShifts.some(prevApp => prevApp._id === app._id);
+        return wasNotApproved;
+      });
+      
+      const newNotifications = newApprovedApps.map(app => ({
+        id: `approved-${app._id}-${Date.now()}`,
+        title: lang.newShiftApproved,
+        message: lang.shiftApprovedMessage.replace('{taskTitle}', app.task?.title || 'Shift'),
+        time: new Date().toLocaleTimeString(),
+        read: false,
+        type: 'approved'
+      }));
+      
+      setNotifications(prev => [...newNotifications, ...prev]);
+      setNotificationCount(prev => prev + newNotifications.length);
+    }
+    
+    setLastApprovedCount(currentApprovedCount);
     setApplications(appsWithTasks);
     
     const appliedTaskIds = appsWithTasks.map(app => app.task?._id || app.task);
@@ -212,31 +239,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     
     const approved = appsWithTasks.filter(app => app.status === 'approved');
     setApprovedShifts(approved);
-    
-    const pending = appsWithTasks.filter(app => app.status === 'pending').length;
-    setNotificationCount(pending);
-    
-    const newNotifications = [];
-    const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
-    if (hasNewTasks) {
-      newNotifications.push({
-        id: 'new-tasks',
-        title: language === 'en' ? 'New Tasks Available' : 'Nya Uppgifter Tillgängliga',
-        message: `${available.length} ${language === 'en' ? 'new task' : 'ny uppgift'}${available.length > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'available for you' : 'tillgängliga för dig'}`,
-        time: new Date().toLocaleTimeString(),
-        read: false
-      });
-    }
-    if (pending > 0 && !localStorage.getItem('notified_pending')) {
-      newNotifications.push({
-        id: 'pending-apps',
-        title: language === 'en' ? 'Applications Pending' : 'Väntande Ansökningar',
-        message: `${language === 'en' ? 'You have' : 'Du har'} ${pending} ${language === 'en' ? 'application' : 'ansökan'}${pending > 1 ? (language === 'en' ? 's' : 'er') : ''} ${language === 'en' ? 'awaiting review' : 'som väntar på granskning'}`,
-        time: new Date().toLocaleTimeString(),
-        read: false
-      });
-    }
-    setNotifications(newNotifications);
     
   } catch (error) {
     console.error('Error fetching employee data:', error);
@@ -271,7 +273,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         setAvailableTasks(prev => prev.filter(task => task._id !== taskId));
         const newApplication = { task: taskId, status: 'pending' };
         setApplications(prev => [...prev, newApplication]);
-        setNotificationCount(prev => prev + 1);
         showMessage(language === 'en' ? 'Application submitted successfully!' : 'Ansökan skickades!', 'success');
         setShowApplyModal(false);
         fetchEmployeeData();
@@ -286,9 +287,13 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 
   const handleMarkNotificationAsRead = (notifId) => {
     setNotifications(prev => prev.filter(n => n.id !== notifId));
-    if (notifId === 'new-tasks') localStorage.setItem('notified_tasks', 'true');
-    if (notifId === 'pending-apps') localStorage.setItem('notified_pending', 'true');
     setNotificationCount(prev => Math.max(0, prev - 1));
+  };
+
+  const handleMarkAllNotificationsAsRead = () => {
+    setNotifications([]);
+    setNotificationCount(0);
+    setShowNotifications(false);
   };
 
   const handleUpdatePassword = async () => {
@@ -386,8 +391,8 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       }
       else if (input.includes('notification') || input.includes('notis')) {
         response = language === 'en'
-          ? "You get notifications when new jobs are available or when your application status changes. The bell icon shows how many unread notifications you have."
-          : "Du får notiser när nya jobb finns tillgängliga eller när din ansökningsstatus ändras. Klockikonen visar hur många olästa notiser du har.";
+          ? "You get notifications when your shifts are approved by admin. The bell icon shows how many unread notifications you have."
+          : "Du får notiser när dina pass godkänns av admin. Klockikonen visar hur många olästa notiser du har.";
       }
       else {
         response = language === 'en'
@@ -503,6 +508,12 @@ const EmployeeDashboard = ({ user, onLogout }) => {
             </button>
             {showNotifications && (
               <div style={{...styles.notificationDropdown, width: isSmall ? '260px' : '280px'}}>
+                <div style={styles.notificationHeader}>
+                  <span style={styles.notificationHeaderTitle}>{lang.notifications}</span>
+                  {notificationCount > 0 && (
+                    <button onClick={handleMarkAllNotificationsAsRead} style={styles.markAllReadButton}>Mark all read</button>
+                  )}
+                </div>
                 {notifications.length === 0 ? (
                   <div style={styles.noNotifications}>{lang.noNotifications}</div>
                 ) : (
@@ -544,7 +555,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
                 return total + hours;
               }
               return total;
-            }, 0)}
+            }, 0).toFixed(1)}
           </div>
           <div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.totalHours}</div>
         </div>
@@ -684,7 +695,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
               <div style={{...styles.statusIcon, fontSize: isSmall ? '20px' : '24px'}}>✅</div>
               <div>
                 <div style={{...styles.statusTitle, fontSize: isSmall ? '13px' : '14px'}}>{lang.shiftApproved}</div>
-                <div style={{...styles.statusText, fontSize: isSmall ? '10px' : '11px'}}>{lang.shiftApprovedMessage}</div>
+                <div style={{...styles.statusText, fontSize: isSmall ? '10px' : '11px'}}>{lang.shiftApprovedMessage.replace('{taskTitle}', selectedTask.title)}</div>
               </div>
             </div>
           </div>
@@ -784,6 +795,9 @@ const styles = {
   notificationButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', position: 'relative' },
   notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   notificationDropdown: { position: 'absolute', top: '40px', right: '0', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, maxHeight: '300px', overflowY: 'auto' },
+  notificationHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  notificationHeaderTitle: { fontSize: '13px', fontWeight: '600', color: '#00d1ff' },
+  markAllReadButton: { fontSize: '10px', background: 'none', border: 'none', color: '#00d1ff', cursor: 'pointer' },
   noNotifications: { padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' },
   notificationItem: { padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
   notificationTitle: { fontWeight: '600', color: '#00d1ff', marginBottom: '4px' },
