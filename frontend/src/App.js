@@ -62,8 +62,9 @@ function App() {
   };
 
   const handleNavigate = (page) => {
-    setCurrentPage(page);
-  };
+  console.log('Navigating to:', page);
+  setCurrentPage(page);
+};
 
   const handleLogin = (userData) => {
     setUser(userData);

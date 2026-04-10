@@ -141,12 +141,11 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         {!isMobile && (
           <>
             <div style={styles.navLinks}>
-              // In the navigation section, change:
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{content.nav.home}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); }} style={styles.navLink}>{content.nav.pricing}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={styles.navLink}>{content.nav.contact}</a>
-              </div>
+            </div>
             <div style={styles.navActions}>
               <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
               <button onClick={handleSignIn} style={styles.navButton}>{content.signIn}</button>
@@ -168,8 +167,8 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         <div style={styles.mobileMenu}>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.home}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
           <button onClick={handleSignIn} style={styles.mobileSignInButton}>{content.signIn}</button>
         </div>
       )}
@@ -420,39 +419,36 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 40px',
     maxWidth: '1400px',
     margin: '0 auto',
-    flexWrap: 'wrap',
-    gap: '16px',
+    flexWrap: 'nowrap',
+    gap: '12px',
   },
   logo: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
     textDecoration: 'none',
+    flexShrink: 0,
   },
   logoIcon: {
-    width: '40px',
-    height: '40px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
     fontWeight: 'bold',
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
+    flexShrink: 0,
   },
   logoText: {
-    fontSize: '24px',
     fontWeight: 'bold',
     background: 'linear-gradient(135deg, #fff, #00d1ff)',
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
+    whiteSpace: 'nowrap',
   },
   navLinks: {
     display: 'flex',
@@ -465,9 +461,6 @@ const styles = {
     fontWeight: '500',
     transition: 'color 0.3s ease',
     cursor: 'pointer',
-    '&:hover': {
-      color: '#00d1ff',
-    },
   },
   navActions: {
     display: 'flex',
@@ -495,11 +488,12 @@ const styles = {
   },
   mobileControls: {
     display: 'flex',
-    gap: '12px',
+    gap: '10px',
     alignItems: 'center',
+    flexShrink: 0,
   },
   langButtonMobile: {
-    padding: '8px 16px',
+    padding: '7px 13px',
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(255, 255, 255, 0.2)',
     borderRadius: '50px',
@@ -515,7 +509,7 @@ const styles = {
     color: 'white',
     fontSize: '18px',
     cursor: 'pointer',
-    padding: '8px 16px',
+    padding: '7px 14px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -557,14 +551,11 @@ const styles = {
     zIndex: 10,
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '60px 40px',
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '60px',
     alignItems: 'center',
   },
   heroContent: {
-    maxWidth: '600px',
+    width: '100%',
   },
   tag: {
     display: 'inline-flex',
@@ -589,7 +580,6 @@ const styles = {
     fontWeight: '500',
   },
   title: {
-    fontSize: '56px',
     fontWeight: '700',
     lineHeight: '1.2',
     marginBottom: '24px',
@@ -602,7 +592,6 @@ const styles = {
     color: 'transparent',
   },
   subtitle: {
-    fontSize: '18px',
     lineHeight: '1.6',
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: '32px',
@@ -611,9 +600,9 @@ const styles = {
     display: 'flex',
     gap: '16px',
     marginBottom: '48px',
+    flexWrap: 'wrap',
   },
   primaryButton: {
-    padding: '14px 32px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
     border: 'none',
     borderRadius: '50px',
@@ -623,7 +612,6 @@ const styles = {
     cursor: 'pointer',
   },
   secondaryButton: {
-    padding: '14px 32px',
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(255, 255, 255, 0.2)',
     borderRadius: '50px',
@@ -637,14 +625,11 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    overflow: 'visible',
   },
   calendar: {
     width: '100%',
-    maxWidth: '380px',
     background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
     borderRadius: '24px',
-    padding: '24px',
     border: '2px solid rgba(0, 209, 255, 0.3)',
     boxShadow: '0 0 30px rgba(0, 209, 255, 0.2)',
     position: 'relative',
@@ -658,7 +643,6 @@ const styles = {
     borderBottom: '1px solid rgba(0, 209, 255, 0.3)',
   },
   calendarMonth: {
-    fontSize: '22px',
     fontWeight: 'bold',
     background: 'linear-gradient(135deg, #fff, #00d1ff)',
     WebkitBackgroundClip: 'text',
@@ -668,25 +652,21 @@ const styles = {
   calendarWeekdays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '8px',
-    marginBottom: '12px',
+    gap: '4px',
+    marginBottom: '8px',
   },
   weekday: {
     textAlign: 'center',
-    fontSize: '13px',
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
-    padding: '8px 0',
   },
   calendarDays: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '8px',
+    gap: '4px',
   },
   calendarDay: {
     textAlign: 'center',
-    padding: '10px 0',
-    fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.9)',
     borderRadius: '8px',
     transition: 'all 0.2s ease',
@@ -718,10 +698,8 @@ const styles = {
     zIndex: 10,
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '80px 40px',
   },
   featuresTitle: {
-    fontSize: '36px',
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: '48px',
@@ -729,7 +707,7 @@ const styles = {
   },
   featuresGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
     gap: '24px',
   },
   featureCard: {
@@ -768,7 +746,6 @@ const styles = {
     background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%)',
     borderTop: '1px solid rgba(0, 209, 255, 0.2)',
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
-    padding: '60px 40px',
   },
   ownerContainer: {
     maxWidth: '1000px',
@@ -778,10 +755,7 @@ const styles = {
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(0, 209, 255, 0.25)',
     borderRadius: '28px',
-    padding: '40px',
     display: 'flex',
-    flexDirection: 'row',
-    gap: '50px',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
   },
@@ -797,14 +771,11 @@ const styles = {
   },
   glorifyLogoIcon: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    width: '80px',
-    height: '80px',
     borderRadius: '24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: '800',
-    fontSize: '44px',
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
@@ -823,7 +794,6 @@ const styles = {
     flex: 1,
   },
   ownerTitle: {
-    fontSize: '24px',
     fontWeight: '600',
     color: '#00d1ff',
     marginBottom: '20px',
@@ -844,17 +814,11 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.8)',
     textDecoration: 'none',
     transition: 'color 0.3s ease',
-    wordBreak: 'keep-all',
-    whiteSpace: 'nowrap',
-    '&:hover': {
-      color: '#00d1ff',
-    },
   },
   footer: {
     position: 'relative',
     zIndex: 10,
     background: '#0a0f1a',
-    padding: '30px 40px',
     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
   },
   footerContent: {
@@ -914,6 +878,12 @@ styleSheet.textContent = `
   }
   .contactLink:hover {
     color: #00d1ff;
+  }
+  .navLink:hover {
+    color: #00d1ff !important;
+  }
+  .mobileNavLink:hover {
+    color: #00d1ff !important;
   }
 
   /* Responsive navbar rules */
