@@ -5,11 +5,14 @@ const Landing = ({ onLoginClick, onNavigate }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [language, setLanguage] = useState('en');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-      if (window.innerWidth > 768) {
+      const w = window.innerWidth;
+      setScreenWidth(w);
+      setIsMobile(w <= 768);
+      if (w > 768) {
         setMobileMenuOpen(false);
       }
     };
@@ -105,6 +108,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
   };
 
   const content = t[language];
+  const isSmall = screenWidth <= 480;
 
   return (
     <div style={styles.container}>
@@ -116,11 +120,22 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       </div>
 
       {/* Navigation */}
-      <nav style={styles.navbar}>
+      <nav style={{
+        ...styles.navbar,
+        padding: isSmall ? '12px 14px' : isMobile ? '14px 18px' : '20px 40px',
+      }}>
         <div style={styles.logo}>
-          {/* FIX: added className for responsive CSS targeting */}
-          <div style={styles.logoIcon} className="tb-logo-icon"><span>T</span></div>
-          <span style={styles.logoText} className="tb-logo-text">TaskBridge</span>
+          <div style={{
+            ...styles.logoIcon,
+            width: isSmall ? '32px' : isMobile ? '36px' : '40px',
+            height: isSmall ? '32px' : isMobile ? '36px' : '40px',
+            fontSize: isSmall ? '17px' : isMobile ? '20px' : '24px',
+            borderRadius: isSmall ? '8px' : '12px',
+          }} className="tb-logo-icon"><span>T</span></div>
+          <span style={{
+            ...styles.logoText,
+            fontSize: isSmall ? '18px' : isMobile ? '21px' : '24px',
+          }} className="tb-logo-text">TaskBridge</span>
         </div>
         
         {!isMobile && (
@@ -159,25 +174,49 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       )}
 
       {/* Hero Section - Calendar now VISIBLE on mobile */}
-      <div style={styles.hero}>
+      <div style={{
+        ...styles.hero,
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        padding: isSmall ? '24px 16px' : isMobile ? '32px 20px' : '60px 40px',
+        gap: isSmall ? '28px' : isMobile ? '36px' : '60px',
+        textAlign: isMobile ? 'center' : 'left',
+      }}>
         <div style={styles.heroContent}>
           <div style={styles.tag}>
             <span style={styles.tagDot}></span>
             <span style={styles.tagText}>{content.tag}</span>
           </div>
-          <h1 style={styles.title}>
+          <h1 style={{
+            ...styles.title,
+            fontSize: isSmall ? '30px' : isMobile ? '36px' : '56px',
+          }}>
             {content.title.split(' ').map((word, i) => 
               word === 'Workforce' || word === 'Arbetsstyrka' ? 
                 <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
                 word + ' '
             )}
           </h1>
-          <p style={styles.subtitle}>{content.subtitle}</p>
-          <div style={styles.buttons}>
-            <button onClick={handleSignIn} style={styles.primaryButton}>
+          <p style={{
+            ...styles.subtitle,
+            fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px',
+          }}>{content.subtitle}</p>
+          <div style={{
+            ...styles.buttons,
+            flexDirection: isSmall ? 'column' : 'row',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+          }}>
+            <button onClick={handleSignIn} style={{
+              ...styles.primaryButton,
+              width: isSmall ? '100%' : 'auto',
+              padding: isSmall ? '12px 20px' : '14px 32px',
+            }}>
               {content.getStarted} <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
             </button>
-            <button style={styles.secondaryButton}>
+            <button style={{
+              ...styles.secondaryButton,
+              width: isSmall ? '100%' : 'auto',
+              padding: isSmall ? '12px 20px' : '14px 32px',
+            }}>
               {content.watchDemo} <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
             </button>
           </div>
@@ -185,16 +224,27 @@ const Landing = ({ onLoginClick, onNavigate }) => {
 
         {/* CALENDAR - FIXED: Always visible on mobile */}
         <div style={styles.calendarContainer}>
-          <div style={styles.calendar}>
+          <div style={{
+            ...styles.calendar,
+            maxWidth: isSmall ? '100%' : isMobile ? '340px' : '380px',
+            padding: isSmall ? '16px' : '24px',
+          }}>
             <div style={styles.calendarHeader}>
-              <div style={styles.calendarMonth}>{currentMonth} {currentYear}</div>
+              <div style={{
+                ...styles.calendarMonth,
+                fontSize: isSmall ? '16px' : '22px',
+              }}>{currentMonth} {currentYear}</div>
             </div>
             <div style={styles.calendarWeekdays}>
-              {content.weekdays.map(day => <div key={day} style={styles.weekday}>{day}</div>)}
+              {content.weekdays.map(day => <div key={day} style={{
+                ...styles.weekday,
+                fontSize: isSmall ? '10px' : '13px',
+                padding: isSmall ? '4px 0' : '8px 0',
+              }}>{day}</div>)}
             </div>
             <div style={styles.calendarDays}>
               {days.map((day, index) => (
-                <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {})}}>
+                <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {}), fontSize: isSmall ? '11px' : '14px', padding: isSmall ? '6px 0' : '10px 0'}}>
                   {day}
                 </div>
               ))}
@@ -205,8 +255,14 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       </div>
 
       {/* Features Section */}
-      <div style={styles.features}>
-        <h2 style={styles.featuresTitle}>
+      <div style={{
+        ...styles.features,
+        padding: isSmall ? '40px 16px' : isMobile ? '50px 20px' : '80px 40px',
+      }}>
+        <h2 style={{
+          ...styles.featuresTitle,
+          fontSize: isSmall ? '22px' : isMobile ? '26px' : '36px',
+        }}>
           {content.featuresTitle.split(' ').map((word, i) => 
             word === 'Modern' || word === 'Moderna' ? 
               <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : word + ' '
@@ -237,18 +293,38 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       </div>
 
       {/* Owner Section - FIXED: Text no longer cut off */}
-      <div style={styles.ownerSection}>
+      <div style={{
+        ...styles.ownerSection,
+        padding: isSmall ? '40px 16px' : isMobile ? '40px 20px' : '60px 40px',
+      }}>
         <div style={styles.ownerContainer}>
-          <div style={styles.ownerCard}>
+          <div style={{
+            ...styles.ownerCard,
+            flexDirection: isMobile ? 'column' : 'row',
+            textAlign: isMobile ? 'center' : 'left',
+            padding: isSmall ? '24px 16px' : isMobile ? '28px 20px' : '40px',
+            gap: isSmall ? '20px' : isMobile ? '24px' : '50px',
+          }}>
             <div style={styles.ownerLogo}>
               <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
-                <div style={styles.glorifyLogoIcon}><span>G</span></div>
+                <div style={{
+                  ...styles.glorifyLogoIcon,
+                  width: isSmall ? '64px' : '80px',
+                  height: isSmall ? '64px' : '80px',
+                  fontSize: isSmall ? '36px' : '44px',
+                }}><span>G</span></div>
                 <div style={styles.glorifyLogoText}>GlorifyTC</div>
               </a>
             </div>
-            <div style={styles.ownerInfo}>
-              <h3 style={styles.ownerTitle}>{content.ownerTitle}</h3>
-              <div style={styles.ownerDetails}>
+            <div style={{ ...styles.ownerInfo, width: isMobile ? '100%' : 'auto' }}>
+              <h3 style={{
+                ...styles.ownerTitle,
+                fontSize: isSmall ? '16px' : isMobile ? '18px' : '24px',
+              }}>{content.ownerTitle}</h3>
+              <div style={{
+                ...styles.ownerDetails,
+                alignItems: isMobile ? 'center' : 'flex-start',
+              }}>
                 <div style={styles.contactItem}>
                   <i className="fas fa-envelope"></i>
                   <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
@@ -264,7 +340,10 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       </div>
 
       {/* Footer */}
-      <footer style={styles.footer}>
+      <footer style={{
+        ...styles.footer,
+        padding: isSmall ? '20px 16px' : '30px 40px',
+      }}>
         <div style={styles.footerContent}>
           <p>&copy; 2026 TaskBridge. {content.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
         </div>
@@ -334,7 +413,6 @@ const styles = {
     backgroundSize: '50px 50px',
     zIndex: 0,
   },
-  // FIX: removed dead @media keys — moved to styleSheet below
   navbar: {
     position: 'relative',
     zIndex: 20,
@@ -353,7 +431,6 @@ const styles = {
     gap: '12px',
     textDecoration: 'none',
   },
-  // FIX: removed dead @media keys — tb-logo-icon class handles responsive sizing
   logoIcon: {
     width: '40px',
     height: '40px',
@@ -368,7 +445,6 @@ const styles = {
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
   },
-  // FIX: removed dead @media keys — tb-logo-text class handles responsive sizing
   logoText: {
     fontSize: '24px',
     fontWeight: 'bold',
@@ -485,22 +561,9 @@ const styles = {
     gridTemplateColumns: '1fr 1fr',
     gap: '60px',
     alignItems: 'center',
-    '@media (max-width: 1024px)': {
-      gridTemplateColumns: '1fr',
-      textAlign: 'center',
-      padding: '40px 24px',
-      gap: '40px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '30px 16px',
-      gap: '30px',
-    },
   },
   heroContent: {
     maxWidth: '600px',
-    '@media (max-width: 1024px)': {
-      maxWidth: '100%',
-    },
   },
   tag: {
     display: 'inline-flex',
@@ -530,15 +593,6 @@ const styles = {
     lineHeight: '1.2',
     marginBottom: '24px',
     color: 'white',
-    '@media (max-width: 1024px)': {
-      fontSize: '42px',
-    },
-    '@media (max-width: 768px)': {
-      fontSize: '36px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '28px',
-    },
   },
   titleGradient: {
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
@@ -551,25 +605,11 @@ const styles = {
     lineHeight: '1.6',
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: '32px',
-    '@media (max-width: 768px)': {
-      fontSize: '16px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '14px',
-    },
   },
   buttons: {
     display: 'flex',
     gap: '16px',
     marginBottom: '48px',
-    '@media (max-width: 1024px)': {
-      justifyContent: 'center',
-    },
-    '@media (max-width: 480px)': {
-      flexDirection: 'column',
-      gap: '10px',
-      marginBottom: '24px',
-    },
   },
   primaryButton: {
     padding: '14px 32px',
@@ -580,10 +620,6 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    '@media (max-width: 480px)': {
-      width: '100%',
-      padding: '12px 20px',
-    },
   },
   secondaryButton: {
     padding: '14px 32px',
@@ -594,10 +630,6 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    '@media (max-width: 480px)': {
-      width: '100%',
-      padding: '12px 20px',
-    },
   },
   calendarContainer: {
     display: 'flex',
@@ -617,15 +649,6 @@ const styles = {
     position: 'relative',
     backdropFilter: 'blur(10px)',
     animation: 'floatCalendar 6s ease-in-out infinite',
-    '@media (max-width: 768px)': {
-      maxWidth: '320px',
-      padding: '20px',
-    },
-    '@media (max-width: 480px)': {
-      maxWidth: '300px',
-      padding: '16px',
-      margin: '0 auto',
-    },
   },
   calendarHeader: {
     textAlign: 'center',
@@ -640,9 +663,6 @@ const styles = {
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     color: 'transparent',
-    '@media (max-width: 480px)': {
-      fontSize: '18px',
-    },
   },
   calendarWeekdays: {
     display: 'grid',
@@ -656,10 +676,6 @@ const styles = {
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
     padding: '8px 0',
-    '@media (max-width: 480px)': {
-      fontSize: '10px',
-      padding: '4px 0',
-    },
   },
   calendarDays: {
     display: 'grid',
@@ -674,10 +690,6 @@ const styles = {
     borderRadius: '8px',
     transition: 'all 0.2s ease',
     cursor: 'pointer',
-    '@media (max-width: 480px)': {
-      fontSize: '11px',
-      padding: '6px 0',
-    },
   },
   today: {
     background: 'rgba(0, 209, 255, 0.25)',
@@ -706,12 +718,6 @@ const styles = {
     maxWidth: '1400px',
     margin: '0 auto',
     padding: '80px 40px',
-    '@media (max-width: 1024px)': {
-      padding: '60px 24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '40px 16px',
-    },
   },
   featuresTitle: {
     fontSize: '36px',
@@ -719,12 +725,6 @@ const styles = {
     textAlign: 'center',
     marginBottom: '48px',
     color: 'white',
-    '@media (max-width: 768px)': {
-      fontSize: '28px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '24px',
-    },
   },
   featuresGrid: {
     display: 'grid',
@@ -737,9 +737,6 @@ const styles = {
     borderRadius: '24px',
     padding: '32px',
     textAlign: 'center',
-    '@media (max-width: 480px)': {
-      padding: '20px',
-    },
   },
   featureIcon: {
     width: '64px',
@@ -752,28 +749,17 @@ const styles = {
     margin: '0 auto 20px',
     fontSize: '28px',
     color: '#00d1ff',
-    '@media (max-width: 480px)': {
-      width: '50px',
-      height: '50px',
-      fontSize: '22px',
-    },
   },
   featureTitle: {
     fontSize: '20px',
     fontWeight: '600',
     marginBottom: '12px',
     color: 'white',
-    '@media (max-width: 480px)': {
-      fontSize: '16px',
-    },
   },
   featureDesc: {
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.6)',
     lineHeight: '1.6',
-    '@media (max-width: 480px)': {
-      fontSize: '13px',
-    },
   },
   ownerSection: {
     position: 'relative',
@@ -782,12 +768,6 @@ const styles = {
     borderTop: '1px solid rgba(0, 209, 255, 0.2)',
     borderBottom: '1px solid rgba(0, 209, 255, 0.2)',
     padding: '60px 40px',
-    '@media (max-width: 1024px)': {
-      padding: '50px 24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '40px 16px',
-    },
   },
   ownerContainer: {
     maxWidth: '1000px',
@@ -803,18 +783,6 @@ const styles = {
     gap: '50px',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
-    '@media (max-width: 768px)': {
-      flexDirection: 'column',
-      textAlign: 'center',
-      padding: '30px',
-      gap: '25px',
-    },
-    '@media (max-width: 480px)': {
-      flexDirection: 'column',
-      textAlign: 'center',
-      padding: '24px 16px',
-      gap: '20px',
-    },
   },
   ownerLogo: {
     flexShrink: 0,
@@ -839,12 +807,6 @@ const styles = {
     color: 'white',
     boxShadow: '0 0 25px rgba(0, 209, 255, 0.35)',
     animation: 'softGlow 3s ease-in-out infinite',
-    '@media (max-width: 480px)': {
-      width: '60px',
-      height: '60px',
-      fontSize: '32px',
-      borderRadius: '20px',
-    },
   },
   glorifyLogoText: {
     fontWeight: '800',
@@ -855,36 +817,20 @@ const styles = {
     backgroundClip: 'text',
     color: 'transparent',
     animation: 'shimmer 4s ease infinite',
-    '@media (max-width: 480px)': {
-      fontSize: '20px',
-    },
   },
   ownerInfo: {
     flex: 1,
-    '@media (max-width: 768px)': {
-      width: '100%',
-    },
   },
   ownerTitle: {
     fontSize: '24px',
     fontWeight: '600',
     color: '#00d1ff',
     marginBottom: '20px',
-    '@media (max-width: 768px)': {
-      fontSize: '20px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '16px',
-      marginBottom: '12px',
-    },
   },
   ownerDetails: {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    '@media (max-width: 768px)': {
-      alignItems: 'center',
-    },
   },
   contactItem: {
     display: 'flex',
@@ -892,12 +838,6 @@ const styles = {
     gap: '12px',
     fontSize: '15px',
     color: 'rgba(255, 255, 255, 0.8)',
-    '@media (max-width: 480px)': {
-      fontSize: '12px',
-      gap: '8px',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-    },
   },
   contactLink: {
     color: 'rgba(255, 255, 255, 0.8)',
@@ -905,10 +845,6 @@ const styles = {
     transition: 'color 0.3s ease',
     wordBreak: 'keep-all',
     whiteSpace: 'nowrap',
-    '@media (max-width: 480px)': {
-      whiteSpace: 'normal',
-      wordBreak: 'break-all',
-    },
     '&:hover': {
       color: '#00d1ff',
     },
@@ -919,12 +855,6 @@ const styles = {
     background: '#0a0f1a',
     padding: '30px 40px',
     borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-    '@media (max-width: 768px)': {
-      padding: '20px 24px',
-    },
-    '@media (max-width: 480px)': {
-      padding: '16px',
-    },
   },
   footerContent: {
     maxWidth: '1400px',
@@ -932,12 +862,6 @@ const styles = {
     textAlign: 'center',
     fontSize: '14px',
     color: 'rgba(255, 255, 255, 0.5)',
-    '@media (max-width: 768px)': {
-      fontSize: '12px',
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '10px',
-    },
   },
   glorifyHighlight: {
     color: '#00d1ff',
@@ -991,7 +915,7 @@ styleSheet.textContent = `
     color: #00d1ff;
   }
 
-  /* FIX: Responsive navbar rules that actually work in the browser */
+  /* Responsive navbar rules */
   @media (max-width: 768px) {
     nav { padding: 16px 20px !important; }
     .tb-logo-icon { width: 34px !important; height: 34px !important; font-size: 19px !important; }
