@@ -163,7 +163,8 @@ const Contact = ({ onNavigate, onLoginClick }) => {
                 <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{lang.nav.home}</a>
                 <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{lang.nav.about}</a>
                 <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); }} style={styles.navLink}>{lang.nav.pricing}</a>
-                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={{ ...styles.navLink, color: '#00d1ff' }}>{lang.nav.contact}</a>            </div>
+                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.contact}</a>
+           </div>
             <div style={styles.navActions}>
               <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
               <button onClick={() => onNavigate && onNavigate('login')} style={styles.navButton}>{lang.signIn}</button>

@@ -7,9 +7,6 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
-  const [selectedPlan, setSelectedPlan] = useState('pro');
-  const [selectedDuration, setSelectedDuration] = useState(1);
-  const [showContactModal, setShowContactModal] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -31,30 +28,14 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
-  const planPrices = {
-    trial: { price: 0, name: 'Trial', maxEmployees: 10, maxBranches: 2, maxEmails: 50, maxAdmins: 1, popular: false },
-    basic: { price: 399, name: 'Basic', maxEmployees: 25, maxBranches: 3, maxEmails: 200, maxAdmins: 2, popular: false },
-    standard: { price: 799, name: 'Standard', maxEmployees: 50, maxBranches: 5, maxEmails: 400, maxAdmins: 3, popular: false },
-    pro: { price: 1299, name: 'Pro', maxEmployees: 100, maxBranches: 8, maxEmails: 700, maxAdmins: 5, popular: true },
-    business: { price: 2499, name: 'Business', maxEmployees: 250, maxBranches: 15, maxEmails: 2000, maxAdmins: 10, popular: false },
-    enterprise: { price: 4999, name: 'Enterprise', maxEmployees: 500, maxBranches: 30, maxEmails: 5000, maxAdmins: 20, popular: false },
-    corporate: { price: 9999, name: 'Corporate', maxEmployees: 1000, maxBranches: 60, maxEmails: 12000, maxAdmins: 50, popular: false },
-    custom: { price: 0, name: 'Custom', maxEmployees: 'Unlimited', maxBranches: 'Unlimited', maxEmails: 'Unlimited', maxAdmins: 'Unlimited', popular: false }
-  };
-
-  const getPlanPrice = (plan, months) => {
-    const price = planPrices[plan]?.price || 0;
-    let total = price * months;
-    if (months >= 3) total = total * 0.95;
-    if (months >= 6) total = total * 0.9;
-    if (months >= 12) total = total * 0.85;
-    return Math.round(total);
-  };
-
-  const getMonthlyPrice = (plan, months) => {
-    const total = getPlanPrice(plan, months);
-    return Math.round(total / months);
-  };
+  const planPrices = [
+    { id: 'basic', name: 'Basic', price: 399, maxEmployees: 25, maxBranches: 3, maxEmails: 200, maxAdmins: 2 },
+    { id: 'standard', name: 'Standard', price: 799, maxEmployees: 50, maxBranches: 5, maxEmails: 400, maxAdmins: 3 },
+    { id: 'pro', name: 'Pro', price: 1299, maxEmployees: 100, maxBranches: 8, maxEmails: 700, maxAdmins: 5, popular: true },
+    { id: 'business', name: 'Business', price: 2499, maxEmployees: 250, maxBranches: 15, maxEmails: 2000, maxAdmins: 10 },
+    { id: 'enterprise', name: 'Enterprise', price: 4999, maxEmployees: 500, maxBranches: 30, maxEmails: 5000, maxAdmins: 20 },
+    { id: 'corporate', name: 'Corporate', price: 9999, maxEmployees: 1000, maxBranches: 60, maxEmails: 12000, maxAdmins: 50 }
+  ];
 
   const t = {
     en: {
@@ -62,102 +43,43 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
       signIn: 'Sign In',
       title: 'Simple, Transparent Pricing',
       subtitle: 'Choose the perfect plan for your organization. No hidden fees.',
-      monthly: 'Monthly',
-      yearly: 'Yearly',
-      saveUpTo: 'Save up to 15%',
       perMonth: '/month',
       getStarted: 'Get Started',
-      contactSales: 'Contact Sales',
-      features: 'Features',
+      plan: 'Plan',
+      price: 'Price (SEK)',
       employees: 'Employees',
       branches: 'Branches',
-      emailsPerMonth: 'Emails/month',
+      emails: 'Emails/month',
       admins: 'Admins',
-      support: 'Support',
-      emailSupport: 'Email Support',
-      prioritySupport: 'Priority Support',
-      dedicatedSupport: '24/7 Dedicated Support',
-      apiAccess: 'API Access',
-      customReports: 'Custom Reports',
-      faqTitle: 'Frequently Asked Questions',
-      faq1q: 'Can I change my plan later?',
-      faq1a: 'Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.',
-      faq2q: 'What payment methods do you accept?',
-      faq2a: 'We accept all major credit cards, invoice for annual plans, and bank transfers for enterprise customers.',
-      faq3q: 'Is there a setup fee?',
-      faq3a: 'No, there are no setup fees or hidden costs. You only pay the monthly subscription fee.',
-      faq4q: 'Can I cancel my subscription?',
-      faq4a: 'Yes, you can cancel anytime. No long-term contracts required.',
-      footer: 'All rights reserved. Developed by',
       mostPopular: 'MOST POPULAR',
-      customPlanTitle: 'Need a Custom Plan?',
-      customPlanDesc: 'Contact our sales team for a tailored solution that fits your specific needs.',
-      discount: 'Save {percentage}%',
-      discount3: '5',
-      discount6: '10',
-      discount12: '15'
+      footer: 'All rights reserved. Developed by',
+      contactSales: 'Contact Sales'
     },
     sv: {
       nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
       signIn: 'Logga in',
       title: 'Enkla, Transparenta Priser',
       subtitle: 'Välj den perfekta planen för din organisation. Inga dolda avgifter.',
-      monthly: 'Månadsvis',
-      yearly: 'Årsvis',
-      saveUpTo: 'Spara upp till 15%',
       perMonth: '/månad',
       getStarted: 'Kom igång',
-      contactSales: 'Kontakta oss',
-      features: 'Funktioner',
+      plan: 'Plan',
+      price: 'Pris (SEK)',
       employees: 'Anställda',
       branches: 'Filialer',
-      emailsPerMonth: 'E-post/månad',
+      emails: 'E-post/månad',
       admins: 'Administratörer',
-      support: 'Support',
-      emailSupport: 'E-post Support',
-      prioritySupport: 'Prioriterad Support',
-      dedicatedSupport: '24/7 Dedikerad Support',
-      apiAccess: 'API-åtkomst',
-      customReports: 'Anpassade Rapporter',
-      faqTitle: 'Vanliga Frågor',
-      faq1q: 'Kan jag ändra min plan senare?',
-      faq1a: 'Ja, du kan uppgradera eller nedgradera din plan när som helst. Ändringar syns i nästa faktureringsperiod.',
-      faq2q: 'Vilka betalningsmetoder accepterar ni?',
-      faq2a: 'Vi accepterar alla större kreditkort, faktura för årsplaner och banköverföringar för företagskunder.',
-      faq3q: 'Finns det en installationsavgift?',
-      faq3a: 'Nej, det finns inga installationsavgifter eller dolda kostnader. Du betalar bara månadsavgiften.',
-      faq4q: 'Kan jag avsluta min prenumeration?',
-      faq4a: 'Ja, du kan avsluta när som helst. Inga långtidskontrakt krävs.',
-      footer: 'Alla rättigheter förbehållna. Utvecklad av',
       mostPopular: 'MEST POPULÄR',
-      customPlanTitle: 'Behöver du en Anpassad Plan?',
-      customPlanDesc: 'Kontakta vårt säljteam för en skräddarsydd lösning som passar dina specifika behov.',
-      discount: 'Spara {percentage}%',
-      discount3: '5',
-      discount6: '10',
-      discount12: '15'
+      footer: 'Alla rättigheter förbehållna. Utvecklad av',
+      contactSales: 'Kontakta oss'
     }
   };
 
   const lang = t[language];
   const isSmall = screenWidth <= 480;
 
-  const handleGetStarted = (planName) => {
-    if (planName === 'custom') {
-      setShowContactModal(true);
-    } else {
-      if (onLoginClick) onLoginClick();
-    }
+  const handleGetStarted = () => {
+    if (onLoginClick) onLoginClick();
   };
-
-  const plans = [
-    { id: 'basic', ...planPrices.basic },
-    { id: 'standard', ...planPrices.standard },
-    { id: 'pro', ...planPrices.pro },
-    { id: 'business', ...planPrices.business },
-    { id: 'enterprise', ...planPrices.enterprise },
-    { id: 'corporate', ...planPrices.corporate }
-  ];
 
   return (
     <div style={styles.container}>
@@ -194,7 +116,7 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{lang.nav.home}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{lang.nav.about}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); }} style={{ ...styles.navLink, color: '#00d1ff' }}>{lang.nav.pricing}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{lang.nav.contact}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={styles.navLink}>{lang.nav.contact}</a>
             </div>
             <div style={styles.navActions}>
               <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
@@ -215,10 +137,11 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
 
       {isMobile && mobileMenuOpen && (
         <div style={styles.mobileMenu}>
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.home}</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.about}</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.pricing}</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.contact}</a>          <button onClick={() => { onNavigate && onNavigate('login'); setMobileMenuOpen(false); }} style={styles.mobileSignInButton}>{lang.signIn}</button>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.home}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.about}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); }} style={{ ...styles.mobileNavLink, color: '#00d1ff' }}>{lang.nav.pricing}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{lang.nav.contact}</a>
+          <button onClick={() => { onNavigate && onNavigate('login'); setMobileMenuOpen(false); }} style={styles.mobileSignInButton}>{lang.signIn}</button>
         </div>
       )}
 
@@ -234,90 +157,46 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
         </div>
       </div>
 
-      {/* Billing Toggle */}
-      <div style={styles.billingToggle}>
-        <button 
-          onClick={() => setSelectedDuration(1)} 
-          style={{ ...styles.toggleButton, background: selectedDuration === 1 ? '#00d1ff' : 'rgba(255,255,255,0.1)' }}
-        >
-          {lang.monthly}
-        </button>
-        <button 
-          onClick={() => setSelectedDuration(12)} 
-          style={{ ...styles.toggleButton, background: selectedDuration === 12 ? '#00d1ff' : 'rgba(255,255,255,0.1)' }}
-        >
-          {lang.yearly}
-          <span style={styles.saveBadge}>{lang.saveUpTo}</span>
-        </button>
-      </div>
-
-      {/* Pricing Cards */}
-      <div style={{ ...styles.pricingGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        {plans.map((plan) => {
-          const monthlyPrice = selectedDuration === 1 ? plan.price : getMonthlyPrice(plan.id, selectedDuration);
-          const hasDiscount = selectedDuration === 12 && plan.price > 0;
-          const discountPercent = selectedDuration === 12 ? 15 : 0;
-          
-          return (
-            <div key={plan.id} style={{ ...styles.pricingCard, ...(plan.popular ? styles.popularCard : {}) }}>
-              {plan.popular && <div style={styles.popularBadge}>{lang.mostPopular}</div>}
-              <h3 style={styles.planName}>{plan.name}</h3>
-              <div style={styles.price}>
-                {monthlyPrice === 0 ? 'Free' : `${monthlyPrice.toLocaleString()} SEK`}
-                {monthlyPrice > 0 && <span style={styles.pricePeriod}>{lang.perMonth}</span>}
-              </div>
-              {hasDiscount && (
-                <div style={styles.discountBadge}>
-                  {lang.discount.replace('{percentage}', discountPercent)}
-                </div>
-              )}
-              <div style={styles.featuresList}>
-                <div style={styles.feature}>
-                  <i className="fas fa-users"></i>
-                  <span>Up to {plan.maxEmployees.toLocaleString()} {lang.employees}</span>
-                </div>
-                <div style={styles.feature}>
-                  <i className="fas fa-code-branch"></i>
-                  <span>Up to {plan.maxBranches} {lang.branches}</span>
-                </div>
-                <div style={styles.feature}>
-                  <i className="fas fa-envelope"></i>
-                  <span>Up to {plan.maxEmails.toLocaleString()} {lang.emailsPerMonth}</span>
-                </div>
-                <div style={styles.feature}>
-                  <i className="fas fa-user-shield"></i>
-                  <span>Up to {plan.maxAdmins} {lang.admins}</span>
-                </div>
-                <div style={styles.feature}>
-                  <i className="fas fa-headset"></i>
-                  <span>
-                    {plan.id === 'corporate' ? lang.dedicatedSupport : 
-                     plan.id === 'enterprise' || plan.id === 'business' ? lang.prioritySupport : 
-                     lang.emailSupport}
-                  </span>
-                </div>
-                {(plan.id === 'enterprise' || plan.id === 'corporate') && (
-                  <div style={styles.feature}>
-                    <i className="fas fa-code"></i>
-                    <span>{lang.apiAccess}</span>
-                  </div>
-                )}
-                {plan.id === 'corporate' && (
-                  <div style={styles.feature}>
-                    <i className="fas fa-chart-pie"></i>
-                    <span>{lang.customReports}</span>
-                  </div>
-                )}
-              </div>
-              <button 
-                onClick={() => handleGetStarted(plan.id)} 
-                style={styles.getStartedButton}
-              >
-                {lang.getStarted}
-              </button>
-            </div>
-          );
-        })}
+      {/* Pricing Table */}
+      <div style={styles.tableContainer}>
+        <div style={{ ...styles.tableWrapper, overflowX: isMobile ? 'auto' : 'visible' }}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>{lang.plan}</th>
+                <th style={styles.th}>{lang.price}</th>
+                <th style={styles.th}>{lang.employees}</th>
+                <th style={styles.th}>{lang.branches}</th>
+                <th style={styles.th}>{lang.emails}</th>
+                <th style={styles.th}>{lang.admins}</th>
+                <th style={styles.th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {planPrices.map((plan) => (
+                <tr key={plan.id} style={{ ...styles.tableRow, ...(plan.popular ? styles.popularRow : {}) }}>
+                  <td style={styles.td}>
+                    <strong>{plan.name}</strong>
+                    {plan.popular && <span style={styles.popularBadge}>{lang.mostPopular}</span>}
+                  </td>
+                  <td style={styles.td}>
+                    <span style={styles.priceValue}>{plan.price.toLocaleString()} SEK</span>
+                    <span style={styles.pricePeriod}>{lang.perMonth}</span>
+                  </td>
+                  <td style={styles.td}>Up to {plan.maxEmployees.toLocaleString()}</td>
+                  <td style={styles.td}>Up to {plan.maxBranches}</td>
+                  <td style={styles.td}>Up to {plan.maxEmails.toLocaleString()}</td>
+                  <td style={styles.td}>Up to {plan.maxAdmins}</td>
+                  <td style={styles.td}>
+                    <button onClick={handleGetStarted} style={styles.tableButton}>
+                      {lang.getStarted}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Custom Plan Section */}
@@ -326,34 +205,11 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
           <div style={styles.customPlanIcon}>
             <i className="fas fa-gem"></i>
           </div>
-          <h2 style={styles.customPlanTitle}>{lang.customPlanTitle}</h2>
-          <p style={styles.customPlanDesc}>{lang.customPlanDesc}</p>
-          <button onClick={() => setShowContactModal(true)} style={styles.customPlanButton}>
+          <h2 style={styles.customPlanTitle}>Need a Custom Plan?</h2>
+          <p style={styles.customPlanDesc}>Contact our sales team for a tailored solution that fits your specific needs.</p>
+          <button onClick={() => onNavigate && onNavigate('contact')} style={styles.customPlanButton}>
             {lang.contactSales}
           </button>
-        </div>
-      </div>
-
-      {/* FAQ Section */}
-      <div style={styles.faqSection}>
-        <h2 style={styles.faqTitle}>{lang.faqTitle}</h2>
-        <div style={{ ...styles.faqGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)' }}>
-          <div style={styles.faqItem}>
-            <h4>{lang.faq1q}</h4>
-            <p>{lang.faq1a}</p>
-          </div>
-          <div style={styles.faqItem}>
-            <h4>{lang.faq2q}</h4>
-            <p>{lang.faq2a}</p>
-          </div>
-          <div style={styles.faqItem}>
-            <h4>{lang.faq3q}</h4>
-            <p>{lang.faq3a}</p>
-          </div>
-          <div style={styles.faqItem}>
-            <h4>{lang.faq4q}</h4>
-            <p>{lang.faq4a}</p>
-          </div>
         </div>
       </div>
 
@@ -363,27 +219,6 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
           <p>&copy; 2026 TaskBridge. {lang.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
         </div>
       </footer>
-
-      {/* Contact Modal */}
-      {showContactModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowContactModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.contactSales}</h2>
-            <p style={{ marginBottom: '20px', color: 'rgba(255,255,255,0.7)' }}>
-              Contact our sales team for a custom plan tailored to your needs.
-            </p>
-            <div style={styles.contactInfo}>
-              <p><i className="fas fa-envelope"></i> sales@taskbridge.com</p>
-              <p><i className="fas fa-phone"></i> +46 (0)8 123 456 78</p>
-            </div>
-            <div style={styles.modalButtons}>
-              <button onClick={() => setShowContactModal(false)} style={styles.cancelButton}>
-                {lang.close}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     </div>
@@ -587,124 +422,87 @@ const styles = {
   tagText: { fontSize: '14px', color: '#00d1ff', fontWeight: '500' },
   title: { fontWeight: '700', lineHeight: '1.2', marginBottom: '24px', color: 'white' },
   subtitle: { lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)' },
-  billingToggle: {
+  tableContainer: {
     position: 'relative',
     zIndex: 10,
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '16px',
-    marginBottom: '48px',
-  },
-  toggleButton: {
-    padding: '12px 32px',
-    border: 'none',
-    borderRadius: '50px',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: '600',
-    position: 'relative',
-  },
-  saveBadge: {
-    position: 'absolute',
-    top: '-10px',
-    right: '-10px',
-    background: '#10b981',
-    fontSize: '10px',
-    padding: '2px 8px',
-    borderRadius: '50px',
-    whiteSpace: 'nowrap',
-  },
-  pricingGrid: {
-    position: 'relative',
-    zIndex: 10,
-    maxWidth: '1400px',
+    maxWidth: '1200px',
     margin: '0 auto',
-    padding: '20px 40px',
-    display: 'grid',
-    gap: '24px',
+    padding: '20px 40px 40px',
   },
-  pricingCard: {
-    background: 'rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '24px',
-    padding: '32px',
+  tableWrapper: {
+    background: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: '20px',
     border: '1px solid rgba(255, 255, 255, 0.1)',
-    transition: 'transform 0.3s ease',
-    position: 'relative',
+    overflow: 'hidden',
   },
-  popularCard: {
-    border: '2px solid #00d1ff',
-    transform: 'scale(1.02)',
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '700px',
   },
-  popularBadge: {
-    position: 'absolute',
-    top: '-12px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    background: '#00d1ff',
-    padding: '4px 16px',
-    borderRadius: '50px',
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#0f172a',
-    whiteSpace: 'nowrap',
+  tableHeader: {
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'rgba(0, 209, 255, 0.05)',
   },
-  planName: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '16px',
-    textAlign: 'center',
-  },
-  price: {
-    fontSize: '42px',
-    fontWeight: '800',
+  th: {
+    padding: '16px 20px',
+    textAlign: 'left',
     color: '#00d1ff',
-    textAlign: 'center',
-    marginBottom: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
+  },
+  tableRow: {
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    transition: 'background 0.3s ease',
+  },
+  popularRow: {
+    background: 'rgba(0, 209, 255, 0.05)',
+    borderLeft: '3px solid #00d1ff',
+  },
+  td: {
+    padding: '16px 20px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: '14px',
+  },
+  priceValue: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#00d1ff',
   },
   pricePeriod: {
-    fontSize: '14px',
-    fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-  discountBadge: {
-    textAlign: 'center',
     fontSize: '12px',
-    color: '#10b981',
-    marginBottom: '16px',
+    color: 'rgba(255, 255, 255, 0.5),
+    marginLeft: '4px',
   },
-  featuresList: {
-    margin: '24px 0',
+  popularBadge: {
+    display: 'inline-block',
+    background: '#00d1ff',
+    color: '#0f172a',
+    fontSize: '10px',
+    fontWeight: 'bold',
+    padding: '2px 8px',
+    borderRadius: '50px',
+    marginLeft: '10px',
+    verticalAlign: 'middle',
   },
-  feature: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '10px 0',
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: '14px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  },
-  getStartedButton: {
-    width: '100%',
-    padding: '14px',
+  tableButton: {
+    padding: '8px 20px',
     background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
     border: 'none',
-    borderRadius: '50px',
+    borderRadius: '8px',
     color: 'white',
-    fontSize: '16px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'transform 0.2s ease',
+    whiteSpace: 'nowrap',
   },
   customPlanSection: {
     position: 'relative',
     zIndex: 10,
     maxWidth: '800px',
-    margin: '60px auto',
-    padding: '0 40px',
+    margin: '40px auto',
+    padding: '0 40px 60px',
   },
   customPlanCard: {
     background: 'linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(138, 43, 226, 0.1))',
@@ -738,29 +536,7 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-  },
-  faqSection: {
-    position: 'relative',
-    zIndex: 10,
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '40px',
-  },
-  faqTitle: {
-    fontSize: '32px',
-    fontWeight: '700',
-    textAlign: 'center',
-    color: 'white',
-    marginBottom: '48px',
-  },
-  faqGrid: {
-    display: 'grid',
-    gap: '24px',
-  },
-  faqItem: {
-    background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: '16px',
-    padding: '24px',
+    transition: 'all 0.3s ease',
   },
   footer: {
     position: 'relative',
@@ -776,51 +552,6 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.5)',
   },
   glorifyHighlight: { color: '#00d1ff', fontWeight: '600' },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0,0,0,0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  modal: {
-    background: '#1e293b',
-    borderRadius: '24px',
-    padding: '32px',
-    maxWidth: '450px',
-    width: '90%',
-    border: '1px solid rgba(255,255,255,0.1)',
-  },
-  modalTitle: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '16px',
-  },
-  contactInfo: {
-    marginBottom: '24px',
-    padding: '16px',
-    background: 'rgba(0,209,255,0.1)',
-    borderRadius: '12px',
-  },
-  modalButtons: {
-    display: 'flex',
-    gap: '12px',
-  },
-  cancelButton: {
-    flex: 1,
-    padding: '12px',
-    background: 'rgba(255,255,255,0.1)',
-    border: 'none',
-    borderRadius: '12px',
-    color: 'white',
-    cursor: 'pointer',
-  },
 };
 
 const styleSheet = document.createElement("style");
@@ -830,21 +561,23 @@ styleSheet.textContent = `
   @keyframes pulse { 0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); } }
   @keyframes softGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0, 209, 255, 0.3); } 50% { box-shadow: 0 0 40px rgba(0, 209, 255, 0.5); } }
   
-  .pricingCard:hover { transform: translateY(-8px); }
-  .getStartedButton:hover { transform: translateY(-2px); }
-  .customPlanButton:hover { background: rgba(0,209,255,0.2); }
   .navLink:hover { color: #00d1ff !important; }
   .mobileNavLink:hover { color: #00d1ff !important; }
+  .tableRow:hover { background: rgba(255, 255, 255, 0.03); }
+  .tableButton:hover { transform: translateY(-2px); }
+  .customPlanButton:hover { background: rgba(0, 209, 255, 0.2); transform: translateY(-2px); }
 
   @media (max-width: 768px) {
     nav { padding: 16px 20px !important; }
     .tb-logo-icon { width: 34px !important; height: 34px !important; font-size: 19px !important; }
     .tb-logo-text { font-size: 20px !important; }
+    .th, .td { padding: 12px 16px !important; }
   }
   @media (max-width: 480px) {
     nav { padding: 12px 14px !important; }
     .tb-logo-icon { width: 30px !important; height: 30px !important; font-size: 16px !important; border-radius: 8px !important; }
     .tb-logo-text { font-size: 17px !important; }
+    .th, .td { padding: 10px 12px !important; font-size: 12px !important; }
   }
 `;
 document.head.appendChild(styleSheet);
