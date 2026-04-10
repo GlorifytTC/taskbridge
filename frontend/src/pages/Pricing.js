@@ -471,7 +471,7 @@ const styles = {
   },
   pricePeriod: {
     fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.5),
+    color: 'rgba(255, 255, 255, 0.5)',
     marginLeft: '4px',
   },
   popularBadge: {
