@@ -64,7 +64,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
 
   const t = {
     en: {
-      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact Us' },
+      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
       signIn: 'Sign In',
       tag: 'Smart Staff Management',
       title: 'Manage Your Workforce with Intelligence',
@@ -85,7 +85,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     },
     sv: {
-      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta Oss' },
+      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta' },
       signIn: 'Logga in',
       tag: 'Smart Personalhantering',
       title: 'Hantera Din Arbetsstyrka med Intelligens',

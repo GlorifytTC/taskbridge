@@ -30,6 +30,19 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const w = window.innerWidth;
+      setScreenWidth(w);
+      setIsMobile(w <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const t = {
     en: {
@@ -127,12 +140,12 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const lang = t[language];
+  const isSmall = screenWidth <= 480;
 
   const changeLanguage = (langCode) => {
     setLanguage(langCode);
     localStorage.setItem('taskbridge_language', langCode);
     setShowLanguageDropdown(false);
-    // Update chat welcome message
     setChatMessages([{
       text: langCode === 'en' 
         ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" 
@@ -142,31 +155,27 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     }]);
   };
 
-  // Add this useEffect to listen for changes
-        useEffect(() => {
-        fetchEmployeeData();
-        const savedLogo = localStorage.getItem('organizationLogo');
-        if (savedLogo) setLogoPreview(savedLogo);
-        
-        // Refresh every 10 seconds to catch approvals
-        const interval = setInterval(() => {
-            fetchEmployeeData();
-        }, 10000);
-        
-        return () => clearInterval(interval);
-        }, [currentDate]);
+  useEffect(() => {
+    fetchEmployeeData();
+    const savedLogo = localStorage.getItem('organizationLogo');
+    if (savedLogo) setLogoPreview(savedLogo);
+    
+    const interval = setInterval(() => {
+      fetchEmployeeData();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [currentDate]);
 
-        const showMessage = (text, type = 'success') => {
-            setMessage({ text, type });
-            setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-        };
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+  };
 
-        const fetchEmployeeData = async () => {
-  setLoading(true);
+  const fetchEmployeeData = async () => {
   try {
     const token = localStorage.getItem('token');
     
-    // Fetch applications for the employee
     const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/my-applications', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -174,13 +183,10 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     
     const allApps = appsData.data || [];
     
-    // For each application, fetch the full task details
     const appsWithTasks = await Promise.all(allApps.map(async (app) => {
       if (app.task && typeof app.task === 'object' && app.task._id) {
-        // Task is already populated
         return app;
       } else if (app.task) {
-        // Fetch full task details
         const taskRes = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${app.task}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -194,7 +200,6 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     
     const appliedTaskIds = appsWithTasks.map(app => app.task?._id || app.task);
     
-    // Fetch available tasks
     const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -205,14 +210,12 @@ const EmployeeDashboard = ({ user, onLogout }) => {
     );
     setAvailableTasks(available);
     
-    // Approved shifts - tasks that are approved
     const approved = appsWithTasks.filter(app => app.status === 'approved');
     setApprovedShifts(approved);
     
     const pending = appsWithTasks.filter(app => app.status === 'pending').length;
     setNotificationCount(pending);
     
-    // Notifications logic...
     const newNotifications = [];
     const hasNewTasks = available.length > 0 && !localStorage.getItem('notified_tasks');
     if (hasNewTasks) {
@@ -341,12 +344,12 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const getApprovedTasksForDate = (date) => {
-  return approvedShifts.filter(app => {
-    if (!app.task) return false;
-    const taskDate = new Date(app.task.date);
-    return isSameDay(taskDate, date);
-  });
-};
+    return approvedShifts.filter(app => {
+      if (!app.task) return false;
+      const taskDate = new Date(app.task.date);
+      return isSameDay(taskDate, date);
+    });
+  };
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
@@ -399,46 +402,50 @@ const EmployeeDashboard = ({ user, onLogout }) => {
   };
 
   const renderDayCell = (day) => {
-  const dayTasks = getApprovedTasksForDate(day);
-  const isToday = isSameDay(day, new Date());
-  const isCurrentMonth = isSameMonth(day, currentDate);
-  
-  return (
-    <div
-      key={day.toISOString()}
-      onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0].task)}
-      style={{
-        ...styles.dayCell,
-        background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
-        border: isToday ? '1px solid #00d1ff' : '1px solid rgba(255,255,255,0.1)',
-        opacity: isCurrentMonth ? 1 : 0.5,
-        cursor: dayTasks.length > 0 ? 'pointer' : 'default',
-      }}
-    >
-      <div style={styles.dayNumber}>{format(day, 'd')}</div>
-      <div style={styles.dayTasks}>
-        {dayTasks.slice(0, 2).map(app => {
-          const task = app.task;
-          return (
-            <div
-              key={app._id}
-              style={{
-                ...styles.taskDot,
-                backgroundColor: '#10b981'
-              }}
-              title={task?.title}
-            >
-              {task?.title?.length > 20 ? task.title.substring(0, 20) + '...' : task?.title}
-            </div>
-          );
-        })}
-        {dayTasks.length > 2 && (
-          <div style={styles.moreTasks}>+{dayTasks.length - 2} more</div>
-        )}
+    const dayTasks = getApprovedTasksForDate(day);
+    const isToday = isSameDay(day, new Date());
+    const isCurrentMonth = isSameMonth(day, currentDate);
+    
+    return (
+      <div
+        key={day.toISOString()}
+        onClick={() => dayTasks.length > 0 && handleTaskClick(dayTasks[0].task)}
+        style={{
+          ...styles.dayCell,
+          background: isToday ? 'rgba(0,209,255,0.15)' : 'rgba(255,255,255,0.03)',
+          border: isToday ? '1px solid #00d1ff' : '1px solid rgba(255,255,255,0.1)',
+          opacity: isCurrentMonth ? 1 : 0.5,
+          cursor: dayTasks.length > 0 ? 'pointer' : 'default',
+          minHeight: isSmall ? '60px' : '80px',
+          padding: isSmall ? '4px' : '6px',
+        }}
+      >
+        <div style={{...styles.dayNumber, fontSize: isSmall ? '10px' : '12px'}}>{format(day, 'd')}</div>
+        <div style={styles.dayTasks}>
+          {dayTasks.slice(0, isSmall ? 1 : 2).map(app => {
+            const task = app.task;
+            return (
+              <div
+                key={app._id}
+                style={{
+                  ...styles.taskDot,
+                  backgroundColor: '#10b981',
+                  fontSize: isSmall ? '7px' : '9px',
+                  padding: isSmall ? '1px 3px' : '2px 4px',
+                }}
+                title={task?.title}
+              >
+                {task?.title?.length > (isSmall ? 10 : 20) ? task.title.substring(0, isSmall ? 10 : 20) + '...' : task?.title}
+              </div>
+            );
+          })}
+          {dayTasks.length > (isSmall ? 1 : 2) && (
+            <div style={{...styles.moreTasks, fontSize: isSmall ? '7px' : '9px'}}>+{dayTasks.length - (isSmall ? 1 : 2)} more</div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   if (loading) {
     return (
@@ -456,7 +463,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      <div style={styles.header}>
+      <div style={{...styles.header, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center'}}>
         <div style={styles.logoSection}>
           {logoPreview ? (
             <img src={logoPreview} alt="Organization Logo" style={styles.orgLogo} />
@@ -467,17 +474,17 @@ const EmployeeDashboard = ({ user, onLogout }) => {
           )}
           <div>
             <div style={styles.titleRow}>
-              <h1 style={styles.title}>{lang.employeeDashboard}</h1>
-              <span style={styles.userNameBadge}>
+              <h1 style={{...styles.title, fontSize: isSmall ? '18px' : '22px'}}>{lang.employeeDashboard}</h1>
+              <span style={{...styles.userNameBadge, fontSize: isSmall ? '10px' : '11px'}}>
                 <i className="fas fa-user"></i> {user?.name}
               </span>
             </div>
-            <p style={styles.subtitle}>{lang.yourSchedule}</p>
+            <p style={{...styles.subtitle, fontSize: isSmall ? '10px' : '11px'}}>{lang.yourSchedule}</p>
           </div>
         </div>
-        <div style={styles.headerButtons}>
+        <div style={{...styles.headerButtons, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end'}}>
           <div style={styles.languageContainer}>
-            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={styles.languageButton}>
+            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={{...styles.languageButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 12px'}}>
               <i className="fas fa-globe"></i> {language === 'en' ? 'EN' : 'SV'}
             </button>
             {showLanguageDropdown && (
@@ -488,47 +495,47 @@ const EmployeeDashboard = ({ user, onLogout }) => {
             )}
           </div>
           <div style={styles.notificationContainer}>
-            <button onClick={() => setShowNotifications(!showNotifications)} style={styles.notificationButton}>
+            <button onClick={() => setShowNotifications(!showNotifications)} style={{...styles.notificationButton, fontSize: isSmall ? '12px' : '14px', padding: isSmall ? '5px 10px' : '6px 12px'}}>
               <i className="fas fa-bell"></i>
               {notificationCount > 0 && (
-                <span style={styles.notificationBadge}>{notificationCount > 9 ? '9+' : notificationCount}</span>
+                <span style={{...styles.notificationBadge, width: isSmall ? '14px' : '16px', height: isSmall ? '14px' : '16px', fontSize: isSmall ? '8px' : '10px'}}>{notificationCount > 9 ? '9+' : notificationCount}</span>
               )}
             </button>
             {showNotifications && (
-              <div style={styles.notificationDropdown}>
+              <div style={{...styles.notificationDropdown, width: isSmall ? '260px' : '280px'}}>
                 {notifications.length === 0 ? (
                   <div style={styles.noNotifications}>{lang.noNotifications}</div>
                 ) : (
                   notifications.map(notif => (
                     <div key={notif.id} style={styles.notificationItem} onClick={() => handleMarkNotificationAsRead(notif.id)}>
-                      <div style={styles.notificationTitle}>{notif.title}</div>
-                      <div style={styles.notificationMessage}>{notif.message}</div>
-                      <div style={styles.notificationTime}>{notif.time}</div>
+                      <div style={{...styles.notificationTitle, fontSize: isSmall ? '11px' : '12px'}}>{notif.title}</div>
+                      <div style={{...styles.notificationMessage, fontSize: isSmall ? '10px' : '11px'}}>{notif.message}</div>
+                      <div style={{...styles.notificationTime, fontSize: isSmall ? '8px' : '9px'}}>{notif.time}</div>
                     </div>
                   ))
                 )}
               </div>
             )}
           </div>
-          <button onClick={() => setShowProfileModal(true)} style={styles.profileButton}>{lang.profile}</button>
-          <button onClick={onLogout} style={styles.logoutButton}>{lang.logout}</button>
+          <button onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
+          <button onClick={onLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
         </div>
       </div>
 
-      <div style={styles.statsGrid}>
+      <div style={{...styles.statsGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(100px, 1fr))'}}>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-briefcase" style={{ color: '#00d1ff' }}></i></div>
-          <div style={styles.statValueSmall}>{availableTasks.length}</div>
-          <div style={styles.statLabelSmall}>{lang.availableJobs}</div>
+          <div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '22px'}}>{availableTasks.length}</div>
+          <div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.availableJobs}</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-calendar-check" style={{ color: '#00d1ff' }}></i></div>
-          <div style={styles.statValueSmall}>{approvedShifts.length}</div>
-          <div style={styles.statLabelSmall}>{lang.approvedShifts}</div>
+          <div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '22px'}}>{approvedShifts.length}</div>
+          <div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.approvedShifts}</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-clock" style={{ color: '#00d1ff' }}></i></div>
-          <div style={styles.statValueSmall}>
+          <div style={{...styles.statValueSmall, fontSize: isSmall ? '18px' : '22px'}}>
             {approvedShifts.reduce((total, app) => {
               if (app.task) {
                 const start = new Date(`1970-01-01T${app.task.startTime}`);
@@ -539,30 +546,30 @@ const EmployeeDashboard = ({ user, onLogout }) => {
               return total;
             }, 0)}
           </div>
-          <div style={styles.statLabelSmall}>{lang.totalHours}</div>
+          <div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.totalHours}</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIconSmall}><i className="fas fa-building" style={{ color: '#00d1ff' }}></i></div>
-          <div style={styles.statValueSmall}>{user?.organization?.name?.substring(0, 10) || 'N/A'}</div>
-          <div style={styles.statLabelSmall}>{lang.organization}</div>
+          <div style={{...styles.statValueSmall, fontSize: isSmall ? '16px' : '22px'}}>{user?.organization?.name?.substring(0, isSmall ? 8 : 10) || 'N/A'}</div>
+          <div style={{...styles.statLabelSmall, fontSize: isSmall ? '9px' : '10px'}}>{lang.organization}</div>
         </div>
       </div>
 
-      <div style={styles.sectionCard}>
-        <h3 style={styles.sectionTitle}>{lang.availableJobs}</h3>
+      <div style={{...styles.sectionCard, padding: isSmall ? '12px' : '16px'}}>
+        <h3 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.availableJobs}</h3>
         <div style={styles.tasksList}>
           {availableTasks.length === 0 ? (
-            <p style={styles.noTasks}>{lang.noAvailableJobs}</p>
+            <p style={{...styles.noTasks, fontSize: isSmall ? '12px' : '14px'}}>{lang.noAvailableJobs}</p>
           ) : (
-            availableTasks.slice(0, 5).map(task => {
+            availableTasks.slice(0, isSmall ? 3 : 5).map(task => {
               const alreadyApplied = applications.some(app => app.task === task._id);
               return (
-                <div key={task._id} style={styles.taskItem}>
+                <div key={task._id} style={{...styles.taskItem, padding: isSmall ? '10px' : '12px'}}>
                   <div style={styles.taskItemInfo}>
-                    <div style={styles.taskItemTitle}>{task.title}</div>
-                    <div style={styles.taskItemDetails}>
+                    <div style={{...styles.taskItemTitle, fontSize: isSmall ? '13px' : '14px'}}>{task.title}</div>
+                    <div style={{...styles.taskItemDetails, fontSize: isSmall ? '9px' : '10px'}}>
                       <span><i className="fas fa-calendar"></i> {new Date(task.date).toLocaleDateString()}</span>
-                      <span><i className="fas fa-clock"></i> {task.startTime} - {task.endTime}</span>
+                      {!isSmall && <span><i className="fas fa-clock"></i> {task.startTime} - {task.endTime}</span>}
                       <span><i className="fas fa-map-marker-alt"></i> {task.location || lang.location}</span>
                     </div>
                   </div>
@@ -575,7 +582,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
                         setShowApplyModal(true);
                       }
                     }} 
-                    style={{...styles.applyButton, background: alreadyApplied ? '#6b7280' : 'linear-gradient(135deg, #00f5ff, #00d1ff)'}}
+                    style={{...styles.applyButton, background: alreadyApplied ? '#6b7280' : 'linear-gradient(135deg, #00f5ff, #00d1ff)', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '4px 12px' : '6px 16px'}}
                     disabled={alreadyApplied}
                   >
                     {alreadyApplied ? lang.applied : lang.apply}
@@ -587,60 +594,60 @@ const EmployeeDashboard = ({ user, onLogout }) => {
         </div>
       </div>
 
-      <div style={styles.sectionCard}>
-        <div style={styles.calendarHeader}>
+      <div style={{...styles.sectionCard, padding: isSmall ? '12px' : '16px', overflowX: isSmall ? 'auto' : 'visible'}}>
+        <div style={{...styles.calendarHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'center' : 'center'}}>
           <div style={styles.headerLeft}>
-            <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
-            <h2 style={styles.monthTitle}>{format(currentDate, 'MMMM yyyy')}</h2>
-            <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={styles.navButton}>→</button>
+            <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={{...styles.navButton, fontSize: isSmall ? '12px' : '14px', padding: isSmall ? '4px 10px' : '6px 12px'}}>←</button>
+            <h2 style={{...styles.monthTitle, fontSize: isSmall ? '16px' : '18px'}}>{format(currentDate, 'MMMM yyyy')}</h2>
+            <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={{...styles.navButton, fontSize: isSmall ? '12px' : '14px', padding: isSmall ? '4px 10px' : '6px 12px'}}>→</button>
           </div>
         </div>
 
-        <div style={styles.weekHeaders}>
+        <div style={{...styles.weekHeaders, gap: isSmall ? '3px' : '6px'}}>
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-            <div key={day} style={styles.weekDay}>{day}</div>
+            <div key={day} style={{...styles.weekDay, fontSize: isSmall ? '9px' : '11px', padding: isSmall ? '4px' : '6px'}}>{day}</div>
           ))}
         </div>
 
-        <div style={styles.calendarGrid}>
+        <div style={{...styles.calendarGrid, gap: isSmall ? '3px' : '6px'}}>
           {getMonthDays().map(day => renderDayCell(day))}
         </div>
 
-        <div style={styles.legend}>
-          <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> {lang.approvedShifts}</div>
+        <div style={{...styles.legend, gap: isSmall ? '10px' : '20px', fontSize: isSmall ? '9px' : '10px'}}>
+          <div><span style={{...styles.legendDot, width: isSmall ? '6px' : '8px', height: isSmall ? '6px' : '8px'}}></span> {lang.approvedShifts}</div>
         </div>
       </div>
 
       {showApplyModal && selectedTask && (
         <div style={styles.modalOverlay} onClick={() => setShowApplyModal(false)}>
-          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '500px'}} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>{lang.applyForShift}</h2>
+              <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '18px'}}>{lang.applyForShift}</h2>
               <button onClick={() => setShowApplyModal(false)} style={styles.closeButton}>✕</button>
             </div>
-            <div style={styles.taskInfoCard}>
-              <h3>{selectedTask.title}</h3>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.date}:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
-                <span><strong>{lang.time}:</strong> {selectedTask.startTime} - {selectedTask.endTime}</span>
+            <div style={{...styles.taskInfoCard, padding: isSmall ? '12px' : '14px'}}>
+              <h3 style={{fontSize: isSmall ? '15px' : '18px', color: 'white'}}>{selectedTask.title}</h3>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.date}:</strong> <span style={{color: 'white'}}>{new Date(selectedTask.date).toLocaleDateString()}</span></span>
+                <span><strong style={{color: '#00d1ff'}}>{lang.time}:</strong> <span style={{color: 'white'}}>{selectedTask.startTime} - {selectedTask.endTime}</span></span>
               </div>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.location}:</strong> {selectedTask.location || lang.location}</span>
-                <span><strong>{lang.role}:</strong> {selectedTask.jobDescription?.name}</span>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.location}:</strong> <span style={{color: 'white'}}>{selectedTask.location || lang.location}</span></span>
+                <span><strong style={{color: '#00d1ff'}}>{lang.role}:</strong> <span style={{color: 'white'}}>{selectedTask.jobDescription?.name}</span></span>
               </div>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.branch}:</strong> {selectedTask.branch?.name}</span>
-                <span><strong>{lang.slots}:</strong> {selectedTask.currentEmployees}/{selectedTask.maxEmployees}</span>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.branch}:</strong> <span style={{color: 'white'}}>{selectedTask.branch?.name}</span></span>
+                <span><strong style={{color: '#00d1ff'}}>{lang.slots}:</strong> <span style={{color: 'white'}}>{selectedTask.currentEmployees}/{selectedTask.maxEmployees}</span></span>
               </div>
               {selectedTask.description && (
-                <div style={styles.taskDescription}>
-                  <strong>{lang.description}:</strong><br/>{selectedTask.description}
+                <div style={{...styles.taskDescription, fontSize: isSmall ? '11px' : '12px'}}>
+                  <strong style={{color: '#00d1ff'}}>{lang.description}:</strong><br/><span style={{color: 'white'}}>{selectedTask.description}</span>
                 </div>
               )}
             </div>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowApplyModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={() => handleApplyForTask(selectedTask._id)} style={styles.submitButton}>{lang.confirmApplication}</button>
+              <button onClick={() => setShowApplyModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.cancel}</button>
+              <button onClick={() => handleApplyForTask(selectedTask._id)} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.confirmApplication}</button>
             </div>
           </div>
         </div>
@@ -648,37 +655,36 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 
       {showTaskModal && selectedTask && (
         <div style={styles.modalOverlay} onClick={() => setShowTaskModal(false)}>
-          <div style={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '500px'}} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>{selectedTask.title}</h2>
+              <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '18px'}}>{selectedTask.title}</h2>
               <button onClick={() => setShowTaskModal(false)} style={styles.closeButton}>✕</button>
             </div>
             
-            <div style={styles.taskInfoCard}>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.date}:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
-                <span><strong>{lang.time}:</strong> {selectedTask.startTime} - {selectedTask.endTime}</span>
+            <div style={{...styles.taskInfoCard, padding: isSmall ? '12px' : '14px'}}>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.date}:</strong> <span style={{color: 'white'}}>{new Date(selectedTask.date).toLocaleDateString()}</span></span>
+                <span><strong style={{color: '#00d1ff'}}>{lang.time}:</strong> <span style={{color: 'white'}}>{selectedTask.startTime} - {selectedTask.endTime}</span></span>
               </div>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.location}:</strong> {selectedTask.location || lang.location}</span>
-                <span><strong>{lang.role}:</strong> {selectedTask.jobDescription?.name}</span>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.location}:</strong> <span style={{color: 'white'}}>{selectedTask.location || lang.location}</span></span>
+                <span><strong style={{color: '#00d1ff'}}>{lang.role}:</strong> <span style={{color: 'white'}}>{selectedTask.jobDescription?.name}</span></span>
               </div>
-              <div style={styles.taskInfoRow}>
-                <span><strong>{lang.branch}:</strong> {selectedTask.branch?.name}</span>
+              <div style={{...styles.taskInfoRow, fontSize: isSmall ? '11px' : '12px'}}>
+                <span><strong style={{color: '#00d1ff'}}>{lang.branch}:</strong> <span style={{color: 'white'}}>{selectedTask.branch?.name}</span></span>
               </div>
               {selectedTask.description && (
-                <div style={styles.taskDescription}>
-                  <strong>{lang.notesFromAdmin}:</strong><br/>
-                  {selectedTask.description}
+                <div style={{...styles.taskDescription, fontSize: isSmall ? '11px' : '12px'}}>
+                  <strong style={{color: '#00d1ff'}}>{lang.notesFromAdmin}:</strong><br/><span style={{color: 'white'}}>{selectedTask.description}</span>
                 </div>
               )}
             </div>
             
-            <div style={styles.taskStatusCard}>
-              <div style={styles.statusIcon}>✅</div>
+            <div style={{...styles.taskStatusCard, padding: isSmall ? '12px' : '14px'}}>
+              <div style={{...styles.statusIcon, fontSize: isSmall ? '20px' : '24px'}}>✅</div>
               <div>
-                <div style={styles.statusTitle}>{lang.shiftApproved}</div>
-                <div style={styles.statusText}>{lang.shiftApprovedMessage}</div>
+                <div style={{...styles.statusTitle, fontSize: isSmall ? '13px' : '14px'}}>{lang.shiftApproved}</div>
+                <div style={{...styles.statusText, fontSize: isSmall ? '10px' : '11px'}}>{lang.shiftApprovedMessage}</div>
               </div>
             </div>
           </div>
@@ -687,9 +693,9 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 
       {showProfileModal && (
         <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.profileSettings}</h2>
-            <div style={styles.profileInfo}>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '400px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '18px', color: 'white'}}>{lang.profileSettings}</h2>
+            <div style={{...styles.profileInfo, padding: isSmall ? '10px' : '12px', fontSize: isSmall ? '11px' : '13px'}}>
               <p><strong style={{color: '#00d1ff'}}>{lang.name}:</strong> <span style={{color: 'white'}}>{user?.name}</span></p>
               <p><strong style={{color: '#00d1ff'}}>{lang.email}:</strong> <span style={{color: 'white'}}>{user?.email}</span></p>
               <p><strong style={{color: '#00d1ff'}}>{lang.role}:</strong> <span style={{color: 'white'}}>Employee</span></p>
@@ -697,15 +703,15 @@ const EmployeeDashboard = ({ user, onLogout }) => {
               {user?.jobDescription && <p><strong style={{color: '#00d1ff'}}>{lang.jobRole}:</strong> <span style={{color: 'white'}}>{user.jobDescription.name}</span></p>}
               {user?.branch && <p><strong style={{color: '#00d1ff'}}>{lang.branch}:</strong> <span style={{color: 'white'}}>{user.branch.name}</span></p>}
             </div>
-            <h3 style={styles.subTitle}>{lang.changePassword}</h3>
-            <input type="password" placeholder={lang.currentPassword} value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder={lang.newPassword} value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={styles.input} />
-            <input type="password" placeholder={lang.confirmPassword} value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={styles.input} />
-            <button onClick={handleUpdatePassword} style={styles.submitButton}>{lang.updatePassword}</button>
+            <h3 style={{...styles.subTitle, fontSize: isSmall ? '13px' : '14px', color: 'white'}}>{lang.changePassword}</h3>
+            <input type="password" placeholder={lang.currentPassword} value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '12px', color: 'white'}} />
+            <input type="password" placeholder={lang.newPassword} value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '12px', color: 'white'}} />
+            <input type="password" placeholder={lang.confirmPassword} value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '12px', color: 'white'}} />
+            <button onClick={handleUpdatePassword} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.updatePassword}</button>
             <div style={styles.dangerZone}>
-              <h3 style={{ color: '#ef4444' }}>{lang.dangerZone}</h3>
-              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={styles.deleteAccountButton}>{lang.deleteAccount}</button>
-              <p style={styles.warningText}>⚠️ {lang.deleteWarning}</p>
+              <h3 style={{ color: '#ef4444', fontSize: isSmall ? '13px' : '14px' }}>{lang.dangerZone}</h3>
+              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{...styles.deleteAccountButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.deleteAccount}</button>
+              <p style={{...styles.warningText, fontSize: isSmall ? '9px' : '10px'}}>⚠️ {lang.deleteWarning}</p>
             </div>
           </div>
         </div>
@@ -713,24 +719,24 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 
       {showDeleteAccountModal && (
         <div style={styles.modalOverlay} onClick={() => setShowDeleteAccountModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.deleteAccount}</h2>
-            <p>{language === 'en' ? 'Are you sure you want to delete your account?' : 'Är du säker på att du vill radera ditt konto?'}</p>
-            <p style={{ color: '#ef4444' }}>⚠️ {language === 'en' ? 'This action cannot be undone. Your personal data will be removed.' : 'Denna åtgärd kan inte ångras. Din personliga data kommer att raderas.'}</p>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '400px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '18px', color: 'white'}}>{lang.deleteAccount}</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>{language === 'en' ? 'Are you sure you want to delete your account?' : 'Är du säker på att du vill radera ditt konto?'}</p>
+            <p style={{ color: '#ef4444', fontSize: isSmall ? '11px' : '13px' }}>⚠️ {language === 'en' ? 'This action cannot be undone. Your personal data will be removed.' : 'Denna åtgärd kan inte ångras. Din personliga data kommer att raderas.'}</p>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>{lang.deleteAccount}</button>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.cancel}</button>
+              <button onClick={handleDeleteAccount} style={{...styles.confirmDeleteButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.deleteAccount}</button>
             </div>
           </div>
         </div>
       )}
 
-      <button style={styles.chatButton} onClick={() => setShowChat(!showChat)}>
+      <button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
 
       {showChat && (
-        <div style={styles.chatModal}>
+        <div style={{...styles.chatModal, width: isSmall ? '260px' : '300px', height: isSmall ? '350px' : '450px', bottom: isSmall ? '70px' : '80px'}}>
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot"></i> AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
@@ -738,17 +744,17 @@ const EmployeeDashboard = ({ user, onLogout }) => {
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b'}}>
+                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', fontSize: isSmall ? '10px' : '12px'}}>
                   {msg.sender === 'ai' && <i className="fas fa-robot"></i>} {msg.text}
-                  <div style={styles.messageTime}>{msg.time}</div>
+                  <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
                 </div>
               </div>
             ))}
-            {isAiTyping && <div style={styles.typingIndicator}>AI is typing...</div>}
+            {isAiTyping && <div style={{...styles.typingIndicator, fontSize: isSmall ? '9px' : '11px'}}>AI is typing...</div>}
           </div>
           <div style={styles.chatInputContainer}>
-            <input type="text" placeholder={language === 'en' ? "Ask me..." : "Fråga mig..."} value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={styles.chatInput} />
-            <button onClick={sendChatMessage} style={styles.chatSend}>➤</button>
+            <input type="text" placeholder={language === 'en' ? "Ask me..." : "Fråga mig..."} value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}} />
+            <button onClick={sendChatMessage} style={{...styles.chatSend, fontSize: isSmall ? '11px' : '12px'}}>➤</button>
           </div>
         </div>
       )}
@@ -757,7 +763,7 @@ const EmployeeDashboard = ({ user, onLogout }) => {
 };
 
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif' },
+  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
   messageToast: { position: 'fixed', top: '20px', right: '20px', padding: '12px 20px', borderRadius: '8px', color: 'white', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease' },
@@ -766,88 +772,88 @@ const styles = {
   orgLogo: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' },
   logoPlaceholder: { width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px' },
   titleRow: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-  title: { fontSize: '22px', fontWeight: 'bold', color: 'white', margin: 0 },
-  userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', color: '#00d1ff' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginTop: '2px' },
-  headerButtons: { display: 'flex', gap: '12px', alignItems: 'center' },
+  title: { fontWeight: 'bold', color: 'white', margin: 0 },
+  userNameBadge: { background: 'rgba(0,209,255,0.2)', padding: '4px 10px', borderRadius: '20px', color: '#00d1ff' },
+  subtitle: { color: 'rgba(255,255,255,0.6)', marginTop: '2px' },
+  headerButtons: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' },
   languageContainer: { position: 'relative' },
-  languageButton: { padding: '6px 12px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' },
+  languageButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' },
   languageDropdown: { position: 'absolute', top: '35px', right: '0', background: '#1e293b', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, minWidth: '120px' },
   languageOption: { padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '12px' },
   notificationContainer: { position: 'relative' },
-  notificationButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', padding: '6px 12px', fontSize: '14px', position: 'relative' },
-  notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  notificationDropdown: { position: 'absolute', top: '40px', right: '0', width: '280px', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, maxHeight: '300px', overflowY: 'auto' },
+  notificationButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', position: 'relative' },
+  notificationBadge: { position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  notificationDropdown: { position: 'absolute', top: '40px', right: '0', background: '#1e293b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, maxHeight: '300px', overflowY: 'auto' },
   noNotifications: { padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' },
   notificationItem: { padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
-  notificationTitle: { fontSize: '12px', fontWeight: '600', color: '#00d1ff', marginBottom: '4px' },
-  notificationMessage: { fontSize: '11px', color: 'rgba(255,255,255,0.7)' },
-  notificationTime: { fontSize: '9px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' },
-  profileButton: { padding: '6px 14px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  logoutButton: { padding: '6px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' },
+  notificationTitle: { fontWeight: '600', color: '#00d1ff', marginBottom: '4px' },
+  notificationMessage: { color: 'rgba(255,255,255,0.7)' },
+  notificationTime: { color: 'rgba(255,255,255,0.4)', marginTop: '4px' },
+  profileButton: { background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer' },
+  logoutButton: { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', cursor: 'pointer' },
+  statsGrid: { display: 'grid', gap: '10px', marginBottom: '20px' },
   statCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', textAlign: 'center' },
   statIconSmall: { fontSize: '20px', marginBottom: '6px' },
-  statValueSmall: { fontSize: '22px', fontWeight: 'bold', color: 'white' },
-  statLabelSmall: { fontSize: '10px', color: 'rgba(255,255,255,0.6)' },
-  sectionCard: { background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px', marginBottom: '20px' },
-  sectionTitle: { fontSize: '16px', fontWeight: '600', color: 'white', marginBottom: '12px' },
+  statValueSmall: { fontWeight: 'bold', color: 'white' },
+  statLabelSmall: { color: 'rgba(255,255,255,0.6)' },
+  sectionCard: { background: 'rgba(255,255,255,0.03)', borderRadius: '16px', marginBottom: '20px' },
+  sectionTitle: { fontWeight: '600', color: 'white', marginBottom: '12px' },
   tasksList: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', flexWrap: 'wrap', gap: '10px' },
+  taskItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', flexWrap: 'wrap', gap: '10px' },
   taskItemInfo: { flex: 1 },
-  taskItemTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '4px' },
-  taskItemDetails: { display: 'flex', gap: '12px', fontSize: '10px', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
-  applyButton: { background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '20px', padding: '6px 16px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  taskItemTitle: { fontWeight: '600', color: 'white', marginBottom: '4px' },
+  taskItemDetails: { display: 'flex', gap: '12px', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
+  applyButton: { border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' },
   noTasks: { textAlign: 'center', color: 'rgba(255,255,255,0.5)', padding: '20px' },
   calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' },
   headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
-  navButton: { padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px' },
-  monthTitle: { fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 },
-  weekHeaders: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '8px' },
-  weekDay: { textAlign: 'center', padding: '6px', color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: '500' },
-  calendarGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' },
-  dayCell: { minHeight: '80px', padding: '6px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
-  dayNumber: { fontSize: '12px', fontWeight: '500', color: 'white', marginBottom: '6px' },
+  navButton: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  monthTitle: { fontWeight: '600', color: 'white', margin: 0 },
+  weekHeaders: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '8px' },
+  weekDay: { textAlign: 'center', fontWeight: '500', color: 'rgba(255,255,255,0.7)' },
+  calendarGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' },
+  dayCell: { borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' },
+  dayNumber: { fontWeight: '500', color: 'white', marginBottom: '6px' },
   dayTasks: { display: 'flex', flexDirection: 'column', gap: '3px' },
-  taskDot: { fontSize: '9px', padding: '2px 4px', borderRadius: '4px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  moreTasks: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', padding: '2px 4px' },
-  legend: { display: 'flex', gap: '20px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
-  legendDot: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', marginRight: '6px' },
+  taskDot: { borderRadius: '4px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  moreTasks: { color: 'rgba(255,255,255,0.5)', padding: '2px 4px' },
+  legend: { display: 'flex', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', flexWrap: 'wrap' },
+  legendDot: { display: 'inline-block', borderRadius: '2px', marginRight: '6px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxWidth: '400px', width: '90%', maxHeight: '80vh', overflowY: 'auto' },
-  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxWidth: '500px', width: '90%', maxHeight: '85vh', overflowY: 'auto' },
+  modal: { background: '#1e293b', borderRadius: '16px', padding: '20px', maxHeight: '80vh', overflowY: 'auto' },
+  modalLarge: { background: '#1e293b', borderRadius: '16px', padding: '24px', maxHeight: '85vh', overflowY: 'auto' },
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  modalTitle: { fontSize: '18px', fontWeight: '600', color: 'white', margin: 0 },
+  modalTitle: { fontWeight: '600', color: 'white', margin: 0 },
   closeButton: { background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', padding: '4px 8px' },
-  taskInfoCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', marginBottom: '16px' },
-  taskInfoRow: { display: 'flex', gap: '16px', marginBottom: '6px', fontSize: '12px', color: 'white', flexWrap: 'wrap' },
-  taskDescription: { fontSize: '12px', color: 'rgba(255,255,255,0.8)', marginTop: '8px', lineHeight: '1.5' },
-  taskStatusCard: { background: 'rgba(16,185,129,0.1)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid rgba(16,185,129,0.3)' },
+  taskInfoCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '16px' },
+  taskInfoRow: { display: 'flex', gap: '16px', marginBottom: '6px', flexWrap: 'wrap' },
+  taskDescription: { marginTop: '8px', lineHeight: '1.5' },
+  taskStatusCard: { background: 'rgba(16,185,129,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid rgba(16,185,129,0.3)' },
   statusIcon: { fontSize: '24px' },
-  statusTitle: { fontSize: '14px', fontWeight: '600', color: '#10b981' },
-  statusText: { fontSize: '11px', color: 'rgba(255,255,255,0.7)' },
-  profileInfo: { background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontSize: '13px' },
-  subTitle: { fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
-  input: { width: '100%', padding: '8px 10px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', fontSize: '12px', boxSizing: 'border-box' },
+  statusTitle: { fontWeight: '600', color: '#10b981' },
+  statusText: { color: 'rgba(255,255,255,0.7)' },
+  profileInfo: { background: 'rgba(255,255,255,0.05)', borderRadius: '10px', marginBottom: '16px' },
+  subTitle: { fontWeight: '600', color: 'white', marginBottom: '12px', marginTop: '16px' },
+  input: { width: '100%', padding: '8px 10px', marginBottom: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', boxSizing: 'border-box' },
   modalButtons: { display: 'flex', gap: '10px', marginTop: '16px' },
-  cancelButton: { flex: 1, padding: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  submitButton: { flex: 1, padding: '8px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  confirmDeleteButton: { flex: 1, padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  deleteAccountButton: { padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '10px', fontSize: '12px' },
+  cancelButton: { flex: 1, padding: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  submitButton: { flex: 1, padding: '8px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  confirmDeleteButton: { flex: 1, padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' },
+  deleteAccountButton: { padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', width: '100%', marginTop: '10px' },
   dangerZone: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' },
-  warningText: { fontSize: '10px', color: '#f87171', marginTop: '6px' },
-  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', zIndex: 1000 },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '300px', height: '450px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '12px', background: '#00d1ff', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' },
+  warningText: { color: '#f87171', marginTop: '6px' },
+  chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatModal: { position: 'fixed', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+  chatHeader: { padding: '12px', background: '#00d1ff', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
   chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
   chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
   chatMessage: { display: 'flex' },
-  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', lineHeight: '1.4' },
-  messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
-  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '60px', fontSize: '11px' },
+  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', lineHeight: '1.4' },
+  messageTime: { color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
+  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '60px' },
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
-  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '12px' },
-  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' }
+  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none' },
+  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }
 };
 
 export default EmployeeDashboard;
