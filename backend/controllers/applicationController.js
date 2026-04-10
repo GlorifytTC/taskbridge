@@ -13,18 +13,26 @@ exports.applyForTask = async (req, res) => {
   try {
     const { taskId } = req.body;
     
+    console.log('=========================================');
     console.log('📝 Applying for task:', taskId);
+    console.log('User ID:', req.user.id);
+    console.log('User role:', req.user.role);
+    console.log('=========================================');
     
     const task = await Task.findById(taskId);
     if (!task) {
+      console.log('❌ Task not found');
       return res.status(404).json({ message: 'Task not found' });
     }
     
+    console.log('✅ Task found:', task.title);
+    console.log('Task status:', task.status);
     console.log('Task jobDescription:', task.jobDescription);
     console.log('Employee jobDescription:', req.user.jobDescription);
     
     // Check if task is still open
     if (task.status !== 'open') {
+      console.log('❌ Task status is not open:', task.status);
       return res.status(400).json({ message: 'Task is no longer available' });
     }
     
@@ -34,9 +42,11 @@ exports.applyForTask = async (req, res) => {
     
     console.log('Employee job ID:', employeeJobId);
     console.log('Task job ID:', taskJobId);
+    console.log('Job match:', employeeJobId === taskJobId);
     
     // If task has no job requirement, allow anyone to apply
     if (taskJobId && employeeJobId !== taskJobId) {
+      console.log('❌ Job description mismatch');
       return res.status(403).json({ 
         message: `Not eligible for this task. Your job role does not match the task requirements.` 
       });
@@ -49,6 +59,7 @@ exports.applyForTask = async (req, res) => {
     });
     
     if (existingApplication) {
+      console.log('❌ Already applied for this task');
       return res.status(400).json({ message: 'Already applied for this task' });
     }
     
@@ -67,6 +78,7 @@ exports.applyForTask = async (req, res) => {
     });
     
     if (hasConflict) {
+      console.log('❌ Time conflict with existing shift');
       return res.status(400).json({ message: 'Time conflict with existing approved shift' });
     }
     
@@ -86,7 +98,7 @@ exports.applyForTask = async (req, res) => {
     
     console.log('✅ Application created:', application._id);
     
-    // ✅ NOTIFY ADMIN (ADD THIS BACK)
+    // Notify admin
     const admin = await User.findOne({
       organization: req.user.organization,
       role: 'admin',
@@ -102,6 +114,7 @@ exports.applyForTask = async (req, res) => {
         message: `${req.user.name} applied for task: ${task.title}`,
         data: { applicationId: application._id, taskId: task._id }
       });
+      console.log('✅ Admin notified');
     }
     
     // Create audit log
@@ -116,13 +129,16 @@ exports.applyForTask = async (req, res) => {
       userAgent: req.headers['user-agent']
     });
     
+    console.log('✅ Application process complete');
+    console.log('=========================================');
+    
     res.status(201).json({
       success: true,
       data: application
     });
     
   } catch (error) {
-    console.error('Error applying for task:', error);
+    console.error('❌ Error applying for task:', error);
     res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
