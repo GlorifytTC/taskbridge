@@ -4,6 +4,7 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
 const { sendEmail } = require('../utils/emailService');
+const JobDescription = require('../models/JobDescription');
 
 // @desc    Apply for a task
 // @route   POST /api/applications
@@ -13,49 +14,34 @@ exports.applyForTask = async (req, res) => {
     const { taskId } = req.body;
     
     console.log('📝 Applying for task:', taskId);
-    console.log('Employee ID:', req.user.id);
-    console.log('Employee jobDescription raw:', req.user.jobDescription);
     
-    const task = await Task.findById(taskId).populate('jobDescription');
+    const task = await Task.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
     
-    console.log('Task jobDescription raw:', task.jobDescription);
+    console.log('Task jobDescription:', task.jobDescription);
+    console.log('Employee jobDescription:', req.user.jobDescription);
     
     // Check if task is still open
     if (task.status !== 'open') {
       return res.status(400).json({ message: 'Task is no longer available' });
     }
     
-    // ✅ IMPROVED: Better job description comparison
-    // Get the actual ID values as strings
+    // Simple job description check
     const employeeJobId = req.user.jobDescription ? req.user.jobDescription.toString() : null;
-    const taskJobId = task.jobDescription ? task.jobDescription._id.toString() : null;
+    const taskJobId = task.jobDescription ? task.jobDescription.toString() : null;
     
     console.log('Employee job ID:', employeeJobId);
     console.log('Task job ID:', taskJobId);
-    console.log('Match:', employeeJobId === taskJobId);
     
-    // If employee has no job description, they can't apply
-    if (!employeeJobId) {
+    // If task has no job requirement, allow anyone to apply
+    if (taskJobId && employeeJobId !== taskJobId) {
       return res.status(403).json({ 
-        message: 'You have not been assigned a job role. Please contact your administrator.' 
+        message: `Not eligible for this task. Your job role does not match the task requirements.` 
       });
     }
     
-    // Check if job descriptions match
-    if (employeeJobId !== taskJobId) {
-      // Get the actual job names for better error message
-      const employeeJob = await JobDescription.findById(employeeJobId);
-      const taskJob = await JobDescription.findById(taskJobId);
-      
-      return res.status(403).json({ 
-        message: `Not eligible for this task. Your role (${employeeJob?.name || 'Unknown'}) does not match the task requirement (${taskJob?.name || 'Unknown'}).` 
-      });
-    }
-    
-    // Rest of your code remains the same...
     // Check for double booking
     const existingApplication = await Application.findOne({
       employee: req.user.id,
@@ -66,7 +52,7 @@ exports.applyForTask = async (req, res) => {
       return res.status(400).json({ message: 'Already applied for this task' });
     }
     
-    // Check for time conflict
+    // Check for time conflict with existing approved shifts
     const conflictingTasks = await Application.find({
       employee: req.user.id,
       status: 'approved'
@@ -100,7 +86,7 @@ exports.applyForTask = async (req, res) => {
     
     console.log('✅ Application created:', application._id);
     
-    // Notify admin
+    // ✅ NOTIFY ADMIN (ADD THIS BACK)
     const admin = await User.findOne({
       organization: req.user.organization,
       role: 'admin',
@@ -117,6 +103,18 @@ exports.applyForTask = async (req, res) => {
         data: { applicationId: application._id, taskId: task._id }
       });
     }
+    
+    // Create audit log
+    await AuditLog.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      action: 'create',
+      entityType: 'application',
+      entityId: application._id,
+      changes: { taskId, status: 'pending' },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     
     res.status(201).json({
       success: true,
