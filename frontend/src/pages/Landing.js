@@ -141,11 +141,12 @@ const Landing = ({ onLoginClick, onNavigate }) => {
         {!isMobile && (
           <>
             <div style={styles.navLinks}>
+              // In the navigation section, change:
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={styles.navLink}>{content.nav.home}</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.pricing}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); }} style={styles.navLink}>{content.nav.contact}</a>
-            </div>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); }} style={styles.navLink}>{content.nav.pricing}</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={styles.navLink}>{content.nav.contact}</a>
+              </div>
             <div style={styles.navActions}>
               <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
               <button onClick={handleSignIn} style={styles.navButton}>{content.signIn}</button>
