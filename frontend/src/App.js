@@ -10,8 +10,8 @@ import Tasks from './pages/Tasks';
 import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
 import CreateAccount from './components/CreateAccount';
-import About from './pages/About'; // Import About page
-import Pricing from './pages/Pricing'; 
+import About from './pages/About';
+import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 
 function App() {
@@ -101,17 +101,23 @@ function App() {
     return <CreateAccount onBack={() => setCurrentPage('login')} onLogin={handleLogin} />;
   }
 
-  // About page (public)
+  // Public pages
+  if (currentPage === 'landing') {
+    return <Landing onLoginClick={goToLogin} onNavigate={handleNavigate} />;
+  }
+
   if (currentPage === 'about') {
     return <About user={user} onNavigate={handleNavigate} />;
   }
 
-  if (currentPage === 'pricing') {  
+  if (currentPage === 'pricing') {
     return <Pricing user={user} onNavigate={handleNavigate} />;
   }
-  if (currentPage === 'Contact') {  
+
+  if (currentPage === 'contact') {
     return <Contact user={user} onNavigate={handleNavigate} />;
   }
+
   // Protected routes with role-based dashboards
   if (currentPage === 'master' && user) {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
