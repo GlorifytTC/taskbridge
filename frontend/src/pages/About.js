@@ -32,20 +32,13 @@ const About = ({ onNavigate, user }) => {
       },
       { threshold: 0.2 }
     );
-    const elements = ['hero', 'mission', 'services', 'features', 'stats', 'owner'];
+    const elements = ['hero', 'mission', 'services', 'features', 'owner'];
     elements.forEach((id) => {
       const element = document.getElementById(id);
       if (element) observer.observe(element);
     });
     return () => observer.disconnect();
   }, []);
-
-  const getDashboardRoute = () => {
-    if (user?.role === 'master') return 'master';
-    if (user?.role === 'superadmin') return 'superadmin';
-    if (user?.role === 'admin') return 'admin';
-    return 'dashboard';
-  };
 
   const toggleLanguage = () => {
     const newLang = language === 'en' ? 'sv' : 'en';
@@ -83,11 +76,6 @@ const About = ({ onNavigate, user }) => {
       employeeAppDesc: 'Employees can view shifts, apply for openings, and track their hours.',
       reporting: 'Reporting',
       reportingDesc: 'Export detailed reports on attendance, payroll, and branch performance.',
-      statsTitle: 'Trusted By',
-      organizationsCount: '500+', organizationsLabel: 'Organizations',
-      employeesCount: '10K+', employeesLabel: 'Employees',
-      satisfactionCount: '98%', satisfactionLabel: 'Satisfaction',
-      shiftsCount: '50K+', shiftsLabel: 'Shifts Completed',
       ownerTitle: 'Project Owner & Lead Developer',
       developedBy: 'Developed by',
       pic1Caption: 'Central Dashboard', pic2Caption: 'Smart Calendar', pic3Caption: 'Analytics'
@@ -116,11 +104,6 @@ const About = ({ onNavigate, user }) => {
       employeeAppDesc: 'Anställda kan se skift, söka lediga pass och följa sina timmar.',
       reporting: 'Rapportering',
       reportingDesc: 'Exportera detaljerade rapporter om närvaro, löner och filialprestanda.',
-      statsTitle: 'Lita På Av',
-      organizationsCount: '500+', organizationsLabel: 'Organisationer',
-      employeesCount: '10K+', employeesLabel: 'Anställda',
-      satisfactionCount: '98%', satisfactionLabel: 'Nöjdhet',
-      shiftsCount: '50K+', shiftsLabel: 'Genomförda Skift',
       ownerTitle: 'Projektägare & Lead Utvecklare',
       developedBy: 'Utvecklad av',
       pic1Caption: 'Central Dashboard', pic2Caption: 'Smart Kalender', pic3Caption: 'Analys'
@@ -269,24 +252,6 @@ const About = ({ onNavigate, user }) => {
                 <h4 style={{ color: 'white', marginBottom: '6px' }}>{f.title}</h4>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>{f.desc}</p>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div id="stats" style={{ ...styles.statsSection, ...fadeIn('stats'), padding: isSmall ? '20px 16px' : isMobile ? '30px 20px' : '40px' }}>
-        <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '22px' : isMobile ? '26px' : '32px' }}>{lang.statsTitle}</h2>
-        <div style={{ ...styles.statsGrid, gridTemplateColumns: isSmall ? '1fr' : isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)' }}>
-          {[
-            { num: lang.organizationsCount, label: lang.organizationsLabel },
-            { num: lang.employeesCount, label: lang.employeesLabel },
-            { num: lang.satisfactionCount, label: lang.satisfactionLabel },
-            { num: lang.shiftsCount, label: lang.shiftsLabel },
-          ].map((s, i) => (
-            <div key={i} style={styles.statCard}>
-              <div style={{ ...styles.statNumber, fontSize: isSmall ? '28px' : '42px' }}>{s.num}</div>
-              <div style={styles.statLabel}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -659,32 +624,6 @@ const styles = {
     color: '#00d1ff',
     minWidth: '40px',
   },
-  statsSection: {
-    position: 'relative',
-    zIndex: 10,
-    maxWidth: '1400px',
-    margin: '0 auto',
-  },
-  statsGrid: {
-    display: 'grid',
-    gap: '24px',
-  },
-  statCard: {
-    background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: '20px',
-    padding: '32px',
-    textAlign: 'center',
-    transition: 'transform 0.3s ease',
-  },
-  statNumber: {
-    fontWeight: '800',
-    color: '#00d1ff',
-    marginBottom: '8px',
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
   ownerSection: {
     position: 'relative',
     zIndex: 10,
@@ -795,7 +734,7 @@ styleSheet.textContent = `
   .navLink:hover, .mobileNavLink:hover {
     color: #00d1ff !important;
   }
-  .serviceCard:hover, .featureImageCard:hover, .featureItem:hover, .statCard:hover {
+  .serviceCard:hover, .featureImageCard:hover, .featureItem:hover {
     transform: translateY(-4px);
   }
   .ownerLink:hover {

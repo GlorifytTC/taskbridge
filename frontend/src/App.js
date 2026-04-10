@@ -11,6 +11,8 @@ import Profile from './pages/Profile';
 import SmartCalendar from './components/SmartCalendar';
 import CreateAccount from './components/CreateAccount';
 import About from './pages/About'; // Import About page
+import pricing from './pages/Pricing'; 
+
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -102,6 +104,10 @@ function App() {
   // About page (public)
   if (currentPage === 'about') {
     return <About user={user} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'pricing') {
+    return <Pricing user={user} onNavigate={handleNavigate} />;
   }
 
   // Protected routes with role-based dashboards
