@@ -13,31 +13,49 @@ exports.applyForTask = async (req, res) => {
     const { taskId } = req.body;
     
     console.log('📝 Applying for task:', taskId);
-    console.log('Employee jobDescription:', req.user.jobDescription);
+    console.log('Employee ID:', req.user.id);
+    console.log('Employee jobDescription raw:', req.user.jobDescription);
     
-    const task = await Task.findById(taskId);
+    const task = await Task.findById(taskId).populate('jobDescription');
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
     
-    console.log('Task jobDescription:', task.jobDescription);
+    console.log('Task jobDescription raw:', task.jobDescription);
     
     // Check if task is still open
     if (task.status !== 'open') {
       return res.status(400).json({ message: 'Task is no longer available' });
     }
     
-    // ✅ FIX: Safe comparison of job descriptions
+    // ✅ IMPROVED: Better job description comparison
+    // Get the actual ID values as strings
     const employeeJobId = req.user.jobDescription ? req.user.jobDescription.toString() : null;
-    const taskJobId = task.jobDescription ? task.jobDescription.toString() : null;
+    const taskJobId = task.jobDescription ? task.jobDescription._id.toString() : null;
     
-    if (employeeJobId !== taskJobId) {
-      console.log('Job description mismatch:', employeeJobId, 'vs', taskJobId);
+    console.log('Employee job ID:', employeeJobId);
+    console.log('Task job ID:', taskJobId);
+    console.log('Match:', employeeJobId === taskJobId);
+    
+    // If employee has no job description, they can't apply
+    if (!employeeJobId) {
       return res.status(403).json({ 
-        message: 'Not eligible for this task. Your job role does not match the task requirements.' 
+        message: 'You have not been assigned a job role. Please contact your administrator.' 
       });
     }
     
+    // Check if job descriptions match
+    if (employeeJobId !== taskJobId) {
+      // Get the actual job names for better error message
+      const employeeJob = await JobDescription.findById(employeeJobId);
+      const taskJob = await JobDescription.findById(taskJobId);
+      
+      return res.status(403).json({ 
+        message: `Not eligible for this task. Your role (${employeeJob?.name || 'Unknown'}) does not match the task requirement (${taskJob?.name || 'Unknown'}).` 
+      });
+    }
+    
+    // Rest of your code remains the same...
     // Check for double booking
     const existingApplication = await Application.findOne({
       employee: req.user.id,
@@ -100,22 +118,11 @@ exports.applyForTask = async (req, res) => {
       });
     }
     
-    // Create audit log
-    await AuditLog.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      action: 'create',
-      entityType: 'application',
-      entityId: application._id,
-      changes: { taskId, status: 'pending' },
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
     res.status(201).json({
       success: true,
       data: application
     });
+    
   } catch (error) {
     console.error('Error applying for task:', error);
     res.status(500).json({ message: 'Server error: ' + error.message });
