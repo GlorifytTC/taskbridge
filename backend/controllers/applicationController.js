@@ -12,19 +12,30 @@ exports.applyForTask = async (req, res) => {
   try {
     const { taskId } = req.body;
     
+    console.log('📝 Applying for task:', taskId);
+    console.log('Employee jobDescription:', req.user.jobDescription);
+    
     const task = await Task.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+    
+    console.log('Task jobDescription:', task.jobDescription);
     
     // Check if task is still open
     if (task.status !== 'open') {
       return res.status(400).json({ message: 'Task is no longer available' });
     }
     
-    // Check if employee has correct job description
-    if (task.jobDescription.toString() !== req.user.jobDescription.toString()) {
-      return res.status(403).json({ message: 'Not eligible for this task' });
+    // ✅ FIX: Safe comparison of job descriptions
+    const employeeJobId = req.user.jobDescription ? req.user.jobDescription.toString() : null;
+    const taskJobId = task.jobDescription ? task.jobDescription.toString() : null;
+    
+    if (employeeJobId !== taskJobId) {
+      console.log('Job description mismatch:', employeeJobId, 'vs', taskJobId);
+      return res.status(403).json({ 
+        message: 'Not eligible for this task. Your job role does not match the task requirements.' 
+      });
     }
     
     // Check for double booking
@@ -45,6 +56,7 @@ exports.applyForTask = async (req, res) => {
     
     const hasConflict = conflictingTasks.some(app => {
       const existingTask = app.task;
+      if (!existingTask) return false;
       return existingTask.date.toDateString() === task.date.toDateString() &&
              ((task.startTime >= existingTask.startTime && task.startTime < existingTask.endTime) ||
               (task.endTime > existingTask.startTime && task.endTime <= existingTask.endTime));
@@ -67,6 +79,8 @@ exports.applyForTask = async (req, res) => {
       task.status = 'filled';
     }
     await task.save();
+    
+    console.log('✅ Application created:', application._id);
     
     // Notify admin
     const admin = await User.findOne({
@@ -104,7 +118,7 @@ exports.applyForTask = async (req, res) => {
     });
   } catch (error) {
     console.error('Error applying for task:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
