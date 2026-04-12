@@ -260,7 +260,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(false);
     fetchSubscriptionData();
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
@@ -270,7 +270,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       time: new Date().toLocaleTimeString()
     }]);
     const interval = setInterval(() => {
-      fetchDashboardData();
+      fetchDashboardData(false); // silent refresh - no loading state
       fetchSubscriptionData();
     }, 30000);
     return () => clearInterval(interval);
@@ -384,7 +384,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
@@ -423,7 +424,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -526,7 +527,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
         setShowCreateAdminModal(false);
         setFormData({});
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to create admin' : 'Kunde inte skapa administratör'), 'error');
       }
@@ -570,7 +571,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         );
         
         showToast(language === 'en' ? 'Branch assigned successfully!' : 'Avdelning tilldelad!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(false);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to assign branch' : 'Kunde inte tilldela avdelning'), 'error');
       }
@@ -612,7 +613,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         );
         
         showToast(language === 'en' ? 'Branch removed successfully!' : 'Avdelning borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(false);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to remove branch' : 'Kunde inte ta bort avdelning'), 'error');
       }
@@ -651,7 +652,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
         setShowCreateEmployeeModal(false);
         setFormData({});
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to create employee' : 'Kunde inte skapa anställd'), 'error');
       }
@@ -689,7 +690,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
         setShowCreateBranchModal(false);
         setFormData({});
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to create branch' : 'Kunde inte skapa avdelning'), 'error');
@@ -723,7 +724,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
         setShowCreateJobModal(false);
         setFormData({});
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to create job role' : 'Kunde inte skapa jobbroll'), 'error');
@@ -767,7 +768,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
         setShowCreateTaskModal(false);
         setFormData({});
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to create task' : 'Kunde inte skapa uppgift'), 'error');
       }
@@ -798,7 +799,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setShowResetPasswordModal(false);
         setSelectedUser(null);
         setResetPasswordData({ newPassword: '', confirmPassword: '' });
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to reset password' : 'Kunde inte återställa lösenord'), 'error');
@@ -821,7 +822,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to delete admin' : 'Kunde inte ta bort administratör'), 'error');
       }
@@ -846,7 +847,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to delete employee' : 'Kunde inte ta bort anställd'), 'error');
       }
@@ -872,7 +873,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to delete branch' : 'Kunde inte ta bort avdelning'), 'error');
       }
@@ -904,7 +905,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to delete job role' : 'Kunde inte ta bort jobbroll'), 'error');
       }
@@ -926,7 +927,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         showToast(data.message || (language === 'en' ? 'Failed to delete task' : 'Kunde inte ta bort uppgift'), 'error');
       }
@@ -946,7 +947,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
         fetchSubscriptionData();
       } else {
         const data = await response.json();
@@ -974,7 +975,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
-        fetchDashboardData();
+        fetchDashboardData(true);
       } else {
         const data = await response.json();
         showToast(data.message || (language === 'en' ? 'Failed to reject' : 'Kunde inte avslå'), 'error');
@@ -1324,7 +1325,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
                           <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
                         </div>
-                      </td>}
+                       </div>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span></td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><div style={styles.actionButtons}><button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button><button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></div></td>
                     </tr>
@@ -1505,7 +1506,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         }}>
                           {app.status}
                         </span>
-                      </td>
+                       </div>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
@@ -1514,8 +1515,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
                           </div>
                         )}
-                      </td>
-                    </tr>
+                       </div>
+                    </table>
                   ))}
                 </tbody>
               </table>
