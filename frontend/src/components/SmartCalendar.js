@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 const SmartCalendar = ({ user, onNavigate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [showDayModal, setShowDayModal] = useState(false);
@@ -14,6 +15,18 @@ const SmartCalendar = ({ user, onNavigate }) => {
   const [editFormData, setEditFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('month');
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterBranch, setFilterBranch] = useState('all');
+  const [filterJobRole, setFilterJobRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [branches, setBranches] = useState([]);
+  const [jobRoles, setJobRoles] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Conflict detection
+  const [conflicts, setConflicts] = useState([]);
 
   const getDashboardRoute = () => {
     if (user?.role === 'master') return 'master';
@@ -24,113 +37,221 @@ const SmartCalendar = ({ user, onNavigate }) => {
 
   useEffect(() => {
     fetchCalendarData();
+    fetchFiltersData();
   }, [currentDate, viewMode]);
 
-  const fetchCalendarData = async () => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    
-    let startDate, endDate;
-    if (viewMode === 'month') {
-      startDate = startOfMonth(currentDate);
-      endDate = endOfMonth(currentDate);
-    } else if (viewMode === 'week') {
-      startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-      endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-    } else {
-      startDate = currentDate;
-      endDate = currentDate;
-    }
-    
-    let tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
-    
-    if (user?.role === 'admin') {
-      const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const adminData = await adminRes.json();
-      const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+  useEffect(() => {
+    applyFilters();
+  }, [tasks, searchTerm, filterBranch, filterJobRole, filterStatus]);
+
+  const fetchFiltersData = async () => {
+    try {
+      const token = localStorage.getItem('token');
       
-      if (assignedBranchIds.length > 0) {
-        tasksUrl += `&branches=${assignedBranchIds.join(',')}`;
-      }
-    }
-    
-    // Fetch tasks
-    const tasksRes = await fetch(tasksUrl, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const tasksData = await tasksRes.json();
-    setTasks(tasksData.data || []);
-    
-    // Fetch applications with populated employee data
-    if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
-      const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+      // Fetch branches for filter
+      const branchesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const appsData = await appsRes.json();
-      console.log('Applications with populated data:', JSON.stringify(appsData.data, null, 2));
-      setApplications(appsData.data || []);
+      const branchesData = await branchesRes.json();
+      setBranches(branchesData.data || []);
+      
+      // Fetch job roles for filter
+      const jobsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const jobsData = await jobsRes.json();
+      setJobRoles(jobsData.data || []);
+      
+    } catch (error) {
+      console.error('Error fetching filter data:', error);
+    }
+  };
+
+  const fetchCalendarData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      let startDate, endDate;
+      if (viewMode === 'month') {
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+      } else if (viewMode === 'week') {
+        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+      } else {
+        startDate = currentDate;
+        endDate = currentDate;
+      }
+      
+      let tasksUrl = `https://taskbridge-production-9d91.up.railway.app/api/tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      
+      if (user?.role === 'admin') {
+        const adminRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const adminData = await adminRes.json();
+        const assignedBranchIds = adminData.user.assignedBranches?.map(b => b._id) || [];
+        
+        if (assignedBranchIds.length > 0) {
+          tasksUrl += `&branches=${assignedBranchIds.join(',')}`;
+        }
+      }
+      
+      const tasksRes = await fetch(tasksUrl, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const tasksData = await tasksRes.json();
+      setTasks(tasksData.data || []);
+      
+      // Detect conflicts
+      detectConflicts(tasksData.data || []);
+      
+      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
+        const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const appsData = await appsRes.json();
+        setApplications(appsData.data || []);
+      }
+      
+      const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const employeesData = await employeesRes.json();
+      setEmployees(employeesData.data || []);
+      
+    } catch (error) {
+      console.error('Error fetching calendar data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const detectConflicts = (tasksList) => {
+    const conflictsList = [];
+    
+    // Group tasks by date and employee
+    tasksList.forEach(task => {
+      const approvedApps = applications.filter(app => 
+        (app.task === task._id || app.task?._id === task._id) && app.status === 'approved'
+      );
+      
+      approvedApps.forEach(app => {
+        // Check if this employee has other tasks at same time
+        const employeeTasks = tasksList.filter(t => {
+          const employeeApps = applications.filter(a => 
+            (a.task === t._id || a.task?._id === t._id) && 
+            a.status === 'approved' && 
+            a.employee === app.employee
+          );
+          return employeeApps.length > 0 && t.date === task.date && t._id !== task._id;
+        });
+        
+        employeeTasks.forEach(conflictTask => {
+          // Check if times overlap
+          const taskStart = task.startTime;
+          const taskEnd = task.endTime;
+          const conflictStart = conflictTask.startTime;
+          const conflictEnd = conflictTask.endTime;
+          
+          if ((taskStart >= conflictStart && taskStart < conflictEnd) ||
+              (taskEnd > conflictStart && taskEnd <= conflictEnd)) {
+            conflictsList.push({
+              employeeId: app.employee,
+              employeeName: app.employee?.name || 'Unknown',
+              task1: task.title,
+              task2: conflictTask.title,
+              date: task.date
+            });
+          }
+        });
+      });
+    });
+    
+    setConflicts(conflictsList);
+  };
+
+  const applyFilters = () => {
+    let filtered = [...tasks];
+    
+    // Search by branch, job role, task title, or employee
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(task => {
+        const matchesBranch = task.branch?.name?.toLowerCase().includes(term);
+        const matchesJobRole = task.jobDescription?.name?.toLowerCase().includes(term);
+        const matchesTitle = task.title?.toLowerCase().includes(term);
+        
+        // Check if any employee assigned matches search
+        const taskApps = applications.filter(app => 
+          (app.task === task._id || app.task?._id === task._id) && app.status === 'approved'
+        );
+        const matchesEmployee = taskApps.some(app => 
+          app.employee?.name?.toLowerCase().includes(term)
+        );
+        
+        return matchesBranch || matchesJobRole || matchesTitle || matchesEmployee;
+      });
     }
     
-    // Fetch employees as fallback
-    const employeesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const employeesData = await employeesRes.json();
-    setEmployees(employeesData.data || []);
+    // Filter by branch
+    if (filterBranch !== 'all') {
+      filtered = filtered.filter(task => task.branch?._id === filterBranch);
+    }
     
-  } catch (error) {
-    console.error('Error fetching calendar data:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+    // Filter by job role
+    if (filterJobRole !== 'all') {
+      filtered = filtered.filter(task => task.jobDescription?._id === filterJobRole);
+    }
+    
+    // Filter by status
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(task => {
+        if (filterStatus === 'available') return task.status === 'open';
+        if (filterStatus === 'full') return task.status === 'filled';
+        if (filterStatus === 'cancelled') return task.status === 'cancelled';
+        if (filterStatus === 'past') return new Date(task.date) < new Date();
+        return true;
+      });
+    }
+    
+    setFilteredTasks(filtered);
+  };
 
   const getTasksForDate = (date) => {
-    return tasks.filter(task => isSameDay(new Date(task.date), date));
+    return filteredTasks.filter(task => isSameDay(new Date(task.date), date));
   };
 
   const getApplicationsForTask = (taskId) => {
-    // Filter applications that match the task ID and are approved
     const approvedApps = applications.filter(app => {
       const taskMatch = app.task === taskId || app.task?._id === taskId;
       const isApproved = app.status === 'approved';
       return taskMatch && isApproved;
     });
-    console.log(`Applications for task ${taskId}:`, approvedApps);
     return approvedApps;
   };
 
   const getEmployeeName = (employeeData) => {
-  // If employeeData is already an object with name
-  if (employeeData && typeof employeeData === 'object' && employeeData.name) {
-    return employeeData.name;
-  }
-  
-  // If employeeData is an ID string
-  if (employeeData && typeof employeeData === 'string') {
-    // First try from applications data
-    for (const app of applications) {
-      if (app.employee && app.employee._id === employeeData) {
-        return app.employee.name;
+    if (employeeData && typeof employeeData === 'object' && employeeData.name) {
+      return employeeData.name;
+    }
+    if (employeeData && typeof employeeData === 'string') {
+      for (const app of applications) {
+        if (app.employee && app.employee._id === employeeData) {
+          return app.employee.name;
+        }
+        if (app.employee === employeeData && app.employeeData) {
+          return app.employeeData.name;
+        }
       }
-      if (app.employee === employeeData && app.employeeData) {
-        return app.employeeData.name;
+      const employee = employees.find(e => e._id === employeeData);
+      if (employee && employee.name) {
+        return employee.name;
       }
     }
-    
-    // Then try from employees array
-    const employee = employees.find(e => e._id === employeeData);
-    if (employee && employee.name) {
-      return employee.name;
-    }
-  }
-  
-  console.log('Employee not found for data:', employeeData);
-  return 'Unknown';
-};
+    return 'Unknown';
+  };
 
   const getTaskStatusColor = (task) => {
     const currentDateObj = new Date();
@@ -314,6 +435,75 @@ const SmartCalendar = ({ user, onNavigate }) => {
         </button>
       </div>
 
+      {/* Search and Filter Bar */}
+      <div style={styles.searchFilterBar}>
+        <div style={styles.searchContainer}>
+          <i className="fas fa-search" style={styles.searchIcon}></i>
+          <input
+            type="text"
+            placeholder="Search by branch, job role, task, or employee..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+        </div>
+        <button onClick={() => setShowFilters(!showFilters)} style={styles.filterToggleButton}>
+          <i className="fas fa-sliders-h"></i> {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+      </div>
+
+      {/* Filter Options */}
+      {showFilters && (
+        <div style={styles.filtersPanel}>
+          <div style={styles.filterRow}>
+            <div style={styles.filterGroup}>
+              <label style={styles.filterLabel}>Branch:</label>
+              <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} style={styles.filterSelect}>
+                <option value="all">All Branches</option>
+                {branches.map(branch => (
+                  <option key={branch._id} value={branch._id}>{branch.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={styles.filterGroup}>
+              <label style={styles.filterLabel}>Job Role:</label>
+              <select value={filterJobRole} onChange={(e) => setFilterJobRole(e.target.value)} style={styles.filterSelect}>
+                <option value="all">All Roles</option>
+                {jobRoles.map(role => (
+                  <option key={role._id} value={role._id}>{role.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={styles.filterGroup}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.filterSelect}>
+                <option value="all">All Status</option>
+                <option value="available">Available</option>
+                <option value="full">Full</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+            <button onClick={() => {
+              setSearchTerm('');
+              setFilterBranch('all');
+              setFilterJobRole('all');
+              setFilterStatus('all');
+            }} style={styles.clearFiltersButton}>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Conflict Warning */}
+      {conflicts.length > 0 && (
+        <div style={styles.conflictWarning}>
+          <i className="fas fa-exclamation-triangle"></i>
+          <span>⚠️ {conflicts.length} scheduling conflicts detected! Employees have overlapping shifts.</span>
+        </div>
+      )}
+
       <div style={styles.calendarHeader}>
         <div style={styles.headerLeft}>
           <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
@@ -342,6 +532,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
         <div><span style={{...styles.legendDot, backgroundColor: '#f59e0b'}}></span> Full</div>
         <div><span style={{...styles.legendDot, backgroundColor: '#ef4444'}}></span> Cancelled</div>
         <div><span style={{...styles.legendDot, backgroundColor: '#6b7280'}}></span> Past</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#f97316'}}></span> Conflict</div>
       </div>
 
       {showDayModal && selectedDay && (
@@ -444,37 +635,36 @@ const SmartCalendar = ({ user, onNavigate }) => {
             )}
 
             <div style={styles.workersSection}>
-                    <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
-                    <div style={styles.workersList}>
-                        {getApplicationsForTask(selectedTask._id).length === 0 ? (
-                        <p style={styles.noWorkers}>No workers assigned yet</p>
-                        ) : (
-                        getApplicationsForTask(selectedTask._id).map(app => {
-                            // Get employee name - the employee is already populated in the application
-                            let employeeName = 'Unknown';
-                            if (app.employee) {
-                            if (typeof app.employee === 'object' && app.employee.name) {
-                                employeeName = app.employee.name;
-                            } else if (typeof app.employee === 'string') {
-                                employeeName = getEmployeeName(app.employee);
-                            }
-                            }
-                            
-                            return (
-                            <div key={app._id} style={styles.workerCard}>
-                                <div style={styles.workerInfo}>
-                                <div style={styles.workerName}>{employeeName}</div>
-                                <div style={styles.workerStatus}>✅ Approved</div>
-                                </div>
-                                {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
-                                <button onClick={() => handleRemoveEmployee(app.employee._id || app.employee, app._id)} style={styles.removeButton}>Remove</button>
-                                )}
-                            </div>
-                            );
-                        })
+              <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
+              <div style={styles.workersList}>
+                {getApplicationsForTask(selectedTask._id).length === 0 ? (
+                  <p style={styles.noWorkers}>No workers assigned yet</p>
+                ) : (
+                  getApplicationsForTask(selectedTask._id).map(app => {
+                    let employeeName = 'Unknown';
+                    if (app.employee) {
+                      if (typeof app.employee === 'object' && app.employee.name) {
+                        employeeName = app.employee.name;
+                      } else if (typeof app.employee === 'string') {
+                        employeeName = getEmployeeName(app.employee);
+                      }
+                    }
+                    
+                    return (
+                      <div key={app._id} style={styles.workerCard}>
+                        <div style={styles.workerInfo}>
+                          <div style={styles.workerName}>{employeeName}</div>
+                          <div style={styles.workerStatus}>✅ Approved</div>
+                        </div>
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
+                          <button onClick={() => handleRemoveEmployee(app.employee._id || app.employee, app._id)} style={styles.removeButton}>Remove</button>
                         )}
-                    </div>
-                    </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -488,6 +678,21 @@ const styles = {
   closeButton: { background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', color: '#ffffff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
+  
+  // Search and Filter Styles
+  searchFilterBar: { display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' },
+  searchContainer: { flex: 1, position: 'relative' },
+  searchIcon: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', fontSize: '14px' },
+  searchInput: { width: '100%', padding: '10px 12px 10px 35px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', color: 'white', fontSize: '14px', outline: 'none' },
+  filterToggleButton: { padding: '10px 16px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '10px', color: '#00d1ff', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' },
+  filtersPanel: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.1)' },
+  filterRow: { display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' },
+  filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' },
+  filterLabel: { color: 'rgba(255,255,255,0.7)', fontSize: '12px' },
+  filterSelect: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  clearFiltersButton: { padding: '8px 16px', background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontSize: '13px' },
+  conflictWarning: { background: 'rgba(249,115,22,0.2)', border: '1px solid #f97316', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', color: '#f97316', fontSize: '13px' },
+  
   calendarHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
   headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
   navButton: { padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#ffffff', cursor: 'pointer', fontSize: '16px' },

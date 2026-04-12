@@ -87,7 +87,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     },
     sv: {
-      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta' },
+      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakta' },
       signIn: 'Logga in',
       tag: 'Smart Personalhantering',
       title: 'Hantera Din Arbetsstyrka med Intelligens',
