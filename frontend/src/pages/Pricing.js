@@ -29,12 +29,12 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
   const planPrices = [
-    { id: 'basic', name: 'Basic', price: 399, maxEmployees: 25, maxBranches: 3, maxEmails: 200, maxAdmins: 2 },
-    { id: 'standard', name: 'Standard', price: 799, maxEmployees: 50, maxBranches: 5, maxEmails: 400, maxAdmins: 3 },
-    { id: 'pro', name: 'Pro', price: 1299, maxEmployees: 100, maxBranches: 8, maxEmails: 700, maxAdmins: 5, popular: true },
-    { id: 'business', name: 'Business', price: 2499, maxEmployees: 250, maxBranches: 15, maxEmails: 2000, maxAdmins: 10 },
-    { id: 'enterprise', name: 'Enterprise', price: 4999, maxEmployees: 500, maxBranches: 30, maxEmails: 5000, maxAdmins: 20 },
-    { id: 'corporate', name: 'Corporate', price: 9999, maxEmployees: 1000, maxBranches: 60, maxEmails: 12000, maxAdmins: 50 }
+    { id: 'basic', name: 'Basic', price: 399, maxEmployees: 25, maxBranches: 3, maxAdmins: 2 },
+    { id: 'standard', name: 'Standard', price: 799, maxEmployees: 50, maxBranches: 5, maxAdmins: 3 },
+    { id: 'pro', name: 'Pro', price: 1299, maxEmployees: 100, maxBranches: 8, maxAdmins: 5, popular: true },
+    { id: 'business', name: 'Business', price: 2499, maxEmployees: 250, maxBranches: 15, maxAdmins: 10 },
+    { id: 'enterprise', name: 'Enterprise', price: 4999, maxEmployees: 500, maxBranches: 30, maxAdmins: 20 },
+    { id: 'corporate', name: 'Corporate', price: 9999, maxEmployees: 1000, maxBranches: 60, maxAdmins: 50 }
   ];
 
   const t = {
@@ -49,7 +49,6 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
       price: 'Price (SEK)',
       employees: 'Employees',
       branches: 'Branches',
-      emails: 'Emails/month',
       admins: 'Admins',
       mostPopular: 'MOST POPULAR',
       footer: 'All rights reserved. Developed by',
@@ -66,7 +65,6 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
       price: 'Pris (SEK)',
       employees: 'Anställda',
       branches: 'Filialer',
-      emails: 'E-post/månad',
       admins: 'Administratörer',
       mostPopular: 'MEST POPULÄR',
       footer: 'Alla rättigheter förbehållna. Utvecklad av',
@@ -167,7 +165,6 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
                 <th style={styles.th}>{lang.price}</th>
                 <th style={styles.th}>{lang.employees}</th>
                 <th style={styles.th}>{lang.branches}</th>
-                <th style={styles.th}>{lang.emails}</th>
                 <th style={styles.th}>{lang.admins}</th>
                 <th style={styles.th}></th>
               </tr>
@@ -178,24 +175,23 @@ const Pricing = ({ onNavigate, onLoginClick }) => {
                   <td style={styles.td}>
                     <strong>{plan.name}</strong>
                     {plan.popular && <span style={styles.popularBadge}>{lang.mostPopular}</span>}
-                  </td>
+                   </td>
                   <td style={styles.td}>
                     <span style={styles.priceValue}>{plan.price.toLocaleString()} SEK</span>
                     <span style={styles.pricePeriod}>{lang.perMonth}</span>
-                  </td>
+                   </td>
                   <td style={styles.td}>Up to {plan.maxEmployees.toLocaleString()}</td>
                   <td style={styles.td}>Up to {plan.maxBranches}</td>
-                  <td style={styles.td}>Up to {plan.maxEmails.toLocaleString()}</td>
                   <td style={styles.td}>Up to {plan.maxAdmins}</td>
                   <td style={styles.td}>
                     <button onClick={handleGetStarted} style={styles.tableButton}>
                       {lang.getStarted}
                     </button>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       </div>
 
@@ -438,7 +434,7 @@ const styles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '700px',
+    minWidth: '600px',
   },
   tableHeader: {
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',

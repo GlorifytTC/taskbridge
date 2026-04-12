@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { sv, enUS } from 'date-fns/locale';
 
 const SmartCalendar = ({ user, onNavigate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -16,6 +17,11 @@ const SmartCalendar = ({ user, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('month');
   
+  // Language state
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+  
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBranch, setFilterBranch] = useState('all');
@@ -27,6 +33,91 @@ const SmartCalendar = ({ user, onNavigate }) => {
   
   // Conflict detection
   const [conflicts, setConflicts] = useState([]);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+
+  // Translations
+  const t = {
+    en: {
+      weekDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      available: 'Available',
+      full: 'Full',
+      cancelled: 'Cancelled',
+      past: 'Past',
+      conflict: 'Conflict',
+      searchPlaceholder: 'Search by branch, job role, task, or employee...',
+      showFilters: 'Show Filters',
+      hideFilters: 'Hide Filters',
+      branch: 'Branch',
+      jobRole: 'Job Role',
+      status: 'Status',
+      allBranches: 'All Branches',
+      allRoles: 'All Roles',
+      allStatus: 'All Status',
+      clearFilters: 'Clear Filters',
+      conflictsDetected: 'scheduling conflicts detected! Employees have overlapping shifts.',
+      noTasks: 'No tasks scheduled for this day',
+      assignedWorkers: 'Assigned Workers',
+      noWorkers: 'No workers assigned yet',
+      editTask: 'Edit Task',
+      saveChanges: 'Save Changes',
+      cancelTask: 'Cancel Task',
+      remove: 'Remove',
+      approved: 'Approved',
+      location: 'Location',
+      notSpecified: 'Not specified',
+      capacity: 'Capacity',
+      description: 'Description',
+      date: 'Date',
+      time: 'Time',
+      branch: 'Branch',
+      role: 'Role',
+      status: 'Status'
+    },
+    sv: {
+      weekDays: ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'],
+      available: 'Tillgänglig',
+      full: 'Full',
+      cancelled: 'Inställd',
+      past: 'Tidigare',
+      conflict: 'Konflikt',
+      searchPlaceholder: 'Sök efter avdelning, jobbroll, uppgift eller anställd...',
+      showFilters: 'Visa filter',
+      hideFilters: 'Dölj filter',
+      branch: 'Avdelning',
+      jobRole: 'Jobbroll',
+      status: 'Status',
+      allBranches: 'Alla avdelningar',
+      allRoles: 'Alla roller',
+      allStatus: 'Alla status',
+      clearFilters: 'Rensa filter',
+      conflictsDetected: 'schema konflikter upptäckta! Anställda har överlappande skift.',
+      noTasks: 'Inga uppgifter schemalagda denna dag',
+      assignedWorkers: 'Tilldelade arbetare',
+      noWorkers: 'Inga arbetare tilldelade ännu',
+      editTask: 'Redigera uppgift',
+      saveChanges: 'Spara ändringar',
+      cancelTask: 'Avbryt uppgift',
+      remove: 'Ta bort',
+      approved: 'Godkänd',
+      location: 'Plats',
+      notSpecified: 'Ej angivet',
+      capacity: 'Kapacitet',
+      description: 'Beskrivning',
+      date: 'Datum',
+      time: 'Tid',
+      branch: 'Avdelning',
+      role: 'Roll',
+      status: 'Status'
+    }
+  };
+
+  const lang = t[language];
+
+  const changeLanguage = (langCode) => {
+    setLanguage(langCode);
+    localStorage.setItem('taskbridge_language', langCode);
+    setShowLanguageDropdown(false);
+  };
 
   const getDashboardRoute = () => {
     if (user?.role === 'master') return 'master';
@@ -48,14 +139,12 @@ const SmartCalendar = ({ user, onNavigate }) => {
     try {
       const token = localStorage.getItem('token');
       
-      // Fetch branches for filter
       const branchesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const branchesData = await branchesRes.json();
       setBranches(branchesData.data || []);
       
-      // Fetch job roles for filter
       const jobsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -104,7 +193,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
       const tasksData = await tasksRes.json();
       setTasks(tasksData.data || []);
       
-      // Detect conflicts
       detectConflicts(tasksData.data || []);
       
       if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') {
@@ -131,14 +219,12 @@ const SmartCalendar = ({ user, onNavigate }) => {
   const detectConflicts = (tasksList) => {
     const conflictsList = [];
     
-    // Group tasks by date and employee
     tasksList.forEach(task => {
       const approvedApps = applications.filter(app => 
         (app.task === task._id || app.task?._id === task._id) && app.status === 'approved'
       );
       
       approvedApps.forEach(app => {
-        // Check if this employee has other tasks at same time
         const employeeTasks = tasksList.filter(t => {
           const employeeApps = applications.filter(a => 
             (a.task === t._id || a.task?._id === t._id) && 
@@ -149,7 +235,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
         });
         
         employeeTasks.forEach(conflictTask => {
-          // Check if times overlap
           const taskStart = task.startTime;
           const taskEnd = task.endTime;
           const conflictStart = conflictTask.startTime;
@@ -175,7 +260,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
   const applyFilters = () => {
     let filtered = [...tasks];
     
-    // Search by branch, job role, task title, or employee
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(task => {
@@ -183,7 +267,6 @@ const SmartCalendar = ({ user, onNavigate }) => {
         const matchesJobRole = task.jobDescription?.name?.toLowerCase().includes(term);
         const matchesTitle = task.title?.toLowerCase().includes(term);
         
-        // Check if any employee assigned matches search
         const taskApps = applications.filter(app => 
           (app.task === task._id || app.task?._id === task._id) && app.status === 'approved'
         );
@@ -195,17 +278,14 @@ const SmartCalendar = ({ user, onNavigate }) => {
       });
     }
     
-    // Filter by branch
     if (filterBranch !== 'all') {
       filtered = filtered.filter(task => task.branch?._id === filterBranch);
     }
     
-    // Filter by job role
     if (filterJobRole !== 'all') {
       filtered = filtered.filter(task => task.jobDescription?._id === filterJobRole);
     }
     
-    // Filter by status
     if (filterStatus !== 'all') {
       filtered = filtered.filter(task => {
         if (filterStatus === 'available') return task.status === 'open';
@@ -267,10 +347,10 @@ const SmartCalendar = ({ user, onNavigate }) => {
     const currentDateObj = new Date();
     const taskDate = new Date(task.date);
     
-    if (taskDate < currentDateObj) return 'Past';
-    if (task.status === 'cancelled') return 'Cancelled';
-    if (task.status === 'filled' || task.currentEmployees >= task.maxEmployees) return 'Full';
-    return 'Available';
+    if (taskDate < currentDateObj) return lang.past;
+    if (task.status === 'cancelled') return lang.cancelled;
+    if (task.status === 'filled' || task.currentEmployees >= task.maxEmployees) return lang.full;
+    return lang.available;
   };
 
   const handleDayClick = (date, dayTasks) => {
@@ -306,20 +386,20 @@ const SmartCalendar = ({ user, onNavigate }) => {
       });
       
       if (response.ok) {
-        alert('Task updated successfully!');
+        alert(language === 'en' ? 'Task updated successfully!' : 'Uppgiften uppdaterades!');
         setEditingTask(false);
         fetchCalendarData();
       } else {
-        alert('Failed to update task');
+        alert(language === 'en' ? 'Failed to update task' : 'Kunde inte uppdatera uppgiften');
       }
     } catch (error) {
       console.error('Error updating task:', error);
-      alert('Failed to update task');
+      alert(language === 'en' ? 'Failed to update task' : 'Kunde inte uppdatera uppgiften');
     }
   };
 
   const handleCancelTask = async () => {
-    if (!confirm('Are you sure you want to cancel this task?')) return;
+    if (!confirm(language === 'en' ? 'Are you sure you want to cancel this task?' : 'Är du säker på att du vill avbryta denna uppgift?')) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${selectedTask._id}`, {
@@ -330,17 +410,17 @@ const SmartCalendar = ({ user, onNavigate }) => {
         },
         body: JSON.stringify({ status: 'cancelled' })
       });
-      alert('Task cancelled successfully');
+      alert(language === 'en' ? 'Task cancelled successfully' : 'Uppgiften avbröts');
       fetchCalendarData();
       setShowTaskModal(false);
     } catch (error) {
       console.error('Error cancelling task:', error);
-      alert('Failed to cancel task');
+      alert(language === 'en' ? 'Failed to cancel task' : 'Kunde inte avbryta uppgiften');
     }
   };
 
   const handleRemoveEmployee = async (employeeId, applicationId) => {
-    if (!confirm('Remove this employee from the shift?')) return;
+    if (!confirm(language === 'en' ? 'Remove this employee from the shift?' : 'Ta bort denna anställd från skiftet?')) return;
     try {
       const token = localStorage.getItem('token');
       await fetch(`https://taskbridge-production-9d91.up.railway.app/api/applications/${applicationId}/reject`, {
@@ -351,11 +431,11 @@ const SmartCalendar = ({ user, onNavigate }) => {
         },
         body: JSON.stringify({ reason: 'Removed by admin' })
       });
-      alert('Employee removed successfully');
+      alert(language === 'en' ? 'Employee removed successfully' : 'Anställd borttagen');
       fetchCalendarData();
     } catch (error) {
       console.error('Error removing employee:', error);
-      alert('Failed to remove employee');
+      alert(language === 'en' ? 'Failed to remove employee' : 'Kunde inte ta bort anställd');
     }
   };
 
@@ -429,10 +509,23 @@ const SmartCalendar = ({ user, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.backButtonContainer}>
-        <button onClick={() => onNavigate(getDashboardRoute())} style={styles.closeButton}>
-          ✕
-        </button>
+      <div style={styles.header}>
+        <div style={styles.backButtonContainer}>
+          <button onClick={() => onNavigate(getDashboardRoute())} style={styles.closeButton}>
+            ✕
+          </button>
+        </div>
+        <div style={styles.languageContainer}>
+          <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={styles.languageButton}>
+            <i className="fas fa-globe"></i> {language === 'en' ? 'EN' : 'SV'}
+          </button>
+          {showLanguageDropdown && (
+            <div style={styles.languageDropdown}>
+              <button onClick={() => changeLanguage('en')} style={styles.languageOption}>🇬🇧 English</button>
+              <button onClick={() => changeLanguage('sv')} style={styles.languageOption}>🇸🇪 Svenska</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter Bar */}
@@ -441,14 +534,14 @@ const SmartCalendar = ({ user, onNavigate }) => {
           <i className="fas fa-search" style={styles.searchIcon}></i>
           <input
             type="text"
-            placeholder="Search by branch, job role, task, or employee..."
+            placeholder={lang.searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.searchInput}
           />
         </div>
         <button onClick={() => setShowFilters(!showFilters)} style={styles.filterToggleButton}>
-          <i className="fas fa-sliders-h"></i> {showFilters ? 'Hide Filters' : 'Show Filters'}
+          <i className="fas fa-sliders-h"></i> {showFilters ? lang.hideFilters : lang.showFilters}
         </button>
       </div>
 
@@ -457,31 +550,31 @@ const SmartCalendar = ({ user, onNavigate }) => {
         <div style={styles.filtersPanel}>
           <div style={styles.filterRow}>
             <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Branch:</label>
+              <label style={styles.filterLabel}>{lang.branch}:</label>
               <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} style={styles.filterSelect}>
-                <option value="all">All Branches</option>
+                <option value="all">{lang.allBranches}</option>
                 {branches.map(branch => (
                   <option key={branch._id} value={branch._id}>{branch.name}</option>
                 ))}
               </select>
             </div>
             <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Job Role:</label>
+              <label style={styles.filterLabel}>{lang.jobRole}:</label>
               <select value={filterJobRole} onChange={(e) => setFilterJobRole(e.target.value)} style={styles.filterSelect}>
-                <option value="all">All Roles</option>
+                <option value="all">{lang.allRoles}</option>
                 {jobRoles.map(role => (
                   <option key={role._id} value={role._id}>{role.name}</option>
                 ))}
               </select>
             </div>
             <div style={styles.filterGroup}>
-              <label style={styles.filterLabel}>Status:</label>
+              <label style={styles.filterLabel}>{lang.status}:</label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.filterSelect}>
-                <option value="all">All Status</option>
-                <option value="available">Available</option>
-                <option value="full">Full</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="past">Past</option>
+                <option value="all">{lang.allStatus}</option>
+                <option value="available">{lang.available}</option>
+                <option value="full">{lang.full}</option>
+                <option value="cancelled">{lang.cancelled}</option>
+                <option value="past">{lang.past}</option>
               </select>
             </div>
             <button onClick={() => {
@@ -490,7 +583,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
               setFilterJobRole('all');
               setFilterStatus('all');
             }} style={styles.clearFiltersButton}>
-              Clear Filters
+              {lang.clearFilters}
             </button>
           </div>
         </div>
@@ -500,14 +593,14 @@ const SmartCalendar = ({ user, onNavigate }) => {
       {conflicts.length > 0 && (
         <div style={styles.conflictWarning}>
           <i className="fas fa-exclamation-triangle"></i>
-          <span>⚠️ {conflicts.length} scheduling conflicts detected! Employees have overlapping shifts.</span>
+          <span>⚠️ {conflicts.length} {lang.conflictsDetected}</span>
         </div>
       )}
 
       <div style={styles.calendarHeader}>
         <div style={styles.headerLeft}>
           <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={styles.navButton}>←</button>
-          <h2 style={styles.monthTitle}>{format(currentDate, 'MMMM yyyy')}</h2>
+          <h2 style={styles.monthTitle}>{format(currentDate, 'MMMM yyyy', { locale: language === 'sv' ? sv : enUS })}</h2>
           <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={styles.navButton}>→</button>
         </div>
         <div style={styles.viewButtons}>
@@ -518,7 +611,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
       </div>
 
       <div style={styles.weekHeaders}>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+        {lang.weekDays.map(day => (
           <div key={day} style={styles.weekDay}>{day}</div>
         ))}
       </div>
@@ -528,23 +621,23 @@ const SmartCalendar = ({ user, onNavigate }) => {
       </div>
 
       <div style={styles.legend}>
-        <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> Available</div>
-        <div><span style={{...styles.legendDot, backgroundColor: '#f59e0b'}}></span> Full</div>
-        <div><span style={{...styles.legendDot, backgroundColor: '#ef4444'}}></span> Cancelled</div>
-        <div><span style={{...styles.legendDot, backgroundColor: '#6b7280'}}></span> Past</div>
-        <div><span style={{...styles.legendDot, backgroundColor: '#f97316'}}></span> Conflict</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#10b981'}}></span> {lang.available}</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#f59e0b'}}></span> {lang.full}</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#ef4444'}}></span> {lang.cancelled}</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#6b7280'}}></span> {lang.past}</div>
+        <div><span style={{...styles.legendDot, backgroundColor: '#f97316'}}></span> {lang.conflict}</div>
       </div>
 
       {showDayModal && selectedDay && (
         <div style={styles.modalOverlay} onClick={() => setShowDayModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>{format(selectedDay, 'EEEE, MMMM d, yyyy')}</h2>
+              <h2 style={styles.modalTitle}>{format(selectedDay, 'EEEE, MMMM d, yyyy', { locale: language === 'sv' ? sv : enUS })}</h2>
               <button onClick={() => setShowDayModal(false)} style={styles.closeButton}>✕</button>
             </div>
             <div style={styles.tasksList}>
               {getTasksForDate(selectedDay).length === 0 ? (
-                <p style={styles.noTasks}>No tasks scheduled for this day</p>
+                <p style={styles.noTasks}>{lang.noTasks}</p>
               ) : (
                 getTasksForDate(selectedDay).map(task => (
                   <div key={task._id} onClick={() => handleTaskClick(task)} style={styles.taskCard}>
@@ -557,7 +650,7 @@ const SmartCalendar = ({ user, onNavigate }) => {
                     <div style={styles.taskDetails}>
                       <span>⏰ {task.startTime} - {task.endTime}</span>
                       <span>👥 {task.currentEmployees}/{task.maxEmployees}</span>
-                      <span>📍 {task.location || 'No location'}</span>
+                      <span>📍 {task.location || lang.notSpecified}</span>
                     </div>
                     <div style={styles.taskMeta}>{task.jobDescription?.name} • {task.branch?.name}</div>
                   </div>
@@ -578,30 +671,30 @@ const SmartCalendar = ({ user, onNavigate }) => {
             
             <div style={styles.taskInfoCard}>
               <div style={styles.taskInfoRow}>
-                <span><strong>Date:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
-                <span><strong>Time:</strong> {selectedTask.startTime} - {selectedTask.endTime}</span>
+                <span><strong>{lang.date}:</strong> {new Date(selectedTask.date).toLocaleDateString()}</span>
+                <span><strong>{lang.time}:</strong> {selectedTask.startTime} - {selectedTask.endTime}</span>
               </div>
               <div style={styles.taskInfoRow}>
-                <span><strong>Branch:</strong> {selectedTask.branch?.name}</span>
-                <span><strong>Role:</strong> {selectedTask.jobDescription?.name}</span>
+                <span><strong>{lang.branch}:</strong> {selectedTask.branch?.name}</span>
+                <span><strong>{lang.role}:</strong> {selectedTask.jobDescription?.name}</span>
               </div>
               <div style={styles.taskInfoRow}>
-                <span><strong>Location:</strong> {selectedTask.location || 'Not specified'}</span>
-                <span><strong>Status:</strong> 
+                <span><strong>{lang.location}:</strong> {selectedTask.location || lang.notSpecified}</span>
+                <span><strong>{lang.status}:</strong> 
                   <span style={{...styles.taskStatusBadge, backgroundColor: getTaskStatusColor(selectedTask), marginLeft: '8px'}}>
                     {getTaskStatusText(selectedTask)}
                   </span>
                 </span>
               </div>
               {selectedTask.description && (
-                <div style={styles.taskDescription}><strong>Description:</strong> {selectedTask.description}</div>
+                <div style={styles.taskDescription}><strong>{lang.description}:</strong> {selectedTask.description}</div>
               )}
             </div>
 
             {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
               <div style={styles.editSection}>
                 <div style={styles.editHeader}>
-                  <h3 style={styles.editTitle}>Edit Task</h3>
+                  <h3 style={styles.editTitle}>{lang.editTask}</h3>
                   {!editingTask ? (
                     <button onClick={() => setEditingTask(true)} style={styles.editButton}>✎ Edit</button>
                   ) : (
@@ -612,33 +705,33 @@ const SmartCalendar = ({ user, onNavigate }) => {
                 {editingTask ? (
                   <div style={styles.editForm}>
                     <input type="text" placeholder="Task Title" value={editFormData.title} onChange={(e) => setEditFormData({...editFormData, title: e.target.value})} style={styles.input} />
-                    <textarea placeholder="Description" value={editFormData.description} onChange={(e) => setEditFormData({...editFormData, description: e.target.value})} style={styles.textarea} rows="2" />
+                    <textarea placeholder={lang.description} value={editFormData.description} onChange={(e) => setEditFormData({...editFormData, description: e.target.value})} style={styles.textarea} rows="2" />
                     <div style={styles.timeRow}>
                       <input type="time" value={editFormData.startTime} onChange={(e) => setEditFormData({...editFormData, startTime: e.target.value})} style={{...styles.input, flex: 1}} />
                       <input type="time" value={editFormData.endTime} onChange={(e) => setEditFormData({...editFormData, endTime: e.target.value})} style={{...styles.input, flex: 1}} />
                     </div>
                     <input type="number" placeholder="Max Employees" value={editFormData.maxEmployees} onChange={(e) => setEditFormData({...editFormData, maxEmployees: parseInt(e.target.value)})} style={styles.input} min="1" />
-                    <input type="text" placeholder="Location" value={editFormData.location} onChange={(e) => setEditFormData({...editFormData, location: e.target.value})} style={styles.input} />
+                    <input type="text" placeholder={lang.location} value={editFormData.location} onChange={(e) => setEditFormData({...editFormData, location: e.target.value})} style={styles.input} />
                     <div style={styles.editButtons}>
-                      <button onClick={handleUpdateTask} style={styles.saveButton}>Save Changes</button>
-                      <button onClick={handleCancelTask} style={styles.cancelTaskButton}>Cancel Task</button>
+                      <button onClick={handleUpdateTask} style={styles.saveButton}>{lang.saveChanges}</button>
+                      <button onClick={handleCancelTask} style={styles.cancelTaskButton}>{lang.cancelTask}</button>
                     </div>
                   </div>
                 ) : (
                   <div style={styles.taskQuickInfo}>
                     <p>⏰ {selectedTask.startTime} - {selectedTask.endTime}</p>
-                    <p>👥 Capacity: {selectedTask.currentEmployees}/{selectedTask.maxEmployees}</p>
-                    <p>📍 {selectedTask.location || 'Location not specified'}</p>
+                    <p>👥 {lang.capacity}: {selectedTask.currentEmployees}/{selectedTask.maxEmployees}</p>
+                    <p>📍 {lang.location}: {selectedTask.location || lang.notSpecified}</p>
                   </div>
                 )}
               </div>
             )}
 
             <div style={styles.workersSection}>
-              <h3 style={styles.workersTitle}>Assigned Workers ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
+              <h3 style={styles.workersTitle}>{lang.assignedWorkers} ({getApplicationsForTask(selectedTask._id).length}/{selectedTask.maxEmployees})</h3>
               <div style={styles.workersList}>
                 {getApplicationsForTask(selectedTask._id).length === 0 ? (
-                  <p style={styles.noWorkers}>No workers assigned yet</p>
+                  <p style={styles.noWorkers}>{lang.noWorkers}</p>
                 ) : (
                   getApplicationsForTask(selectedTask._id).map(app => {
                     let employeeName = 'Unknown';
@@ -654,10 +747,10 @@ const SmartCalendar = ({ user, onNavigate }) => {
                       <div key={app._id} style={styles.workerCard}>
                         <div style={styles.workerInfo}>
                           <div style={styles.workerName}>{employeeName}</div>
-                          <div style={styles.workerStatus}>✅ Approved</div>
+                          <div style={styles.workerStatus}>✅ {lang.approved}</div>
                         </div>
                         {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'master') && (
-                          <button onClick={() => handleRemoveEmployee(app.employee._id || app.employee, app._id)} style={styles.removeButton}>Remove</button>
+                          <button onClick={() => handleRemoveEmployee(app.employee._id || app.employee, app._id)} style={styles.removeButton}>{lang.remove}</button>
                         )}
                       </div>
                     );
@@ -674,12 +767,16 @@ const SmartCalendar = ({ user, onNavigate }) => {
 
 const styles = {
   container: { background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', minHeight: '100vh', padding: '20px', fontFamily: 'Inter, sans-serif' },
-  backButtonContainer: { display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  backButtonContainer: { display: 'flex' },
   closeButton: { background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', color: '#ffffff', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
+  languageContainer: { position: 'relative' },
+  languageButton: { padding: '6px 12px', background: 'rgba(0,209,255,0.2)', border: '1px solid #00d1ff', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' },
+  languageDropdown: { position: 'absolute', top: '35px', right: '0', background: '#1e293b', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100, minWidth: '120px' },
+  languageOption: { padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '12px' },
   loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
   loadingSpinner: { width: '40px', height: '40px', border: '3px solid rgba(0,209,255,0.3)', borderRadius: '50%', borderTopColor: '#00d1ff', animation: 'spin 1s linear infinite' },
   
-  // Search and Filter Styles
   searchFilterBar: { display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' },
   searchContainer: { flex: 1, position: 'relative' },
   searchIcon: { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', fontSize: '14px' },
