@@ -13,6 +13,7 @@ import CreateAccount from './components/CreateAccount';
 import About from './pages/About';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -95,6 +96,9 @@ function App() {
   // Public routes
   if (currentPage === 'login') {
     return <Login onBack={goToLanding} onLogin={handleLogin} onNavigate={handleNavigate} />;
+  }
+  if (currentPage === 'reset-password') {
+    return <ResetPassword onBack={goToLanding} onNavigate={handleNavigate} />;
   }
 
   // Create Account route

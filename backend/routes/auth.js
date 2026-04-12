@@ -26,5 +26,6 @@ router.get('/me', protect, getMe);
 router.post('/register', protect, authorize('admin', 'superadmin'), register);
 router.put('/change-password', protect, changePassword);
 router.delete('/account', protect, deleteAccount);
+router.get('/verify-reset-token/:token', authController.verifyResetToken);
 
 module.exports = router;

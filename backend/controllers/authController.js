@@ -350,6 +350,29 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// @desc    Verify reset token
+// @route   GET /api/auth/verify-reset-token/:token
+// @access  Public
+exports.verifyResetToken = async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+    
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+    
+    res.json({ valid: !!user });
+  } catch (error) {
+    res.json({ valid: false });
+  }
+};
+
+
 // @desc    Reset password
 // @route   POST /api/auth/reset-password/:token
 // @access  Public
