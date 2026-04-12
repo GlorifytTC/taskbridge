@@ -136,6 +136,23 @@ exports.sendWelcomeEmail = async (user, organization) => {
   });
 };
 
+// Send password reset email
+exports.sendPasswordResetEmail = async (user, resetToken) => {
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  
+  const templateParams = {
+    to_email: user.email,
+    to_name: user.name || user.email.split('@')[0],
+    reset_link: resetLink,
+    year: new Date().getFullYear()
+  };
+  
+  await emailjs.send(
+    process.env.EMAILJS_SERVICE_ID,
+    process.env.EMAILJS_PASSWORD_RESET_TEMPLATE_ID, // Your new template ID
+    templateParams
+  );
+};
 // Send task notification email - ADD ORGANIZATION ID
 exports.sendTaskNotification = async (employee, task, organizationId) => {
   const subject = `New Task Available: ${task.title}`;
@@ -222,10 +239,10 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
     max_admins: planFeatures?.maxAdmins || 0,
     subject: subject,
     message_html: `
-      <h2>Plan Update Confirmation</h2>
-      <p>Your plan has been changed from ${oldPlan?.toUpperCase() || 'TRIAL'} to ${newPlan.toUpperCase()}.</p>
-      <p>Total: ${totalAmount} SEK</p>
-    `
+        <h2>Plan Update Confirmation</h2>
+        <p>Your plan has been changed from {{old_plan}} to {{new_plan}}.</p>
+        <p>Total: {{total_amount}} SEK</p>
+      `
   };
   
   console.log('📧 Template params:', templateParams);

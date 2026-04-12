@@ -312,7 +312,7 @@ exports.getMe = async (req, res) => {
   }
 };
 
-// @desc    Forgot password
+// @desc    Forgot password - send reset email
 // @route   POST /api/auth/forgot-password
 // @access  Public
 exports.forgotPassword = async (req, res) => {
@@ -324,32 +324,29 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
+    // Generate reset token
+    const crypto = require('crypto');
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = crypto
       .createHash('sha256')
       .update(resetToken)
       .digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
     
     await user.save();
     
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    // Send email using EmailJS
+    const { sendPasswordResetEmail } = require('../utils/emailService');
+    await sendPasswordResetEmail(user, resetToken);
     
-    await sendEmail({
-      to: user.email,
-      subject: 'Password Reset Request',
-      html: `
-        <h1>Reset Your Password</h1>
-        <p>You requested a password reset. Click the link below:</p>
-        <a href="${resetUrl}" target="_blank">Reset Password</a>
-        <p>This link expires in 10 minutes.</p>
-      `
+    res.json({ 
+      success: true, 
+      message: 'Password reset email sent successfully' 
     });
     
-    res.json({ message: 'Password reset email sent' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
