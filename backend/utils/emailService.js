@@ -141,14 +141,14 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
   const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
   
   const templateParams = {
-    email: user.email,  // ✅ Change from 'to_email' to 'email' to match template
+    to_email: user.email,  // This MUST match {{to_email}} in template
     to_name: user.name || user.email.split('@')[0],
     reset_link: resetLink,
-    subject: 'Reset Your TaskBridge Password',
+    subject: 'Reset Your TaskBridge Password',  // Add this
     year: new Date().getFullYear()
   };
   
-  console.log('📧 Sending password reset to:', templateParams.email);
+  console.log('📧 Sending password reset to:', templateParams.to_email);
   
   const response = await emailjs.send(
     process.env.EMAILJS_SERVICE_ID,
@@ -158,7 +158,6 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
   
   console.log('✅ Password reset email sent:', response.status);
 };
-
 // Send task notification email - ADD ORGANIZATION ID
 exports.sendTaskNotification = async (employee, task, organizationId) => {
   const subject = `New Task Available: ${task.title}`;
