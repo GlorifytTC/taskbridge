@@ -20,6 +20,18 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ ADD THIS - Check URL on initial load
+  useEffect(() => {
+    const path = window.location.pathname;
+    console.log('Current path:', path);
+    
+    if (path.startsWith('/reset-password/')) {
+      console.log('Reset password page detected');
+      setCurrentPage('reset-password');
+    }
+  }, []);
+
+  // Rest of your useEffect for token remains the same...
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -30,7 +42,6 @@ function App() {
         .then(data => {
           if (data.success) {
             setUser(data.user);
-            // Check user role to set correct page
             if (data.user.role === 'master') {
               setCurrentPage('master');
             } else if (data.user.role === 'superadmin') {
@@ -54,6 +65,7 @@ function App() {
     }
   }, []);
 
+  // Rest of your functions remain the same...
   const goToLogin = () => {
     setCurrentPage('login');
   };
@@ -63,13 +75,12 @@ function App() {
   };
 
   const handleNavigate = (page) => {
-  console.log('Navigating to:', page);
-  setCurrentPage(page);
-};
+    console.log('Navigating to:', page);
+    setCurrentPage(page);
+  };
 
   const handleLogin = (userData) => {
     setUser(userData);
-    // Redirect based on role
     if (userData.role === 'master') {
       setCurrentPage('master');
     } else if (userData.role === 'superadmin') {
@@ -93,12 +104,14 @@ function App() {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading...</div>;
   }
 
+  // ✅ IMPORTANT: Reset Password route MUST be checked FIRST
+  if (currentPage === 'reset-password') {
+    return <ResetPassword onBack={goToLanding} onNavigate={handleNavigate} />;
+  }
+
   // Public routes
   if (currentPage === 'login') {
     return <Login onBack={goToLanding} onLogin={handleLogin} onNavigate={handleNavigate} />;
-  }
-  if (currentPage === 'reset-password') {
-    return <ResetPassword onBack={goToLanding} onNavigate={handleNavigate} />;
   }
 
   // Create Account route
