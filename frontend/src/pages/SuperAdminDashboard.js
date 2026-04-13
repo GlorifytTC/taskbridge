@@ -265,7 +265,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   useEffect(() => {
-    fetchDashboardData(false);
+    fetchDashboardData(true);
     fetchSubscriptionData();
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
