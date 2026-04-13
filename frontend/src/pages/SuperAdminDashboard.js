@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
+  onsole.log('🎯 SuperAdminDashboard rendering');
+  console.log('User object:', user);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    console.log('Loading state changed to:', loading);
+  }, [loading]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
