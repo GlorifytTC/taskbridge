@@ -321,7 +321,11 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email });
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      // Don't reveal that user doesn't exist for security
+      return res.json({ 
+        success: true, 
+        message: 'If that email is registered, you will receive a reset link.' 
+      });
     }
     
     // Generate reset token
@@ -335,7 +339,10 @@ exports.forgotPassword = async (req, res) => {
     
     await user.save();
     
-    // Send email using EmailJS
+    // Send email with reset link
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    
+    // Use your email service to send the email
     const { sendPasswordResetEmail } = require('../utils/emailService');
     await sendPasswordResetEmail(user, resetToken);
     
@@ -346,7 +353,10 @@ exports.forgotPassword = async (req, res) => {
     
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
@@ -366,8 +376,11 @@ exports.verifyResetToken = async (req, res) => {
       resetPasswordExpire: { $gt: Date.now() }
     });
     
+    console.log('Token verification:', user ? 'Valid for ' + user.email : 'Invalid');
+    
     res.json({ valid: !!user });
   } catch (error) {
+    console.error('Verify token error:', error);
     res.json({ valid: false });
   }
 };
@@ -381,6 +394,16 @@ exports.resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
     
+    console.log('🔐 Resetting password for token:', token);
+    
+    if (!password || password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters' 
+      });
+    }
+    
+    const crypto = require('crypto');
     const resetPasswordToken = crypto
       .createHash('sha256')
       .update(token)
@@ -392,18 +415,34 @@ exports.resetPassword = async (req, res) => {
     });
     
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired token' 
+      });
     }
     
-    user.password = password;
+    // ✅ IMPORTANT: Hash the password before saving
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
     
-    res.json({ message: 'Password reset successful' });
+    console.log('✅ Password reset successfully for:', user.email);
+    
+    res.json({ 
+      success: true, 
+      message: 'Password reset successful' 
+    });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
