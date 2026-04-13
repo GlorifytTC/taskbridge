@@ -390,48 +390,83 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const fetchDashboardData = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const usersData = await usersRes.json();
-      const branchesData = await branchesRes.json();
-      const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      
-      const allUsers = usersData.data || [];
-      const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
-      const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      
-      setAdmins(filteredAdmins);
-      setEmployees(filteredEmployees);
-      setBranches(branchesData.data || []);
-      setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setStats({
-        totalAdmins: filteredAdmins.length,
-        totalEmployees: filteredEmployees.length,
-        totalTasks: tasksData.data?.length || 0,
-        totalBranches: branchesData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        totalJobDescriptions: jobsData.data?.length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+  console.log('🚀 fetchDashboardData STARTED, showLoading:', showLoading);
+  if (showLoading) {
+    console.log('Setting loading to true');
+    setLoading(true);
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    console.log('📡 Token exists:', !!token);
+    
+    console.log('📡 Fetching users...');
+    const usersRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { 
+      headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    console.log('✅ Users response status:', usersRes.status);
+    
+    console.log('📡 Fetching branches...');
+    const branchesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { 
+      headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    console.log('✅ Branches response status:', branchesRes.status);
+    
+    console.log('📡 Fetching tasks...');
+    const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { 
+      headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    console.log('✅ Tasks response status:', tasksRes.status);
+    
+    console.log('📡 Fetching applications...');
+    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { 
+      headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    console.log('✅ Applications response status:', appsRes.status);
+    
+    console.log('📡 Fetching job descriptions...');
+    const jobsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { 
+      headers: { 'Authorization': `Bearer ${token}` } 
+    });
+    console.log('✅ Job descriptions response status:', jobsRes.status);
+    
+    console.log('📡 Parsing JSON responses...');
+    const usersData = await usersRes.json();
+    const branchesData = await branchesRes.json();
+    const tasksData = await tasksRes.json();
+    const appsData = await appsRes.json();
+    const jobsData = await jobsRes.json();
+    console.log('✅ All JSON parsed');
+    
+    const allUsers = usersData.data || [];
+    const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
+    const filteredEmployees = allUsers.filter(u => u.role === 'employee');
+    
+    console.log('📊 Setting state with data...');
+    setAdmins(filteredAdmins);
+    setEmployees(filteredEmployees);
+    setBranches(branchesData.data || []);
+    setTasks(tasksData.data || []);
+    setApplications(appsData.data || []);
+    setJobDescriptions(jobsData.data || []);
+    setStats({
+      totalAdmins: filteredAdmins.length,
+      totalEmployees: filteredEmployees.length,
+      totalTasks: tasksData.data?.length || 0,
+      totalBranches: branchesData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      totalJobDescriptions: jobsData.data?.length || 0
+    });
+    
+    console.log('✅ All state updated');
+  } catch (error) {
+    console.error('❌ Error fetching data:', error);
+    console.error('Error stack:', error.stack);
+  } finally {
+    console.log('🏁 Setting loading to false');
+    if (showLoading) setLoading(false);
+  }
+};
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
