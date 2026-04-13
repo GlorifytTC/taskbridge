@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
-  onsole.log('🎯 SuperAdminDashboard rendering');
+  console.log('🎯 SuperAdminDashboard rendering');
   console.log('User object:', user);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
