@@ -20,7 +20,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ ADD THIS - Check URL on initial load
+  // Check URL on initial load
   useEffect(() => {
     const path = window.location.pathname;
     console.log('Current path:', path);
@@ -31,10 +31,27 @@ function App() {
     }
   }, []);
 
-  // Rest of your useEffect for token remains the same...
+  // Check token and validate with backend
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const tokenExpiry = localStorage.getItem('tokenExpiry');
+    
+    // Check if token exists and is not expired
+    if (token && tokenExpiry) {
+      const now = Date.now();
+      const expiry = parseInt(tokenExpiry);
+      
+      // If token is expired, clear everything
+      if (now > expiry) {
+        console.log('Token expired, logging out');
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiry');
+        localStorage.removeItem('user');
+        setLoading(false);
+        return;
+      }
+      
+      // Validate token with backend
       fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -53,11 +70,18 @@ function App() {
             } else {
               setCurrentPage('dashboard');
             }
+          } else {
+            // Token invalid, clear storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiry');
+            localStorage.removeItem('user');
           }
           setLoading(false);
         })
         .catch(() => {
           localStorage.removeItem('token');
+          localStorage.removeItem('tokenExpiry');
+          localStorage.removeItem('user');
           setLoading(false);
         });
     } else {
@@ -65,7 +89,6 @@ function App() {
     }
   }, []);
 
-  // Rest of your functions remain the same...
   const goToLogin = () => {
     setCurrentPage('login');
   };
@@ -96,6 +119,8 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('user');
     setUser(null);
     setCurrentPage('landing');
   };
@@ -104,7 +129,7 @@ function App() {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading...</div>;
   }
 
-  // ✅ IMPORTANT: Reset Password route MUST be checked FIRST
+  // Reset Password route
   if (currentPage === 'reset-password') {
     return <ResetPassword onBack={goToLanding} onNavigate={handleNavigate} />;
   }

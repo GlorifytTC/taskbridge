@@ -33,6 +33,8 @@ const Login = ({ onBack, onLogin }) => {
       console.log('📦 Response data:', data);
 
       if (response.ok && data.success) {
+          const tokenExpiry = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         onLogin(data.user);

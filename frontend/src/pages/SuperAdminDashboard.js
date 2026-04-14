@@ -1109,6 +1109,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
+  // Add this to your SuperAdminDashboard component
+useEffect(() => {
+  // Check session every minute
+  const interval = setInterval(() => {
+    const tokenExpiry = localStorage.getItem('tokenExpiry');
+    if (tokenExpiry) {
+      const now = Date.now();
+      const expiry = parseInt(tokenExpiry);
+      
+      // If token expires in less than 5 minutes, show warning
+      if (expiry - now < 5 * 60 * 1000) {
+        showToast(language === 'en' ? 'Your session will expire soon. Please save your work.' : 'Din session kommer snart att löpa ut. Spara ditt arbete.', 'warning');
+      }
+      
+      // If token expired, logout
+      if (now > expiry) {
+        showToast(language === 'en' ? 'Session expired. Please login again.' : 'Sessionen har löpt ut. Vänligen logga in igen.', 'error');
+        setTimeout(() => {
+          handleLogout();
+        }, 2000);
+      }
+    }
+  }, 60000); // Check every minute
+  
+  return () => clearInterval(interval);
+}, []);
+
   // Show delete confirmation modal
   const confirmDelete = (type, id, name) => {
     let title = '';
