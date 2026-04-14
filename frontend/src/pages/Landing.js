@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 
 const Landing = ({ onLoginClick, onNavigate }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
   const [isMobile, setIsMobile] = useState(false);
-  const [language, setLanguage] = useState(() => {
-  return localStorage.getItem('taskbridge_language') || 'en';
-});
+  const [language, setLanguage] = useState('en');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
 
@@ -21,6 +20,45 @@ const Landing = ({ onLoginClick, onNavigate }) => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Structured data for SEO (JSON-LD)
+  useEffect(() => {
+    // Add JSON-LD structured data to the page
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "TaskBridge",
+      "alternateName": "TaskBridge Workforce Management",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication with ease. Smart workforce management platform for modern teams.",
+      "offers": {
+        "@type": "Offer",
+        "price": "399",
+        "priceCurrency": "SEK",
+        "availability": "https://schema.org/OnlineOnly"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "127"
+      },
+      "keywords": "workforce management, shift scheduling, employee management, attendance tracking, staff scheduling, task management, team management",
+      "image": "https://taskbridge.se/logo.png",
+      "url": "https://taskbridge.se",
+      "sameAs": [
+        "https://www.linkedin.com/company/taskbridge",
+        "https://twitter.com/taskbridge"
+      ]
+    });
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
   }, []);
 
   const handleSignIn = () => {
@@ -66,7 +104,7 @@ const Landing = ({ onLoginClick, onNavigate }) => {
 
   const t = {
     en: {
-      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
+      nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact Us' },
       signIn: 'Sign In',
       tag: 'Smart Staff Management',
       title: 'Manage Your Workforce with Intelligence',
@@ -84,10 +122,14 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       notifDesc: 'Automated alerts for shift assignments, approvals, and reminders.',
       ownerTitle: 'Project Owner & Lead Developer',
       footer: 'All rights reserved. Developed by',
-      weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      // SEO meta descriptions
+      metaTitle: 'TaskBridge - Smart Workforce Management Platform',
+      metaDescription: 'TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication. Free trial available.',
+      metaKeywords: 'workforce management, shift scheduling, employee management, attendance tracking, staff scheduling, task management, team management, HR software'
     },
     sv: {
-      nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakta' },
+      nav: { home: 'Hem', about: 'Om Programmet', pricing: 'Priser', contact: 'Kontakta Oss' },
       signIn: 'Logga in',
       tag: 'Smart Personalhantering',
       title: 'Hantera Din Arbetsstyrka med Intelligens',
@@ -105,254 +147,323 @@ const Landing = ({ onLoginClick, onNavigate }) => {
       notifDesc: 'Automatiska aviseringar för passtilldelningar, godkännanden och påminnelser.',
       ownerTitle: 'Projektägare & Lead Utvecklare',
       footer: 'Alla rättigheter förbehållna. Utvecklad av',
-      weekdays: ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
+      weekdays: ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'],
+      // SEO meta descriptions Swedish
+      metaTitle: 'TaskBridge - Smart Personalhanteringsplattform',
+      metaDescription: 'TaskBridge hjälper skolor, sjukhus och organisationer att hantera pass, spåra närvaro och effektivisera kommunikation. Gratis provperiod.',
+      metaKeywords: 'personalhantering, schemaläggning, anställd administration, närvarorapportering, skiftplanering, uppgiftshantering, HR-system'
     }
   };
 
   const content = t[language];
   const isSmall = screenWidth <= 480;
 
+  // SEO Meta Tags
+  const seoTitle = content.metaTitle;
+  const seoDescription = content.metaDescription;
+  const seoKeywords = content.metaKeywords;
+  const siteUrl = 'https://taskbridge.se';
+  const siteImage = `${siteUrl}/og-image.jpg`;
+
   return (
-    <div style={styles.container}>
-      <div style={styles.bgAnimation}>
-        <div style={styles.bgCircle1}></div>
-        <div style={styles.bgCircle2}></div>
-        <div style={styles.bgCircle3}></div>
-        <div style={styles.bgGrid}></div>
-      </div>
-
-      {/* Navigation */}
-      <nav style={{
-        ...styles.navbar,
-        padding: isSmall ? '12px 14px' : isMobile ? '14px 18px' : '20px 40px',
-      }}>
-        <div style={styles.logo}>
-          <div style={{
-            ...styles.logoIcon,
-            width: isSmall ? '32px' : isMobile ? '36px' : '40px',
-            height: isSmall ? '32px' : isMobile ? '36px' : '40px',
-            fontSize: isSmall ? '17px' : isMobile ? '20px' : '24px',
-            borderRadius: isSmall ? '8px' : '12px',
-          }} className="tb-logo-icon"><span>T</span></div>
-          <span style={{
-            ...styles.logoText,
-            fontSize: isSmall ? '18px' : isMobile ? '21px' : '24px',
-          }} className="tb-logo-text">TaskBridge</span>
-        </div>
+    <>
+      {/* SEO Helmet - Critical for Google Search */}
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{seoTitle}</title>
+        <meta name="title" content={seoTitle} />
+        <meta name="description" content={seoDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <meta name="author" content="GlorifyTC" />
+        <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow" />
+        <meta name="language" content={language === 'en' ? 'English' : 'Swedish'} />
         
-        {!isMobile && (
-          <>
-            <div style={styles.navLinks}>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={{ ...styles.navLink, color: '#00d1ff' }}>{content.nav.home}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink}>{content.nav.about}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); }} style={styles.navLink}>{content.nav.pricing}</a>
-              <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={styles.navLink}>{content.nav.contact}</a>
-            </div>
-            <div style={styles.navActions}>
-              <button onClick={toggleLanguage} style={styles.langButton}>{language === 'en' ? 'SV' : 'EN'}</button>
-              <button onClick={handleSignIn} style={styles.navButton}>{content.signIn}</button>
-            </div>
-          </>
-        )}
+        {/* Canonical URL */}
+        <link rel="canonical" href={siteUrl} />
+        
+        {/* Alternate language versions */}
+        <link rel="alternate" hrefLang="en" href={`${siteUrl}/en`} />
+        <link rel="alternate" hrefLang="sv" href={`${siteUrl}/sv`} />
+        <link rel="alternate" hrefLang="x-default" href={siteUrl} />
 
-        {isMobile && (
-          <div style={styles.mobileControls}>
-            <button onClick={toggleLanguage} style={styles.langButtonMobile}>{language === 'en' ? 'SV' : 'EN'}</button>
-            <button onClick={toggleMobileMenu} style={styles.menuButton}>
-              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
-            </button>
-          </div>
-        )}
-      </nav>
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={siteUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:image" content={siteImage} />
+        <meta property="og:site_name" content="TaskBridge" />
+        <meta property="og:locale" content={language === 'en' ? 'en_US' : 'sv_SE'} />
 
-      {isMobile && mobileMenuOpen && (
-        <div style={styles.mobileMenu}>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={{ ...styles.mobileNavLink, color: '#00d1ff' }}>{content.nav.home}</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
-          <button onClick={handleSignIn} style={styles.mobileSignInButton}>{content.signIn}</button>
-        </div>
-      )}
+        {/* Twitter / X (formerly Twitter) */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={siteUrl} />
+        <meta property="twitter:title" content={seoTitle} />
+        <meta property="twitter:description" content={seoDescription} />
+        <meta property="twitter:image" content={siteImage} />
 
-      {/* Hero Section - Calendar now VISIBLE on mobile */}
-      <div style={{
-        ...styles.hero,
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        padding: isSmall ? '24px 16px' : isMobile ? '32px 20px' : '60px 40px',
-        gap: isSmall ? '28px' : isMobile ? '36px' : '60px',
-        textAlign: isMobile ? 'center' : 'left',
-      }}>
-        <div style={styles.heroContent}>
-          <div style={styles.tag}>
-            <span style={styles.tagDot}></span>
-            <span style={styles.tagText}>{content.tag}</span>
-          </div>
-          <h1 style={{
-            ...styles.title,
-            fontSize: isSmall ? '30px' : isMobile ? '36px' : '56px',
-          }}>
-            {content.title.split(' ').map((word, i) => 
-              word === 'Workforce' || word === 'Arbetsstyrka' ? 
-                <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
-                word + ' '
-            )}
-          </h1>
-          <p style={{
-            ...styles.subtitle,
-            fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px',
-          }}>{content.subtitle}</p>
-          <div style={{
-            ...styles.buttons,
-            flexDirection: isSmall ? 'column' : 'row',
-            justifyContent: isMobile ? 'center' : 'flex-start',
-          }}>
-            <button onClick={handleSignIn} style={{
-              ...styles.primaryButton,
-              width: isSmall ? '100%' : 'auto',
-              padding: isSmall ? '12px 20px' : '14px 32px',
-            }}>
-              {content.getStarted} <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
-            </button>
-            <button style={{
-              ...styles.secondaryButton,
-              width: isSmall ? '100%' : 'auto',
-              padding: isSmall ? '12px 20px' : '14px 32px',
-            }}>
-              {content.watchDemo} <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
-            </button>
-          </div>
+        {/* Additional SEO meta tags */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#0f172a" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        
+        {/* Geo tags */}
+        <meta name="geo.region" content="SE" />
+        <meta name="geo.placename" content="Stockholm" />
+        
+        {/* Business verticals */}
+        <meta name="business:vertical" content="software" />
+        
+        {/* Rating */}
+        <meta name="rating" content="General" />
+        
+        {/* Revisit after */}
+        <meta name="revisit-after" content="7 days" />
+      </Helmet>
+
+      <div style={styles.container}>
+        <div style={styles.bgAnimation}>
+          <div style={styles.bgCircle1}></div>
+          <div style={styles.bgCircle2}></div>
+          <div style={styles.bgCircle3}></div>
+          <div style={styles.bgGrid}></div>
         </div>
 
-        {/* CALENDAR - FIXED: Always visible on mobile */}
-        <div style={styles.calendarContainer}>
-          <div style={{
-            ...styles.calendar,
-            maxWidth: isSmall ? '100%' : isMobile ? '340px' : '380px',
-            padding: isSmall ? '16px' : '24px',
-          }}>
-            <div style={styles.calendarHeader}>
-              <div style={{
-                ...styles.calendarMonth,
-                fontSize: isSmall ? '16px' : '22px',
-              }}>{currentMonth} {currentYear}</div>
-            </div>
-            <div style={styles.calendarWeekdays}>
-              {content.weekdays.map(day => <div key={day} style={{
-                ...styles.weekday,
-                fontSize: isSmall ? '10px' : '13px',
-                padding: isSmall ? '4px 0' : '8px 0',
-              }}>{day}</div>)}
-            </div>
-            <div style={styles.calendarDays}>
-              {days.map((day, index) => (
-                <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {}), fontSize: isSmall ? '11px' : '14px', padding: isSmall ? '6px 0' : '10px 0'}}>
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div style={styles.calendarGlow}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div style={{
-        ...styles.features,
-        padding: isSmall ? '40px 16px' : isMobile ? '50px 20px' : '80px 40px',
-      }}>
-        <h2 style={{
-          ...styles.featuresTitle,
-          fontSize: isSmall ? '22px' : isMobile ? '26px' : '36px',
+        {/* Navigation */}
+        <nav style={{
+          ...styles.navbar,
+          padding: isSmall ? '12px 14px' : isMobile ? '14px 18px' : '20px 40px',
         }}>
-          {content.featuresTitle.split(' ').map((word, i) => 
-            word === 'Modern' || word === 'Moderna' ? 
-              <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : word + ' '
+          <div style={styles.logo}>
+            <div style={{
+              ...styles.logoIcon,
+              width: isSmall ? '32px' : isMobile ? '36px' : '40px',
+              height: isSmall ? '32px' : isMobile ? '36px' : '40px',
+              fontSize: isSmall ? '17px' : isMobile ? '20px' : '24px',
+              borderRadius: isSmall ? '8px' : '12px',
+            }} className="tb-logo-icon" aria-label="TaskBridge Logo"><span>T</span></div>
+            <span style={{
+              ...styles.logoText,
+              fontSize: isSmall ? '18px' : isMobile ? '21px' : '24px',
+            }} className="tb-logo-text">TaskBridge</span>
+          </div>
+          
+          {!isMobile && (
+            <>
+              <div style={styles.navLinks}>
+                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); }} style={{ ...styles.navLink, color: '#00d1ff' }} aria-label="Home">{content.nav.home}</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); }} style={styles.navLink} aria-label="About">{content.nav.about}</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); }} style={styles.navLink} aria-label="Pricing">{content.nav.pricing}</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); }} style={styles.navLink} aria-label="Contact">{content.nav.contact}</a>
+              </div>
+              <div style={styles.navActions}>
+                <button onClick={toggleLanguage} style={styles.langButton} aria-label="Change Language">{language === 'en' ? 'SV' : 'EN'}</button>
+                <button onClick={handleSignIn} style={styles.navButton} aria-label="Sign In">{content.signIn}</button>
+              </div>
+            </>
           )}
-        </h2>
-        <div style={styles.featuresGrid}>
-          <div style={styles.featureCard}>
-            <div style={styles.featureIcon}><i className="fas fa-clock"></i></div>
-            <h3 style={styles.featureTitle}>{content.shiftMgmt}</h3>
-            <p style={styles.featureDesc}>{content.shiftDesc}</p>
+
+          {isMobile && (
+            <div style={styles.mobileControls}>
+              <button onClick={toggleLanguage} style={styles.langButtonMobile} aria-label="Change Language">{language === 'en' ? 'SV' : 'EN'}</button>
+              <button onClick={toggleMobileMenu} style={styles.menuButton} aria-label="Menu">
+                <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+              </button>
+            </div>
+          )}
+        </nav>
+
+        {isMobile && mobileMenuOpen && (
+          <div style={styles.mobileMenu}>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('landing'); setMobileMenuOpen(false); }} style={{ ...styles.mobileNavLink, color: '#00d1ff' }}>{content.nav.home}</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('about'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.about}</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('pricing'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.pricing}</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('contact'); setMobileMenuOpen(false); }} style={styles.mobileNavLink}>{content.nav.contact}</a>
+            <button onClick={handleSignIn} style={styles.mobileSignInButton}>{content.signIn}</button>
           </div>
-          <div style={styles.featureCard}>
-            <div style={styles.featureIcon}><i className="fas fa-users"></i></div>
-            <h3 style={styles.featureTitle}>{content.multiBranch}</h3>
-            <p style={styles.featureDesc}>{content.branchDesc}</p>
+        )}
+
+        {/* Hero Section */}
+        <div style={{
+          ...styles.hero,
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          padding: isSmall ? '24px 16px' : isMobile ? '32px 20px' : '60px 40px',
+          gap: isSmall ? '28px' : isMobile ? '36px' : '60px',
+          textAlign: isMobile ? 'center' : 'left',
+        }}>
+          <div style={styles.heroContent}>
+            <div style={styles.tag}>
+              <span style={styles.tagDot}></span>
+              <span style={styles.tagText}>{content.tag}</span>
+            </div>
+            <h1 style={{
+              ...styles.title,
+              fontSize: isSmall ? '30px' : isMobile ? '36px' : '56px',
+            }}>
+              {content.title.split(' ').map((word, i) => 
+                word === 'Workforce' || word === 'Arbetsstyrka' ? 
+                  <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : 
+                  word + ' '
+              )}
+            </h1>
+            <p style={{
+              ...styles.subtitle,
+              fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px',
+            }}>{content.subtitle}</p>
+            <div style={{
+              ...styles.buttons,
+              flexDirection: isSmall ? 'column' : 'row',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+            }}>
+              <button onClick={handleSignIn} style={{
+                ...styles.primaryButton,
+                width: isSmall ? '100%' : 'auto',
+                padding: isSmall ? '12px 20px' : '14px 32px',
+              }} aria-label="Get Started">
+                {content.getStarted} <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
+              </button>
+              <button style={{
+                ...styles.secondaryButton,
+                width: isSmall ? '100%' : 'auto',
+                padding: isSmall ? '12px 20px' : '14px 32px',
+              }} aria-label="Watch Demo">
+                {content.watchDemo} <i className="fas fa-play" style={{ marginLeft: '8px', fontSize: '12px' }}></i>
+              </button>
+            </div>
           </div>
-          <div style={styles.featureCard}>
-            <div style={styles.featureIcon}><i className="fas fa-chart-line"></i></div>
-            <h3 style={styles.featureTitle}>{content.realtimeAnalytics}</h3>
-            <p style={styles.featureDesc}>{content.analyticsDesc}</p>
-          </div>
-          <div style={styles.featureCard}>
-            <div style={styles.featureIcon}><i className="fas fa-bell"></i></div>
-            <h3 style={styles.featureTitle}>{content.smartNotif}</h3>
-            <p style={styles.featureDesc}>{content.notifDesc}</p>
+
+          {/* Calendar */}
+          <div style={styles.calendarContainer}>
+            <div style={{
+              ...styles.calendar,
+              maxWidth: isSmall ? '100%' : isMobile ? '340px' : '380px',
+              padding: isSmall ? '16px' : '24px',
+            }}>
+              <div style={styles.calendarHeader}>
+                <div style={{
+                  ...styles.calendarMonth,
+                  fontSize: isSmall ? '16px' : '22px',
+                }}>{currentMonth} {currentYear}</div>
+              </div>
+              <div style={styles.calendarWeekdays}>
+                {content.weekdays.map(day => <div key={day} style={{
+                  ...styles.weekday,
+                  fontSize: isSmall ? '10px' : '13px',
+                  padding: isSmall ? '4px 0' : '8px 0',
+                }}>{day}</div>)}
+              </div>
+              <div style={styles.calendarDays}>
+                {days.map((day, index) => (
+                  <div key={index} style={{...styles.calendarDay, ...(day === today ? styles.today : {}), ...(day && day % 2 === 0 ? styles.blinkingEye : {}), fontSize: isSmall ? '11px' : '14px', padding: isSmall ? '6px 0' : '10px 0'}}>
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div style={styles.calendarGlow}></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Owner Section - FIXED: Text no longer cut off */}
-      <div style={{
-        ...styles.ownerSection,
-        padding: isSmall ? '40px 16px' : isMobile ? '40px 20px' : '60px 40px',
-      }}>
-        <div style={styles.ownerContainer}>
-          <div style={{
-            ...styles.ownerCard,
-            flexDirection: isMobile ? 'column' : 'row',
-            textAlign: isMobile ? 'center' : 'left',
-            padding: isSmall ? '24px 16px' : isMobile ? '28px 20px' : '40px',
-            gap: isSmall ? '20px' : isMobile ? '24px' : '50px',
+        {/* Features Section */}
+        <div style={{
+          ...styles.features,
+          padding: isSmall ? '40px 16px' : isMobile ? '50px 20px' : '80px 40px',
+        }}>
+          <h2 style={{
+            ...styles.featuresTitle,
+            fontSize: isSmall ? '22px' : isMobile ? '26px' : '36px',
           }}>
-            <div style={styles.ownerLogo}>
-              <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
-                <div style={{
-                  ...styles.glorifyLogoIcon,
-                  width: isSmall ? '64px' : '80px',
-                  height: isSmall ? '64px' : '80px',
-                  fontSize: isSmall ? '36px' : '44px',
-                }}><span>G</span></div>
-                <div style={styles.glorifyLogoText}>GlorifyTC</div>
-              </a>
+            {content.featuresTitle.split(' ').map((word, i) => 
+              word === 'Modern' || word === 'Moderna' ? 
+                <span key={i}><span style={styles.titleGradient}>{word}</span> </span> : word + ' '
+            )}
+          </h2>
+          <div style={styles.featuresGrid}>
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}><i className="fas fa-clock"></i></div>
+              <h3 style={styles.featureTitle}>{content.shiftMgmt}</h3>
+              <p style={styles.featureDesc}>{content.shiftDesc}</p>
             </div>
-            <div style={{ ...styles.ownerInfo, width: isMobile ? '100%' : 'auto' }}>
-              <h3 style={{
-                ...styles.ownerTitle,
-                fontSize: isSmall ? '16px' : isMobile ? '18px' : '24px',
-              }}>{content.ownerTitle}</h3>
-              <div style={{
-                ...styles.ownerDetails,
-                alignItems: isMobile ? 'center' : 'flex-start',
-              }}>
-                <div style={styles.contactItem}>
-                  <i className="fas fa-envelope"></i>
-                  <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
-                </div>
-                <div style={styles.contactItem}>
-                  <i className="fas fa-globe"></i>
-                  <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}><i className="fas fa-users"></i></div>
+              <h3 style={styles.featureTitle}>{content.multiBranch}</h3>
+              <p style={styles.featureDesc}>{content.branchDesc}</p>
+            </div>
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}><i className="fas fa-chart-line"></i></div>
+              <h3 style={styles.featureTitle}>{content.realtimeAnalytics}</h3>
+              <p style={styles.featureDesc}>{content.analyticsDesc}</p>
+            </div>
+            <div style={styles.featureCard}>
+              <div style={styles.featureIcon}><i className="fas fa-bell"></i></div>
+              <h3 style={styles.featureTitle}>{content.smartNotif}</h3>
+              <p style={styles.featureDesc}>{content.notifDesc}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Owner Section */}
+        <div style={{
+          ...styles.ownerSection,
+          padding: isSmall ? '40px 16px' : isMobile ? '40px 20px' : '60px 40px',
+        }}>
+          <div style={styles.ownerContainer}>
+            <div style={{
+              ...styles.ownerCard,
+              flexDirection: isMobile ? 'column' : 'row',
+              textAlign: isMobile ? 'center' : 'left',
+              padding: isSmall ? '24px 16px' : isMobile ? '28px 20px' : '40px',
+              gap: isSmall ? '20px' : isMobile ? '24px' : '50px',
+            }}>
+              <div style={styles.ownerLogo}>
+                <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.glorifyLogoLink}>
+                  <div style={{
+                    ...styles.glorifyLogoIcon,
+                    width: isSmall ? '64px' : '80px',
+                    height: isSmall ? '64px' : '80px',
+                    fontSize: isSmall ? '36px' : '44px',
+                  }}><span>G</span></div>
+                  <div style={styles.glorifyLogoText}>GlorifyTC</div>
+                </a>
+              </div>
+              <div style={{ ...styles.ownerInfo, width: isMobile ? '100%' : 'auto' }}>
+                <h3 style={{
+                  ...styles.ownerTitle,
+                  fontSize: isSmall ? '16px' : isMobile ? '18px' : '24px',
+                }}>{content.ownerTitle}</h3>
+                <div style={{
+                  ...styles.ownerDetails,
+                  alignItems: isMobile ? 'center' : 'flex-start',
+                }}>
+                  <div style={styles.contactItem}>
+                    <i className="fas fa-envelope"></i>
+                    <a href="mailto:info@glorifytc.se" style={styles.contactLink}>info@glorifytc.se</a>
+                  </div>
+                  <div style={styles.contactItem}>
+                    <i className="fas fa-globe"></i>
+                    <a href="https://glorifytc.se" target="_blank" rel="noopener noreferrer" style={styles.contactLink}>glorifytc.se</a>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer style={{
+          ...styles.footer,
+          padding: isSmall ? '20px 16px' : '30px 40px',
+        }}>
+          <div style={styles.footerContent}>
+            <p>&copy; 2026 TaskBridge. {content.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
+          </div>
+        </footer>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       </div>
-
-      {/* Footer */}
-      <footer style={{
-        ...styles.footer,
-        padding: isSmall ? '20px 16px' : '30px 40px',
-      }}>
-        <div style={styles.footerContent}>
-          <p>&copy; 2026 TaskBridge. {content.footer} <strong style={styles.glorifyHighlight}>GlorifyTC</strong></p>
-        </div>
-      </footer>
-
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    </div>
+    </>
   );
 };
 
