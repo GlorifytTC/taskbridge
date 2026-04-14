@@ -1392,115 +1392,115 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'admins' && (
-          <div>
-            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
-              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
-              <button 
-                onClick={() => {
-                  if (!canAddAdmin()) {
-                    showToast(lang.limitWarning, 'error');
-                  } else {
-                    setShowCreateAdminModal(true);
-                  }
-                }} 
-                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
-              >
-                + {lang.addAdmin}
-              </button>
-            </div>
-            <div style={styles.tableContainer}>
-              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
-                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                  </table>
-                </thead>
-                <tbody>
-                  {admins.map(admin => (
-                    <tr key={admin._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
-                      {!isSmall && (
-                        <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
-                          <div>
-                            {(admin.assignedBranches || []).slice(0, 2).map(b => (
-                              <span key={b._id} style={styles.branchTag}>{b.name}</span>
-                            ))}
-                            {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
-                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
-                          </div>
-                        </div>
-                      )}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
-                       </div>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <div style={styles.actionButtons}>
-                          <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                          <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                        </div>
-                       </div>
-                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+  <div>
+    <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+      <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
+      <button 
+        onClick={() => {
+          if (!canAddAdmin()) {
+            showToast(lang.limitWarning, 'error');
+          } else {
+            setShowCreateAdminModal(true);
+          }
+        }} 
+        style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
+      >
+        + {lang.addAdmin}
+      </button>
+    </div>
+    <div style={styles.tableContainer}>
+      <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {admins.map(admin => (
+            <tr key={admin._id} style={styles.tableRow}>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
+              {!isSmall && (
+                <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                  <div>
+                    {(admin.assignedBranches || []).slice(0, 2).map(b => (
+                      <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                    ))}
+                    {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
+                    <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
+                  </div>
+                </td>
+              )}
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
+              </td>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                <div style={styles.actionButtons}>
+                  <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                  <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
-        {activeTab === 'employees' && (
-          <div>
-            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
-              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
-              <button 
-                onClick={() => {
-                  if (!canAddEmployee()) {
-                    showToast(lang.limitWarning, 'error');
-                  } else {
-                    setShowCreateEmployeeModal(true);
-                  }
-                }} 
-                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
-              >
-                + {lang.addStaff}
-              </button>
-            </div>
-            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
-            <div style={styles.tableContainer}>
-              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
-                <thead>
-                  <tr style={styles.tableHeaderRow}>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
-                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
-                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                  </table>
-                </thead>
-                <tbody>
-                  {filteredEmployees.map(emp => (
-                    <tr key={emp._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
-                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
-                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                       </div>
-                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+{activeTab === 'employees' && (
+  <div>
+    <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+      <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
+      <button 
+        onClick={() => {
+          if (!canAddEmployee()) {
+            showToast(lang.limitWarning, 'error');
+          } else {
+            setShowCreateEmployeeModal(true);
+          }
+        }} 
+        style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
+      >
+        + {lang.addStaff}
+      </button>
+    </div>
+    <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
+    <div style={styles.tableContainer}>
+      <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+        <thead>
+          <tr style={styles.tableHeaderRow}>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
+            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredEmployees.map(emp => (
+            <tr key={emp._id} style={styles.tableRow}>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
+              {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
+              {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
         {activeTab === 'branches' && (
           <div>
@@ -1644,7 +1644,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         }}>
                           {app.status}
                         </span>
-                       </div>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
@@ -1653,7 +1653,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
                           </div>
                         )}
-                       </div>
+                      </td>
                      </tr>
                   ))}
                 </tbody>
