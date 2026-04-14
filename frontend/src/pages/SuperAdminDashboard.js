@@ -67,23 +67,23 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   
   // Quick questions for chat
   const quickQuestions = {
-    en: [
-      "📋 How do I create a new task?",
-      "👥 How to add a new employee?",
-      "🏢 How to create a branch?",
-      "📊 How to generate reports?",
-      "🔑 How to reset a user's password?",
-      "💰 How to change subscription plan?"
-    ],
-    sv: [
-      "📋 Hur skapar jag en ny uppgift?",
-      "👥 Hur lägger jag till en ny anställd?",
-      "🏢 Hur skapar jag en avdelning?",
-      "📊 Hur genererar jag rapporter?",
-      "🔑 Hur återställer jag lösenord?",
-      "💰 Hur ändrar jag prenumerationsplan?"
-    ]
-  };
+  en: [
+    "📋 How do I create a new task?",
+    "👥 How to add a new employee?",
+    "🏢 How to create a branch?",
+    "📊 How to generate reports?",
+    "🔑 How to reset a user's password?",
+    "💰 How to change subscription plan?"
+  ],
+  sv: [
+    "📋 Hur skapar jag en ny uppgift?",
+    "👥 Hur lägger jag till en ny anställd?",
+    "🏢 Hur skapar jag en avdelning?",
+    "📊 Hur genererar jag rapporter?",
+    "🔑 Hur återställer jag lösenord?",
+    "💰 Hur ändrar jag prenumerationsplan?"
+  ]
+};
 
   // Custom confirmation modal states
   const [confirmationModal, setConfirmationModal] = useState({
@@ -315,11 +315,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
     setChatMessages([{
-      text: language === 'en' ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
-      sender: 'ai',
-      time: new Date().toLocaleTimeString(),
-      showQuickQuestions: true
-    }]);
+  text: language === 'en' 
+    ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
+    : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
+  sender: 'ai',
+  time: new Date().toLocaleTimeString(),
+  showQuickQuestions: true
+}]);
     const interval = setInterval(() => {
       fetchDashboardData(false);
       fetchSubscriptionData();
@@ -1082,60 +1084,59 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const sendChatMessage = async (message = null) => {
-    const userMessageText = message || chatInput;
-    if (!userMessageText.trim()) return;
+  const userMessageText = message || chatInput;
+  if (!userMessageText.trim()) return;
+  
+  const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
+  setChatMessages([...chatMessages, userMessage]);
+  setChatInput('');
+  setIsAiTyping(true);
+  
+  setTimeout(() => {
+    const input = userMessageText.toLowerCase();
+    let response = "";
     
-    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
-    setChatMessages([...chatMessages, userMessage]);
-    setChatInput('');
-    setIsAiTyping(true);
+    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
+      response = language === 'en' 
+        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
+        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
+    } 
+    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
+      response = language === 'en'
+        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
+        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
+    }
+    else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
+      response = language === 'en'
+        ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
+        : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+    }
+    else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
+      response = language === 'en'
+        ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
+        : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+    }
+    else if (input.includes('reset password') || input.includes('återställ lösenord')) {
+      response = language === 'en'
+        ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
+        : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
+    }
+    else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
+      response = language === 'en'
+        ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
+        : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
+    }
+    else {
+      response = language === 'en'
+        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
+        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
+    }
     
-    setTimeout(() => {
-      const input = userMessageText.toLowerCase();
-      let response = "";
-      
-      if (input.includes('create task') || input.includes('new task')) {
-        response = language === 'en' 
-          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
-          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
-      } 
-      else if (input.includes('add employee') || input.includes('new employee')) {
-        response = language === 'en'
-          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
-          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
-      }
-      else if (input.includes('add branch') || input.includes('create branch')) {
-        response = language === 'en'
-          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
-          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
-      }
-      else if (input.includes('report') || input.includes('generate report')) {
-        response = language === 'en'
-          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
-          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
-      }
-      else if (input.includes('reset password')) {
-        response = language === 'en'
-          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
-          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
-      }
-      else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade')) {
-        response = language === 'en'
-          ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
-          : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
-      }
-      else {
-        response = language === 'en'
-          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
-      }
-      
-      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
-      setChatMessages(prev => [...prev, aiMessage]);
-      setIsAiTyping(false);
-    }, 800);
-  };
-
+    const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
+    setChatMessages(prev => [...prev, aiMessage]);
+    setIsAiTyping(false);
+  }, 800);
+};
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
       setter(false);
