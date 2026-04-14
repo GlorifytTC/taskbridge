@@ -28,65 +28,53 @@ function App() {
     if (path.startsWith('/reset-password/')) {
       console.log('Reset password page detected');
       setCurrentPage('reset-password');
+      setLoading(false);
+      return;
     }
   }, []);
 
   // Check token and validate with backend
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const tokenExpiry = localStorage.getItem('tokenExpiry');
     
-    // Check if token exists and is not expired
-    if (token && tokenExpiry) {
-      const now = Date.now();
-      const expiry = parseInt(tokenExpiry);
-      
-      // If token is expired, clear everything
-      if (now > expiry) {
-        console.log('Token expired, logging out');
-        localStorage.removeItem('token');
-        localStorage.removeItem('tokenExpiry');
-        localStorage.removeItem('user');
-        setLoading(false);
-        return;
-      }
-      
-      // Validate token with backend
-      fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setUser(data.user);
-            if (data.user.role === 'master') {
-              setCurrentPage('master');
-            } else if (data.user.role === 'superadmin') {
-              setCurrentPage('superadmin');
-            } else if (data.user.role === 'admin') {
-              setCurrentPage('admin');
-            } else if (data.user.role === 'employee') {
-              setCurrentPage('employee');
-            } else {
-              setCurrentPage('dashboard');
-            }
-          } else {
-            // Token invalid, clear storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiry');
-            localStorage.removeItem('user');
-          }
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('tokenExpiry');
-          localStorage.removeItem('user');
-          setLoading(false);
-        });
-    } else {
+    // If no token, just stop loading
+    if (!token) {
       setLoading(false);
+      return;
     }
+    
+    // Validate token with backend
+    fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.user) {
+          setUser(data.user);
+          // Redirect based on role
+          if (data.user.role === 'master') {
+            setCurrentPage('master');
+          } else if (data.user.role === 'superadmin') {
+            setCurrentPage('superadmin');
+          } else if (data.user.role === 'admin') {
+            setCurrentPage('admin');
+          } else if (data.user.role === 'employee') {
+            setCurrentPage('employee');
+          } else {
+            setCurrentPage('dashboard');
+          }
+        } else {
+          // Token invalid, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Auth check error:', err);
+        // Don't clear token on network error, keep user logged in
+        setLoading(false);
+      });
   }, []);
 
   const goToLogin = () => {
@@ -119,7 +107,6 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('tokenExpiry');
     localStorage.removeItem('user');
     setUser(null);
     setCurrentPage('landing');

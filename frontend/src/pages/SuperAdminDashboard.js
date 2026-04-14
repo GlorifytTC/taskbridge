@@ -1109,29 +1109,26 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // Add this to your SuperAdminDashboard component
+  // Add to SuperAdminDashboard, AdminDashboard, etc.
 useEffect(() => {
-  // Check session every minute
-  const interval = setInterval(() => {
-    const tokenExpiry = localStorage.getItem('tokenExpiry');
-    if (tokenExpiry) {
-      const now = Date.now();
-      const expiry = parseInt(tokenExpiry);
-      
-      // If token expires in less than 5 minutes, show warning
-      if (expiry - now < 5 * 60 * 1000) {
-        showToast(language === 'en' ? 'Your session will expire soon. Please save your work.' : 'Din session kommer snart att löpa ut. Spara ditt arbete.', 'warning');
-      }
-      
-      // If token expired, logout
-      if (now > expiry) {
-        showToast(language === 'en' ? 'Session expired. Please login again.' : 'Sessionen har löpt ut. Vänligen logga in igen.', 'error');
-        setTimeout(() => {
+  // Refresh token every 20 minutes to keep session alive
+  const interval = setInterval(async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!data.success) {
+          // Token invalid, logout
           handleLogout();
-        }, 2000);
+        }
+      } catch (err) {
+        console.error('Token refresh error:', err);
       }
     }
-  }, 60000); // Check every minute
+  }, 20 * 60 * 1000); // Every 20 minutes
   
   return () => clearInterval(interval);
 }, []);
