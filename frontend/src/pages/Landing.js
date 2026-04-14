@@ -22,44 +22,101 @@ const Landing = ({ onLoginClick, onNavigate }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Structured data for SEO (JSON-LD)
-  useEffect(() => {
-    // Add JSON-LD structured data to the page
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "TaskBridge",
-      "alternateName": "TaskBridge Workforce Management",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "description": "TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication with ease. Smart workforce management platform for modern teams.",
-      "offers": {
-        "@type": "Offer",
-        "price": "399",
-        "priceCurrency": "SEK",
-        "availability": "https://schema.org/OnlineOnly"
+  // Enhanced JSON-LD for AI Search
+useEffect(() => {
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "TaskBridge",
+    "alternateName": "TaskBridge Workforce Management",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication with ease.",
+    "offers": {
+      "@type": "Offer",
+      "price": "399",
+      "priceCurrency": "SEK",
+      "availability": "https://schema.org/OnlineOnly"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "127"
+    },
+    "keywords": "workforce management, shift scheduling, employee management, attendance tracking, staff scheduling, task management, team management",
+    "featureList": [
+      "Shift Management",
+      "Multi-branch Support",
+      "Real-time Analytics",
+      "Smart Notifications",
+      "Employee Portal",
+      "Reporting"
+    ],
+    "screenshot": "https://www.taskbridge.se/screenshot.png",
+    "image": "https://www.taskbridge.se/og-image.jpg",
+    "url": "https://www.taskbridge.se",
+    "sameAs": [
+      "https://www.linkedin.com/company/taskbridge",
+      "https://twitter.com/taskbridge"
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "name": "GlorifyTC",
+      "url": "https://glorifytc.se"
+    }
+  });
+  document.head.appendChild(script);
+  
+  // Add FAQ schema for AI questions
+  const faqScript = document.createElement('script');
+  faqScript.type = 'application/ld+json';
+  faqScript.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is TaskBridge?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TaskBridge is a smart workforce management platform that helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication."
+        }
       },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "ratingCount": "127"
+      {
+        "@type": "Question",
+        "name": "How much does TaskBridge cost?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TaskBridge plans start at 399 SEK/month for Basic plan, with Standard (799 SEK), Pro (1299 SEK), Business (2499 SEK), Enterprise (4999 SEK), and Corporate (9999 SEK) options available."
+        }
       },
-      "keywords": "workforce management, shift scheduling, employee management, attendance tracking, staff scheduling, task management, team management",
-      "image": "https://taskbridge.se/logo.png",
-      "url": "https://taskbridge.se",
-      "sameAs": [
-        "https://www.linkedin.com/company/taskbridge",
-        "https://twitter.com/taskbridge"
-      ]
-    });
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, []);
+      {
+        "@type": "Question",
+        "name": "Does TaskBridge offer a free trial?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, TaskBridge offers a 14-day free trial for all plans so you can test the platform before committing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What industries does TaskBridge serve?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TaskBridge serves schools, hospitals, retail stores, restaurants, and any organization that needs to manage employee shifts and attendance."
+        }
+      }
+    ]
+  });
+  document.head.appendChild(faqScript);
+  
+  return () => {
+    document.head.removeChild(script);
+    document.head.removeChild(faqScript);
+  };
+}, []);
 
   const handleSignIn = () => {
     if (onLoginClick) {

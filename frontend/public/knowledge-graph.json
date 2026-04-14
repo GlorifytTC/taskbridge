@@ -1,0 +1,27 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.taskbridge.se/#software",
+      "name": "TaskBridge",
+      "description": "Workforce management platform for shift scheduling and attendance tracking"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://glorifytc.se/#organization",
+      "name": "GlorifyTC",
+      "url": "https://glorifytc.se"
+    },
+    {
+      "@type": "Product",
+      "@id": "https://www.taskbridge.se/#product",
+      "name": "TaskBridge Software",
+      "offers": {
+        "@type": "Offer",
+        "price": "399",
+        "priceCurrency": "SEK"
+      }
+    }
+  ]
+}
