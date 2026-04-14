@@ -15,15 +15,6 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import ResetPassword from './pages/ResetPassword';
 
-import { HelmetProvider } from 'react-helmet-async';
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
-);
-
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
