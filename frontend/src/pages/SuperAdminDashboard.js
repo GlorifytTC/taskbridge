@@ -2002,7 +2002,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       </button>
 
       {showChat && (
-        <div style={{...styles.chatModal, width: isSmall ? '320px' : '380px', height: isSmall ? '500px' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
+  <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
+
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
@@ -2182,9 +2183,8 @@ const styles = {
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
-  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
+  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '380px', height: '550px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },  
+  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white', borderRadius: '16px 16px 0 0' },  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
   chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
   chatMessage: { display: 'flex' },
   messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', lineHeight: '1.4' },

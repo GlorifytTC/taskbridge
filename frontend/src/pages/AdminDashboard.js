@@ -51,21 +51,25 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
     employees: { current: 0, limit: 0, percentage: 0, warning: false }
   });
 
-  // Quick questions for chat
-  const quickQuestions = {
-    en: [
-      "📋 How do I create a new task?",
-      "👥 How to add a new employee?",
-      "📊 How to generate reports?",
-      "🔑 How to reset a user's password?"
-    ],
-    sv: [
-      "📋 Hur skapar jag en ny uppgift?",
-      "👥 Hur lägger jag till en ny anställd?",
-      "📊 Hur genererar jag rapporter?",
-      "🔑 Hur återställer jag lösenord?"
-    ]
-  };
+
+const quickQuestions = {
+  en: [
+    "📋 How do I create a new task?",
+    "👥 How to add a new employee?",
+    "🏢 How to manage branches?",
+    "📊 How to generate reports?",
+    "🔑 How to reset a user's password?",
+    "✅ How to approve applications?"
+  ],
+  sv: [
+    "📋 Hur skapar jag en ny uppgift?",
+    "👥 Hur lägger jag till en ny anställd?",
+    "🏢 Hur hanterar jag avdelningar?",
+    "📊 Hur genererar jag rapporter?",
+    "🔑 Hur återställer jag lösenord?",
+    "✅ Hur godkänner jag ansökningar?"
+  ]
+};
 
   const t = {
     en: {
@@ -559,49 +563,44 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const sendChatMessage = async (message = null) => {
-    const userMessageText = message || chatInput;
-    if (!userMessageText.trim()) return;
+  const userMessageText = message || chatInput;
+  if (!userMessageText.trim()) return;
+  
+  const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
+  setChatMessages([...chatMessages, userMessage]);
+  setChatInput('');
+  setIsAiTyping(true);
+  
+  setTimeout(() => {
+    const input = userMessageText.toLowerCase();
+    let response = "";
     
-    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
-    setChatMessages([...chatMessages, userMessage]);
-    setChatInput('');
-    setIsAiTyping(true);
+    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
+      response = language === 'en' 
+        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**"
+        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**";
+    } 
+    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd')) {
+      response = language === 'en'
+        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**"
+        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**";
+    }
+    else if (input.includes('approve application') || input.includes('godkänn ansökan')) {
+      response = language === 'en'
+        ? "✅ **To approve applications:**\n\n1. Go to the **Requests** tab\n2. Find pending applications\n3. Click the **✓ (green check)** to approve\n4. Click the **✗ (red X)** to reject\n\nYou can also add a rejection reason."
+        : "✅ **För att godkänna ansökningar:**\n\n1. Gå till fliken **Förfrågningar**\n2. Hitta väntande ansökningar\n3. Klicka på **✓ (grön bock)** för att godkänna\n4. Klicka på **✗ (rött X)** för att avslå\n\nDu kan också lägga till en anledning vid avslag.";
+    }
+    else {
+      response = language === 'en'
+        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n✅ Approving applications\n📊 Generating reports\n🔑 Resetting passwords\n\nWhat would you like to learn about?"
+        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n✅ Godkänna ansökningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n\nVad vill du lära dig om?";
+    }
     
-    setTimeout(() => {
-      const input = userMessageText.toLowerCase();
-      let response = "";
-      
-      if (input.includes('create task') || input.includes('new task')) {
-        response = language === 'en'
-          ? "📋 **To create a task:**\n\n1. Go to **Tasks** tab\n2. Click **Create Task**\n3. Fill in title, date, time, job role\n4. Select branch (must be one of your assigned branches)\n5. Set max employees\n6. Click **Create**\n\nThe task will be visible to employees with matching job roles."
-          : "📋 **För att skapa en uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i titel, datum, tid, jobbroll\n4. Välj avdelning (måste vara en av dina tilldelade avdelningar)\n5. Ange max antal anställda\n6. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
-      } 
-      else if (input.includes('add employee') || input.includes('new employee')) {
-        response = language === 'en'
-          ? "👥 **To add a new employee:**\n\n1. Go to **Staff** tab\n2. Click **Add Staff**\n3. Enter name, email, temporary password\n4. Select job role and branch\n5. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
-          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Ange namn, e-post, tillfälligt lösenord\n4. Välj jobbroll och avdelning\n5. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
-      }
-      else if (input.includes('report') || input.includes('generate report')) {
-        response = language === 'en'
-          ? "📊 **To generate reports:**\n\n1. Go to **Reports** tab\n2. Choose report type:\n   • Attendance Report\n   • Hours Worked Report\n3. Click **Generate Report**\n4. Export as PDF if needed\n\nReports help track productivity and attendance patterns."
-          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Välj rapporttyp:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Klicka på **Generera rapport**\n4. Exportera som PDF vid behov\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
-      }
-      else if (input.includes('reset password')) {
-        response = language === 'en'
-          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
-          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
-      }
-      else {
-        response = language === 'en'
-          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n📊 Generating reports\n🔑 Resetting passwords\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n📊 Generera rapporter\n🔑 Återställa lösenord\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
-      }
-      
-      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: true };
-      setChatMessages(prev => [...prev, aiMessage]);
-      setIsAiTyping(false);
-    }, 800);
-  };
+    const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString() };
+    setChatMessages(prev => [...prev, aiMessage]);
+    setIsAiTyping(false);
+  }, 800);
+};
 
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
@@ -983,9 +982,67 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      <button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
-        <i className="fas fa-robot"></i>
+      {/* Chat Button */}
+<button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
+  <i className="fas fa-robot"></i>
+</button>
+
+{/* Chat Modal */}
+{showChat && (
+  <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
+    <div style={styles.chatHeader}>
+      <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
+      <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
+    </div>
+    <div style={styles.chatMessages}>
+      {chatMessages.map((msg, i) => (
+        <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
+          <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
+            {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
+            <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
+            <div style={styles.messageTime}>{msg.time}</div>
+          </div>
+        </div>
+      ))}
+      {isAiTyping && (
+        <div style={styles.typingIndicator}>
+          <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
+          {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
+        </div>
+      )}
+    </div>
+    
+    {/* Quick Questions */}
+    {chatMessages.length < 2 && (
+      <div style={styles.quickQuestionsContainer}>
+        <div style={styles.quickQuestionsHeader}>
+          <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+        </div>
+        <div style={styles.quickQuestionsGrid}>
+          {quickQuestions[language].map((q, idx) => (
+            <button key={idx} onClick={() => sendChatMessage(q)} style={styles.quickQuestionButton}>
+              {q}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    
+    <div style={styles.chatInputContainer}>
+      <input
+        type="text"
+        placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
+        value={chatInput}
+        onChange={(e) => setChatInput(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+        style={styles.chatInput}
+      />
+      <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+        <i className="fas fa-paper-plane"></i>
       </button>
+    </div>
+  </div>
+)}
 
       {showChat && (
         <div style={{...styles.chatModal, width: isSmall ? '320px' : '380px', height: isSmall ? '500px' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
@@ -1135,17 +1192,21 @@ const styles = {
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
-  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
-  chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
-  chatMessage: { display: 'flex' },
-  messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', lineHeight: '1.4' },
-  messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
-  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '80px', fontSize: '11px' },
-  chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
-  chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none' },
-  chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }
+chatModal: { position: 'fixed', bottom: '80px', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
+chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' },
+chatMessages: { flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' },
+chatMessage: { display: 'flex' },
+messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', fontSize: '12px', lineHeight: '1.4' },
+messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
+typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '80px', fontSize: '11px' },
+quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
+quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
+quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
+chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
+chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none' },
+chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }
 };
 
 export default AdminDashboard;
