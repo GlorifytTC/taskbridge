@@ -6,9 +6,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    console.log('Loading state changed to:', loading);
-  }, [loading]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -40,9 +37,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   });
   const [subscriptionData, setSubscriptionData] = useState(null);
   const [usageData, setUsageData] = useState({
-    employees: { current: 0, limit: 0, percentage: 0 },
-    branches: { current: 0, limit: 0, percentage: 0 },
-    admins: { current: 0, limit: 0, percentage: 0 }
+    employees: { current: 0, limit: 0, percentage: 0, warning: false },
+    branches: { current: 0, limit: 0, percentage: 0, warning: false },
+    admins: { current: 0, limit: 0, percentage: 0, warning: false },
+    emails: { current: 0, limit: 0, percentage: 0, warning: false }
   });
   const [admins, setAdmins] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -67,6 +65,26 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
   
+  // Quick questions for chat
+  const quickQuestions = {
+    en: [
+      "📋 How do I create a new task?",
+      "👥 How to add a new employee?",
+      "🏢 How to create a branch?",
+      "📊 How to generate reports?",
+      "🔑 How to reset a user's password?",
+      "💰 How to change subscription plan?"
+    ],
+    sv: [
+      "📋 Hur skapar jag en ny uppgift?",
+      "👥 Hur lägger jag till en ny anställd?",
+      "🏢 Hur skapar jag en avdelning?",
+      "📊 Hur genererar jag rapporter?",
+      "🔑 Hur återställer jag lösenord?",
+      "💰 Hur ändrar jag prenumerationsplan?"
+    ]
+  };
+
   // Custom confirmation modal states
   const [confirmationModal, setConfirmationModal] = useState({
     isOpen: false,
@@ -99,7 +117,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Show custom confirmation modal instead of browser confirm
+  // Check limits before creating employees
+  const canAddEmployee = () => {
+    const limit = usageData.employees?.limit;
+    const current = usageData.employees?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
+  // Check limits before creating branches
+  const canAddBranch = () => {
+    const limit = usageData.branches?.limit;
+    const current = usageData.branches?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
+  // Check limits before creating admins
+  const canAddAdmin = () => {
+    const limit = usageData.admins?.limit;
+    const current = usageData.admins?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
   const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
     setConfirmationModal({
       isOpen: true,
@@ -182,7 +223,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       entityType: 'Entity Type',
       user: 'User',
       timestamp: 'Timestamp',
-      changes: 'Changes'
+      changes: 'Changes',
+      limitWarning: 'You have reached the limit for this feature. Please upgrade your plan.',
+      upgradeRequired: 'Upgrade Required'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -250,7 +293,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       entityType: 'Enhetstyp',
       user: 'Användare',
       timestamp: 'Tidpunkt',
-      changes: 'Ändringar'
+      changes: 'Ändringar',
+      limitWarning: 'Du har nått gränsen för denna funktion. Uppgradera din plan.',
+      upgradeRequired: 'Uppgradering krävs'
     }
   };
 
@@ -270,12 +315,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
     setChatMessages([{
-      text: language === 'en' ? "Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
+      text: language === 'en' ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?" : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?",
       sender: 'ai',
-      time: new Date().toLocaleTimeString()
+      time: new Date().toLocaleTimeString(),
+      showQuickQuestions: true
     }]);
     const interval = setInterval(() => {
-      fetchDashboardData(false); // silent refresh - no loading state
+      fetchDashboardData(false);
       fetchSubscriptionData();
     }, 30000);
     return () => clearInterval(interval);
@@ -390,83 +436,48 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const fetchDashboardData = async (showLoading = true) => {
-  console.log('🚀 fetchDashboardData STARTED, showLoading:', showLoading);
-  if (showLoading) {
-    console.log('Setting loading to true');
-    setLoading(true);
-  }
-  
-  try {
-    const token = localStorage.getItem('token');
-    console.log('📡 Token exists:', !!token);
-    
-    console.log('📡 Fetching users...');
-    const usersRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    console.log('✅ Users response status:', usersRes.status);
-    
-    console.log('📡 Fetching branches...');
-    const branchesRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    console.log('✅ Branches response status:', branchesRes.status);
-    
-    console.log('📡 Fetching tasks...');
-    const tasksRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    console.log('✅ Tasks response status:', tasksRes.status);
-    
-    console.log('📡 Fetching applications...');
-    const appsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    console.log('✅ Applications response status:', appsRes.status);
-    
-    console.log('📡 Fetching job descriptions...');
-    const jobsRes = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    });
-    console.log('✅ Job descriptions response status:', jobsRes.status);
-    
-    console.log('📡 Parsing JSON responses...');
-    const usersData = await usersRes.json();
-    const branchesData = await branchesRes.json();
-    const tasksData = await tasksRes.json();
-    const appsData = await appsRes.json();
-    const jobsData = await jobsRes.json();
-    console.log('✅ All JSON parsed');
-    
-    const allUsers = usersData.data || [];
-    const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
-    const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-    
-    console.log('📊 Setting state with data...');
-    setAdmins(filteredAdmins);
-    setEmployees(filteredEmployees);
-    setBranches(branchesData.data || []);
-    setTasks(tasksData.data || []);
-    setApplications(appsData.data || []);
-    setJobDescriptions(jobsData.data || []);
-    setStats({
-      totalAdmins: filteredAdmins.length,
-      totalEmployees: filteredEmployees.length,
-      totalTasks: tasksData.data?.length || 0,
-      totalBranches: branchesData.data?.length || 0,
-      pendingApplications: appsData.data?.length || 0,
-      totalJobDescriptions: jobsData.data?.length || 0
-    });
-    
-    console.log('✅ All state updated');
-  } catch (error) {
-    console.error('❌ Error fetching data:', error);
-    console.error('Error stack:', error.stack);
-  } finally {
-    console.log('🏁 Setting loading to false');
-    if (showLoading) setLoading(false);
-  }
-};
+    if (showLoading) setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      
+      const usersData = await usersRes.json();
+      const branchesData = await branchesRes.json();
+      const tasksData = await tasksRes.json();
+      const appsData = await appsRes.json();
+      const jobsData = await jobsRes.json();
+      
+      const allUsers = usersData.data || [];
+      const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
+      const filteredEmployees = allUsers.filter(u => u.role === 'employee');
+      
+      setAdmins(filteredAdmins);
+      setEmployees(filteredEmployees);
+      setBranches(branchesData.data || []);
+      setTasks(tasksData.data || []);
+      setApplications(appsData.data || []);
+      setJobDescriptions(jobsData.data || []);
+      setStats({
+        totalAdmins: filteredAdmins.length,
+        totalEmployees: filteredEmployees.length,
+        totalTasks: tasksData.data?.length || 0,
+        totalBranches: branchesData.data?.length || 0,
+        pendingApplications: appsData.data?.length || 0,
+        totalJobDescriptions: jobsData.data?.length || 0
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
@@ -540,9 +551,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
+    
+    // Check limit before creating
+    if (!canAddAdmin()) {
+      showToast(lang.limitWarning, 'error');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
-      
       const adminData = {
         name: formData.name,
         email: formData.email,
@@ -579,10 +596,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleAssignBranch = async (branchId) => {
     if (!selectedAdminForBranch) return;
-    
     try {
       const token = localStorage.getItem('token');
-      
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/assign-branch`, {
         method: 'PUT',
         headers: {
@@ -596,12 +611,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       
       if (response.ok) {
         const assignedBranch = branches.find(b => b._id === branchId);
-        
         setSelectedAdminForBranch(prev => ({
           ...prev,
           assignedBranches: [...(prev.assignedBranches || []), assignedBranch]
         }));
-        
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
@@ -609,7 +622,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               : admin
           )
         );
-        
         showToast(language === 'en' ? 'Branch assigned successfully!' : 'Avdelning tilldelad!', 'success');
         fetchDashboardData(false);
       } else {
@@ -623,10 +635,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleRemoveBranch = async (branchId) => {
     if (!selectedAdminForBranch) return;
-    
     try {
       const token = localStorage.getItem('token');
-      
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${selectedAdminForBranch._id}/remove-branch`, {
         method: 'PUT',
         headers: {
@@ -643,7 +653,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           ...prev,
           assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
         }));
-        
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
@@ -651,7 +660,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               : admin
           )
         );
-        
         showToast(language === 'en' ? 'Branch removed successfully!' : 'Avdelning borttagen!', 'success');
         fetchDashboardData(false);
       } else {
@@ -665,9 +673,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
+    
+    // Check limit before creating
+    if (!canAddEmployee()) {
+      showToast(lang.limitWarning, 'error');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
-      
       const employeeData = {
         name: formData.name,
         email: formData.email,
@@ -704,9 +718,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateBranch = async (e) => {
     e.preventDefault();
+    
+    // Check limit before creating
+    if (!canAddBranch()) {
+      showToast(lang.limitWarning, 'error');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('token');
-      
       const branchData = {
         name: formData.name,
         address: {
@@ -745,7 +765,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      
       const jobData = {
         name: formData.name,
         description: formData.description || ''
@@ -779,7 +798,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      
       const taskData = {
         title: formData.title,
         description: formData.description || '',
@@ -900,7 +918,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const handleDeleteBranch = async (branchId, branchName) => {
     try {
       const token = localStorage.getItem('token');
-      
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
         method: 'DELETE',
         headers: { 
@@ -1064,40 +1081,56 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setActiveTab(previousTab);
   };
 
-  const sendChatMessage = async () => {
-    if (!chatInput.trim()) return;
+  const sendChatMessage = async (message = null) => {
+    const userMessageText = message || chatInput;
+    if (!userMessageText.trim()) return;
     
-    const userMessage = { text: chatInput, sender: 'user', time: new Date().toLocaleTimeString() };
+    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
     setChatMessages([...chatMessages, userMessage]);
     setChatInput('');
     setIsAiTyping(true);
     
     setTimeout(() => {
-      const input = chatInput.toLowerCase();
+      const input = userMessageText.toLowerCase();
       let response = "";
       
       if (input.includes('create task') || input.includes('new task')) {
         response = language === 'en' 
-          ? "To create a task:\n1. Go to Tasks tab\n2. Click Create Task\n3. Fill in title, date, time, job role\n4. Set max employees\n5. Click Create"
-          : "För att skapa en uppgift:\n1. Gå till fliken Uppgifter\n2. Klicka på Skapa uppgift\n3. Fyll i titel, datum, tid, jobbroll\n4. Ange max antal anställda\n5. Klicka på Skapa";
+          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
+          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
       } 
-      else if (input.includes('add employee')) {
+      else if (input.includes('add employee') || input.includes('new employee')) {
         response = language === 'en'
-          ? "To add an employee:\n1. Go to Staff tab\n2. Click Add Staff\n3. Enter name, email, password\n4. Select job role and branch\n5. Click Create"
-          : "För att lägga till en anställd:\n1. Gå till fliken Personal\n2. Klicka på Lägg till personal\n3. Ange namn, e-post, lösenord\n4. Välj jobbroll och avdelning\n5. Klicka på Skapa";
+          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
+          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
       }
-      else if (input.includes('subscription') || input.includes('plan')) {
+      else if (input.includes('add branch') || input.includes('create branch')) {
         response = language === 'en'
-          ? `Your current plan: ${subscriptionData?.plan || 'Trial'}\nDays remaining: ${subscriptionData?.daysRemaining || 0}\nEmployee usage: ${Math.round(usageData.employees?.percentage || 0)}%\nBranch usage: ${Math.round(usageData.branches?.percentage || 0)}%\nAdmin usage: ${Math.round(usageData.admins?.percentage || 0)}%\n\nFor upgrades, please contact us at georgeglor@hotmail.com`
-          : `Din nuvarande plan: ${subscriptionData?.plan === 'trial' ? 'Prova på' : subscriptionData?.plan}\nDagar kvar: ${subscriptionData?.daysRemaining || 0}\nAnvändning anställda: ${Math.round(usageData.employees?.percentage || 0)}%\nAnvändning avdelningar: ${Math.round(usageData.branches?.percentage || 0)}%\nAnvändning administratörer: ${Math.round(usageData.admins?.percentage || 0)}%\n\nFör uppgraderingar, kontakta oss på georgeglor@hotmail.com`;
+          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+      }
+      else if (input.includes('report') || input.includes('generate report')) {
+        response = language === 'en'
+          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
+          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+      }
+      else if (input.includes('reset password')) {
+        response = language === 'en'
+          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
+          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
+      }
+      else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade')) {
+        response = language === 'en'
+          ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
+          : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
       }
       else {
         response = language === 'en'
-          ? "I can help with:\n• Creating tasks\n• Adding employees/admins\n• Managing branches\n• Approving applications\n• Subscription info\n• Resetting passwords\n\nWhat would you like to know?"
-          : "Jag kan hjälpa till med:\n• Skapa uppgifter\n• Lägga till anställda/administratörer\n• Hantera avdelningar\n• Godkänna ansökningar\n• Prenumerationsinfo\n• Återställa lösenord\n\nVad vill du veta?";
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
       }
       
-      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString() };
+      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
       setChatMessages(prev => [...prev, aiMessage]);
       setIsAiTyping(false);
     }, 800);
@@ -1109,31 +1142,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // Add to SuperAdminDashboard, AdminDashboard, etc.
-useEffect(() => {
-  // Refresh token every 20 minutes to keep session alive
-  const interval = setInterval(async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (!data.success) {
-          // Token invalid, logout
-          handleLogout();
+  // Add to SuperAdminDashboard for session management
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await response.json();
+          if (!data.success) {
+            handleLogout();
+          }
+        } catch (err) {
+          console.error('Token refresh error:', err);
         }
-      } catch (err) {
-        console.error('Token refresh error:', err);
       }
-    }
-  }, 20 * 60 * 1000); // Every 20 minutes
-  
-  return () => clearInterval(interval);
-}, []);
+    }, 20 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Show delete confirmation modal
   const confirmDelete = (type, id, name) => {
     let title = '';
     let message = '';
@@ -1204,6 +1233,10 @@ useEffect(() => {
     );
   }
 
+  const filteredEmployees = employees.filter(e => 
+    e.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div style={styles.container}>
       {/* Toast Notification */}
@@ -1228,12 +1261,8 @@ useEffect(() => {
               <p style={styles.confirmationMessage}>{confirmationModal.message}</p>
             </div>
             <div style={styles.confirmationFooter}>
-              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.cancelButton}>
-                {lang.cancel}
-              </button>
-              <button onClick={confirmationModal.onConfirm} style={styles.confirmDeleteButton}>
-                {lang.delete}
-              </button>
+              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.cancelButton}>{lang.cancel}</button>
+              <button onClick={confirmationModal.onConfirm} style={styles.confirmDeleteButton}>{lang.delete}</button>
             </div>
           </div>
         </div>
@@ -1300,6 +1329,9 @@ useEffect(() => {
                 <div style={styles.usageHeader}>
                   <span>{lang.employees}</span>
                   <span>{usageData.employees?.current || 0}/{usageData.employees?.limit === Infinity ? '∞' : usageData.employees?.limit || 0}</span>
+                  {usageData.employees?.percentage > 90 && usageData.employees?.limit !== Infinity && (
+                    <span style={{ color: '#ef4444', fontSize: '10px' }}>⚠️ Near limit</span>
+                  )}
                 </div>
                 <div style={styles.progressBar}>
                   <div style={{...styles.progressFill, width: `${Math.min(usageData.employees?.percentage || 0, 100)}%`, background: usageData.employees?.percentage > 90 ? '#ef4444' : '#10b981'}}></div>
@@ -1360,60 +1392,82 @@ useEffect(() => {
         )}
 
         {activeTab === 'admins' && (
-  <div>
-    <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
-      <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
-      <button onClick={() => setShowCreateAdminModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addAdmin}</button>
-    </div>
-    <div style={styles.tableContainer}>
-      <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
-            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-           </tr>
-        </thead>
-        <tbody>
-          {admins.map(admin => (
-            <tr key={admin._id} style={styles.tableRow}>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
-              {!isSmall && (
-                <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
-                  <div>
-                    {(admin.assignedBranches || []).slice(0, 2).map(b => (
-                      <span key={b._id} style={styles.branchTag}>{b.name}</span>
-                    ))}
-                    {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
-                    <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
-                  </div>
-                </td>
-              )}
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
-              </td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <div style={styles.actionButtons}>
-                  <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                  <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+          <div>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
+              <button 
+                onClick={() => {
+                  if (!canAddAdmin()) {
+                    showToast(lang.limitWarning, 'error');
+                  } else {
+                    setShowCreateAdminModal(true);
+                  }
+                }} 
+                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
+              >
+                + {lang.addAdmin}
+              </button>
+            </div>
+            <div style={styles.tableContainer}>
+              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+                  </table>
+                </thead>
+                <tbody>
+                  {admins.map(admin => (
+                    <tr key={admin._id} style={styles.tableRow}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
+                      {!isSmall && (
+                        <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                          <div>
+                            {(admin.assignedBranches || []).slice(0, 2).map(b => (
+                              <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                            ))}
+                            {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
+                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
+                          </div>
+                        </div>
+                      )}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
+                       </div>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <div style={styles.actionButtons}>
+                          <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                          <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                        </div>
+                       </div>
+                     </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'employees' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
-              <button onClick={() => setShowCreateEmployeeModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addStaff}</button>
+              <button 
+                onClick={() => {
+                  if (!canAddEmployee()) {
+                    showToast(lang.limitWarning, 'error');
+                  } else {
+                    setShowCreateEmployeeModal(true);
+                  }
+                }} 
+                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
+              >
+                + {lang.addStaff}
+              </button>
             </div>
             <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
             <div style={styles.tableContainer}>
@@ -1426,10 +1480,10 @@ useEffect(() => {
                     {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                  </tr>
+                  </table>
                 </thead>
                 <tbody>
-                  {employees.filter(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
+                  {filteredEmployees.map(emp => (
                     <tr key={emp._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
@@ -1439,8 +1493,8 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
                         <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                      </td>
-                    </tr>
+                       </div>
+                     </tr>
                   ))}
                 </tbody>
               </table>
@@ -1452,7 +1506,18 @@ useEffect(() => {
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.branchManagement}</h2>
-              <button onClick={() => setShowCreateBranchModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addBranch}</button>
+              <button 
+                onClick={() => {
+                  if (!canAddBranch()) {
+                    showToast(lang.limitWarning, 'error');
+                  } else {
+                    setShowCreateBranchModal(true);
+                  }
+                }} 
+                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddBranch() ? 0.5 : 1}}
+              >
+                + {lang.addBranch}
+              </button>
             </div>
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
@@ -1473,7 +1538,7 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                    </tr>
+                     </tr>
                   ))}
                 </tbody>
               </table>
@@ -1504,7 +1569,7 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{job.description || '-'}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                    </tr>
+                     </tr>
                   ))}
                 </tbody>
               </table>
@@ -1541,7 +1606,7 @@ useEffect(() => {
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>{task.status}</span></td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                    </tr>
+                     </tr>
                   ))}
                 </tbody>
               </table>
@@ -1550,52 +1615,52 @@ useEffect(() => {
         )}
 
         {activeTab === 'applications' && (
-  <div>
-    <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>All Applications</h2>
-    <div style={styles.tableContainer}>
-      <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Employee</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Task</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
-            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Applied Date</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-           </tr>
-        </thead>
-        <tbody>
-          {applications.map(app => (
-            <tr key={app._id} style={styles.tableRow}>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.employee?.name}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
-              {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <span style={{...styles.statusBadge, background: 
-                  app.status === 'approved' ? '#10b981' : 
-                  app.status === 'rejected' ? '#ef4444' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'
-                }}>
-                  {app.status}
-                </span>
-              </td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                {app.status === 'pending' && (
-                  <div style={styles.actionButtons}>
-                    <button onClick={() => handleApproveApplication(app._id)} style={{...styles.approveButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✓</button>
-                    <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+          <div>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>All Applications</h2>
+            <div style={styles.tableContainer}>
+              <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Employee</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Task</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Applied Date</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.map(app => (
+                    <tr key={app._id} style={styles.tableRow}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.employee?.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <span style={{...styles.statusBadge, background: 
+                          app.status === 'approved' ? '#10b981' : 
+                          app.status === 'rejected' ? '#ef4444' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'
+                        }}>
+                          {app.status}
+                        </span>
+                       </div>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {app.status === 'pending' && (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => handleApproveApplication(app._id)} style={{...styles.approveButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✓</button>
+                            <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
+                          </div>
+                        )}
+                       </div>
+                     </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'reports' && (
           <div>
@@ -1688,7 +1753,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* All other modals remain exactly as in your original code - just add responsive width */}
+      {/* All modals - keep as is from original */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
@@ -1936,25 +2001,61 @@ useEffect(() => {
       </button>
 
       {showChat && (
-        <div style={{...styles.chatModal, width: isSmall ? '260px' : '300px', height: isSmall ? '350px' : '450px', bottom: isSmall ? '70px' : '80px'}}>
+        <div style={{...styles.chatModal, width: isSmall ? '320px' : '380px', height: isSmall ? '500px' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
           <div style={styles.chatHeader}>
-            <span><i className="fas fa-robot"></i> AI Assistant</span>
+            <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
           </div>
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', fontSize: isSmall ? '10px' : '12px'}}>
-                  {msg.sender === 'ai' && <i className="fas fa-robot"></i>} {msg.text}
+                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
+                  {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
+                  <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
                   <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
                 </div>
               </div>
             ))}
-            {isAiTyping && <div style={{...styles.typingIndicator, fontSize: isSmall ? '9px' : '11px'}}>AI is typing...</div>}
+            {isAiTyping && (
+              <div style={styles.typingIndicator}>
+                <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
+                {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
+              </div>
+            )}
           </div>
+          
+          {/* Quick Questions */}
+          {chatMessages.length < 3 && (
+            <div style={styles.quickQuestionsContainer}>
+              <div style={styles.quickQuestionsHeader}>
+                <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+              </div>
+              <div style={styles.quickQuestionsGrid}>
+                {quickQuestions[language].map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => sendChatMessage(q)}
+                    style={styles.quickQuestionButton}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div style={styles.chatInputContainer}>
-            <input type="text" placeholder="Ask me..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()} style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}} />
-            <button onClick={sendChatMessage} style={{...styles.chatSend, fontSize: isSmall ? '11px' : '12px'}}>➤</button>
+            <input
+              type="text"
+              placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+              style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}}
+            />
+            <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+              <i className="fas fa-paper-plane"></i>
+            </button>
           </div>
         </div>
       )}
@@ -1962,7 +2063,7 @@ useEffect(() => {
   );
 };
 
-// Keep ALL original styles exactly as they were, only adding isSmall responsive overrides where needed
+// Keep ALL original styles
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
   toast: { position: 'fixed', bottom: '20px', right: '20px', color: 'white', padding: '12px 20px', borderRadius: '8px', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
@@ -2075,6 +2176,10 @@ const styles = {
   branchCheckboxItem: { padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'pointer' },
   checkbox: { width: '16px', height: '16px', cursor: 'pointer' },
+  quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
+  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
+  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   chatModal: { position: 'fixed', bottom: '80px', right: '20px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
   chatHeader: { padding: '12px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'white' },
@@ -2083,7 +2188,7 @@ const styles = {
   chatMessage: { display: 'flex' },
   messageBubble: { maxWidth: '85%', padding: '8px 12px', borderRadius: '12px', color: 'white', lineHeight: '1.4' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '4px' },
-  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '60px', fontSize: '11px' },
+  typingIndicator: { padding: '8px 12px', background: '#1e293b', borderRadius: '12px', width: '80px', fontSize: '11px' },
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
   chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none' },
   chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }
