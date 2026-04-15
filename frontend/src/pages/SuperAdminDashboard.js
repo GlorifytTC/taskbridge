@@ -2004,65 +2004,66 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
       {showChat && (
   <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
-
-          <div style={styles.chatHeader}>
-            <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-            <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
-          </div>
-          <div style={styles.chatMessages}>
-            {chatMessages.map((msg, i) => (
-              <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
-                  {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
-                  <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
-                  <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
-                </div>
-              </div>
-            ))}
-            {isAiTyping && (
-              <div style={styles.typingIndicator}>
-                <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
-                {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
-              </div>
-            )}
-          </div>
-          
-          {/* Quick Questions - Show only if no conversation yet OR if user wants to see them */}
-{(chatMessages.length <= 2 || showQuickQuestions) && (
-  <div style={styles.quickQuestionsContainer}>
-    <div style={styles.quickQuestionsHeader}>
-      <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
-      <button 
-        onClick={() => setShowQuickQuestions(!showQuickQuestions)} 
-        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#00d1ff', cursor: 'pointer', fontSize: '11px' }}
-      >
-        {showQuickQuestions ? 'Hide' : 'Show'}
-      </button>
+    <div style={styles.chatHeader}>
+      <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
+      <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
     </div>
-    <div style={styles.quickQuestionsGrid}>
-      {quickQuestions[language].map((q, idx) => (
-        <button
-          key={idx}
-          onClick={() => {
-            sendChatMessage(q);
-            setShowQuickQuestions(false);
-          }}
-          style={styles.quickQuestionButton}
-        >
-          {q}
-        </button>
+    
+    <div style={styles.chatMessages}>
+      {chatMessages.map((msg, i) => (
+        <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
+          <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
+            {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
+            <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
+            <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
+          </div>
+        </div>
       ))}
-    </div>
-  </div>
-)}
-          
-          {/* No text input - only quick questions */}
-
+      {isAiTyping && (
+        <div style={styles.typingIndicator}>
+          <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
+          {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
         </div>
       )}
     </div>
+    
+    {/* Quick Questions - Always visible */}
+    <div style={styles.quickQuestionsContainer}>
+      <div style={styles.quickQuestionsHeader}>
+        <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+      </div>
+      <div style={styles.quickQuestionsGrid}>
+        {quickQuestions[language].map((q, idx) => (
+          <button
+            key={idx}
+            onClick={() => sendChatMessage(q)}
+            style={styles.quickQuestionButton}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+    
+    {/* ✅ ADD THIS - Text input field */}
+    <div style={styles.chatInputContainer}>
+      <input
+        type="text"
+        placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
+        value={chatInput}
+        onChange={(e) => setChatInput(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+        style={styles.chatInput}
+      />
+      <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+        <i className="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+)}
+    </div>
   );
-};
+}
 
 // Keep ALL original styles
 const styles = {
