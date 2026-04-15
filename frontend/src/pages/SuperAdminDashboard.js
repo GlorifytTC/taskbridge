@@ -52,7 +52,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
-  
+  const [chatInput, setChatInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
   const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
   const [language, setLanguage] = useState(() => {
