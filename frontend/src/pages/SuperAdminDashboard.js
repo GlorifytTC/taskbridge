@@ -66,25 +66,43 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
   
+  // Report filter states
+  const [reportFilters, setReportFilters] = useState({
+    branch: 'all',
+    jobRole: 'all',
+    employee: 'all',
+    dateRange: 'month',
+    startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+  const [showReportFilters, setShowReportFilters] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  
+  // Audit log states
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  
   // Quick questions for chat
   const quickQuestions = {
-  en: [
-    "📋 How do I create a new task?",
-    "👥 How to add a new employee?",
-    "🏢 How to create a branch?",
-    "📊 How to generate reports?",
-    "🔑 How to reset a user's password?",
-    "💰 How to change subscription plan?"
-  ],
-  sv: [
-    "📋 Hur skapar jag en ny uppgift?",
-    "👥 Hur lägger jag till en ny anställd?",
-    "🏢 Hur skapar jag en avdelning?",
-    "📊 Hur genererar jag rapporter?",
-    "🔑 Hur återställer jag lösenord?",
-    "💰 Hur ändrar jag prenumerationsplan?"
-  ]
-};
+    en: [
+      "📋 How do I create a new task?",
+      "👥 How to add a new employee?",
+      "🏢 How to create a branch?",
+      "📊 How to generate reports?",
+      "🔑 How to reset a user's password?",
+      "💰 How to change subscription plan?"
+    ],
+    sv: [
+      "📋 Hur skapar jag en ny uppgift?",
+      "👥 Hur lägger jag till en ny anställd?",
+      "🏢 Hur skapar jag en avdelning?",
+      "📊 Hur genererar jag rapporter?",
+      "🔑 Hur återställer jag lösenord?",
+      "💰 Hur ändrar jag prenumerationsplan?"
+    ]
+  };
 
   // Custom confirmation modal states
   const [confirmationModal, setConfirmationModal] = useState({
@@ -96,11 +114,181 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     itemId: null,
     type: ''
   });
-  
-  // Audit log modal
-  const [showAuditModal, setShowAuditModal] = useState(false);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  // Add this function to fetch employees for filter
+  const fetchEmployeesForFilter = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setAvailableEmployees(data.data || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  // Replace the generateAttendanceReport function with this enhanced version
+  const generateAttendanceReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      let url = 'https://taskbridge-production-9d91.up.railway.app/api/reports/attendance?';
+      
+      if (reportFilters.branch !== 'all') {
+        url += `branch=${reportFilters.branch}&`;
+      }
+      if (reportFilters.jobRole !== 'all') {
+        url += `jobRole=${reportFilters.jobRole}&`;
+      }
+      if (reportFilters.employee !== 'all') {
+        url += `employee=${reportFilters.employee}&`;
+      }
+      if (reportFilters.dateRange === 'custom') {
+        url += `startDate=${reportFilters.startDate}&endDate=${reportFilters.endDate}&`;
+      } else {
+        url += `range=${reportFilters.dateRange}&`;
+      }
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setReportData(data);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'generated!' : 'genererad!'), 'success');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'failed' : 'misslyckades'), 'error');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Replace the exportToPDF function with enhanced version
+  const exportToPDF = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    const reportDate = new Date().toLocaleString();
+    const filters = `
+      Branch: ${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}
+      Job Role: ${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}
+      Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
+      Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
+    `;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>TaskBridge Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+            h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
+            .filters p { margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #00d1ff; color: white; }
+            .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
+            .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TaskBridge Report</h1>
+            <p>Generated: ${reportDate}</p>
+          </div>
+          <div class="filters">
+            <h3>Report Filters:</h3>
+            <p>${filters.replace(/\n/g, '<br>')}</p>
+          </div>
+          <div class="report-content">
+            <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
+          </div>
+          <div class="footer">
+            <p>TaskBridge - Workforce Management System</p>
+            <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+          </div>
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  // Replace the exportToExcel function with enhanced version
+  const exportToExcel = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    
+    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n\n";
+    csvContent += "Filters:\n";
+    csvContent += `Branch,${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}\n`;
+    csvContent += `Job Role,${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}\n`;
+    csvContent += `Employee,${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}\n`;
+    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n\n`;
+    
+    csvContent += "Report Data:\n";
+    csvContent += JSON.stringify(reportData, null, 2);
+    
+    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `taskbridge_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(lang.exportExcel + ' ' + (language === 'en' ? 'exported!' : 'exporterad!'), 'success');
+  };
+
+  // Replace the fetchAuditLogs function with enhanced version
+  const fetchAuditLogsEnhanced = async () => {
+    setLoadingAudit(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/audit-logs?limit=100', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Remove sensitive information from audit logs
+        const sanitizedLogs = (data.data || []).map(log => {
+          const sanitized = { ...log };
+          // Remove password fields from changes
+          if (sanitized.changes) {
+            if (sanitized.changes.password) delete sanitized.changes.password;
+            if (sanitized.changes.newPassword) delete sanitized.changes.newPassword;
+            if (sanitized.changes.currentPassword) delete sanitized.changes.currentPassword;
+            if (sanitized.changes.oldPassword) delete sanitized.changes.oldPassword;
+            // Remove IP address for privacy
+            if (sanitized.ipAddress) delete sanitized.ipAddress;
+            if (sanitized.userAgent) delete sanitized.userAgent;
+          }
+          return sanitized;
+        });
+        setAuditLogs(sanitizedLogs);
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -110,6 +298,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    fetchEmployeesForFilter();
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -316,37 +505,19 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
     setChatMessages([{
-  text: language === 'en' 
-    ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
-    : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
-  sender: 'ai',
-  time: new Date().toLocaleTimeString(),
-  showQuickQuestions: true
-}]);
+      text: language === 'en' 
+        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
+        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
+      sender: 'ai',
+      time: new Date().toLocaleTimeString(),
+      showQuickQuestions: true
+    }]);
     const interval = setInterval(() => {
       fetchDashboardData(false);
       fetchSubscriptionData();
     }, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const fetchAuditLogs = async () => {
-    setLoadingAudit(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/audit-logs', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setAuditLogs(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching audit logs:', error);
-    } finally {
-      setLoadingAudit(false);
-    }
-  };
 
   const fetchSubscriptionData = async () => {
     try {
@@ -364,65 +535,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     } catch (error) {
       console.error('Error fetching subscription:', error);
     }
-  };
-
-  const generateAttendanceReport = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/reports/attendance', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setReportData(data);
-      showToast(lang.generateReport + ' ' + (language === 'en' ? 'generated!' : 'genererad!'), 'success');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      showToast(lang.generateReport + ' ' + (language === 'en' ? 'failed' : 'misslyckades'), 'error');
-    }
-  };
-
-  const exportToPDF = () => {
-    if (!reportData) {
-      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
-      return;
-    }
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head><title>TaskBridge Report</title>
-        <style>
-          body { font-family: Arial; padding: 20px; }
-          h1 { color: #00d1ff; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-        </style>
-        </head>
-        <body>
-          <h1>TaskBridge Report</h1>
-          <p>Generated: ${new Date().toLocaleString()}</p>
-          <pre>${JSON.stringify(reportData, null, 2)}</pre>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const exportToExcel = () => {
-    if (!reportData) {
-      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
-      return;
-    }
-    const csvContent = "data:text/csv;charset=utf-8," + JSON.stringify(reportData, null, 2);
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "taskbridge_report.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(lang.exportExcel + ' ' + (language === 'en' ? 'exported!' : 'exporterad!'), 'success');
   };
 
   const handleLogoUpload = (e) => {
@@ -555,7 +667,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
     
-    // Check limit before creating
     if (!canAddAdmin()) {
       showToast(lang.limitWarning, 'error');
       return;
@@ -677,7 +788,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
     
-    // Check limit before creating
     if (!canAddEmployee()) {
       showToast(lang.limitWarning, 'error');
       return;
@@ -722,7 +832,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const handleCreateBranch = async (e) => {
     e.preventDefault();
     
-    // Check limit before creating
     if (!canAddBranch()) {
       showToast(lang.limitWarning, 'error');
       return;
@@ -1085,59 +1194,60 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const sendChatMessage = async (message = null) => {
-  const userMessageText = message || chatInput;
-  if (!userMessageText.trim()) return;
-  
-  const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
-  setChatMessages([...chatMessages, userMessage]);
-  setChatInput('');
-  setIsAiTyping(true);
-  
-  setTimeout(() => {
-    const input = userMessageText.toLowerCase();
-    let response = "";
+    const userMessageText = message || chatInput;
+    if (!userMessageText.trim()) return;
     
-    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
-      response = language === 'en' 
-        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
-        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
-    } 
-    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
-      response = language === 'en'
-        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
-        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
-    }
-    else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
-      response = language === 'en'
-        ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
-        : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
-    }
-    else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
-      response = language === 'en'
-        ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
-        : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
-    }
-    else if (input.includes('reset password') || input.includes('återställ lösenord')) {
-      response = language === 'en'
-        ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
-        : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
-    }
-    else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
-      response = language === 'en'
-        ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
-        : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
-    }
-    else {
-      response = language === 'en'
-        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
-    }
+    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
+    setChatMessages([...chatMessages, userMessage]);
+    setChatInput('');
+    setIsAiTyping(true);
     
-    const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
-    setChatMessages(prev => [...prev, aiMessage]);
-    setIsAiTyping(false);
-  }, 800);
-};
+    setTimeout(() => {
+      const input = userMessageText.toLowerCase();
+      let response = "";
+      
+      if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
+        response = language === 'en' 
+          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
+          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
+      } 
+      else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
+        response = language === 'en'
+          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
+          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
+      }
+      else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
+        response = language === 'en'
+          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+      }
+      else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
+        response = language === 'en'
+          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
+          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+      }
+      else if (input.includes('reset password') || input.includes('återställ lösenord')) {
+        response = language === 'en'
+          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
+          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
+      }
+      else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
+        response = language === 'en'
+          ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
+          : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
+      }
+      else {
+        response = language === 'en'
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
+      }
+      
+      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
+      setChatMessages(prev => [...prev, aiMessage]);
+      setIsAiTyping(false);
+    }, 800);
+  };
+  
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
       setter(false);
@@ -1394,115 +1504,115 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         )}
 
         {activeTab === 'admins' && (
-  <div>
-    <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
-      <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
-      <button 
-        onClick={() => {
-          if (!canAddAdmin()) {
-            showToast(lang.limitWarning, 'error');
-          } else {
-            setShowCreateAdminModal(true);
-          }
-        }} 
-        style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
-      >
-        + {lang.addAdmin}
-      </button>
-    </div>
-    <div style={styles.tableContainer}>
-      <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
-            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {admins.map(admin => (
-            <tr key={admin._id} style={styles.tableRow}>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
-              {!isSmall && (
-                <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
-                  <div>
-                    {(admin.assignedBranches || []).slice(0, 2).map(b => (
-                      <span key={b._id} style={styles.branchTag}>{b.name}</span>
-                    ))}
-                    {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
-                    <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
-                  </div>
-                </td>
-              )}
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
-              </td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <div style={styles.actionButtons}>
-                  <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                  <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+          <div>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
+              <button 
+                onClick={() => {
+                  if (!canAddAdmin()) {
+                    showToast(lang.limitWarning, 'error');
+                  } else {
+                    setShowCreateAdminModal(true);
+                  }
+                }} 
+                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
+              >
+                + {lang.addAdmin}
+              </button>
+            </div>
+            <div style={styles.tableContainer}>
+              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Assigned Branches</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {admins.map(admin => (
+                    <tr key={admin._id} style={styles.tableRow}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
+                      {!isSmall && (
+                        <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                          <div>
+                            {(admin.assignedBranches || []).slice(0, 2).map(b => (
+                              <span key={b._id} style={styles.branchTag}>{b.name}</span>
+                            ))}
+                            {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
+                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
+                          </div>
+                        </td>
+                      )}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <div style={styles.actionButtons}>
+                          <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                          <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-{activeTab === 'employees' && (
-  <div>
-    <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
-      <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
-      <button 
-        onClick={() => {
-          if (!canAddEmployee()) {
-            showToast(lang.limitWarning, 'error');
-          } else {
-            setShowCreateEmployeeModal(true);
-          }
-        }} 
-        style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
-      >
-        + {lang.addStaff}
-      </button>
-    </div>
-    <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
-    <div style={styles.tableContainer}>
-      <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
-        <thead>
-          <tr style={styles.tableHeaderRow}>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
-            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
-            {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
-            <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredEmployees.map(emp => (
-            <tr key={emp._id} style={styles.tableRow}>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
-              {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
-              {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
-              <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+        {activeTab === 'employees' && (
+          <div>
+            <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
+              <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
+              <button 
+                onClick={() => {
+                  if (!canAddEmployee()) {
+                    showToast(lang.limitWarning, 'error');
+                  } else {
+                    setShowCreateEmployeeModal(true);
+                  }
+                }} 
+                style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
+              >
+                + {lang.addStaff}
+              </button>
+            </div>
+            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px'}} />
+            <div style={styles.tableContainer}>
+              <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+                <thead>
+                  <tr style={styles.tableHeaderRow}>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployees.map(emp => (
+                    <tr key={emp._id} style={styles.tableRow}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'branches' && (
           <div>
@@ -1608,7 +1718,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>{task.status}</span></td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                     </tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1656,7 +1766,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           </div>
                         )}
                       </td>
-                     </tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1664,31 +1774,175 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
+        {/* ENHANCED REPORTS TAB */}
         {activeTab === 'reports' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
-            <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))'}}>
-              <div style={styles.reportCard}>
-                <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.attendance}</h3>
-                <button onClick={generateAttendanceReport} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.generateReport}</button>
+            
+            {/* Report Filters */}
+            <div style={styles.reportFiltersCard}>
+              <div style={styles.reportFiltersHeader}>
+                <h3 style={{color: 'white', fontSize: '14px', margin: 0}}>
+                  <i className="fas fa-filter"></i> {language === 'en' ? 'Report Filters' : 'Rapportfilter'}
+                </h3>
+                <button onClick={() => setShowReportFilters(!showReportFilters)} style={styles.filterToggleButton}>
+                  {showReportFilters ? '▲' : '▼'}
+                </button>
               </div>
+              
+              {showReportFilters && (
+                <div style={styles.reportFiltersBody}>
+                  <div style={styles.filterRow}>
+                    <div style={styles.filterGroup}>
+                      <label style={styles.filterLabel}>{lang.branch}:</label>
+                      <select 
+                        value={reportFilters.branch} 
+                        onChange={(e) => setReportFilters({...reportFilters, branch: e.target.value})}
+                        style={styles.filterSelect}
+                      >
+                        <option value="all">{language === 'en' ? 'All Branches' : 'Alla Avdelningar'}</option>
+                        {branches.map(branch => (
+                          <option key={branch._id} value={branch._id}>{branch.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div style={styles.filterGroup}>
+                      <label style={styles.filterLabel}>{lang.roles}:</label>
+                      <select 
+                        value={reportFilters.jobRole} 
+                        onChange={(e) => setReportFilters({...reportFilters, jobRole: e.target.value})}
+                        style={styles.filterSelect}
+                      >
+                        <option value="all">{language === 'en' ? 'All Roles' : 'Alla Roller'}</option>
+                        {jobDescriptions.map(role => (
+                          <option key={role._id} value={role._id}>{role.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div style={styles.filterGroup}>
+                      <label style={styles.filterLabel}>{lang.employees}:</label>
+                      <select 
+                        value={reportFilters.employee} 
+                        onChange={(e) => setReportFilters({...reportFilters, employee: e.target.value})}
+                        style={styles.filterSelect}
+                      >
+                        <option value="all">{language === 'en' ? 'All Employees' : 'Alla Anställda'}</option>
+                        {availableEmployees.map(emp => (
+                          <option key={emp._id} value={emp._id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div style={styles.filterGroup}>
+                      <label style={styles.filterLabel}>{language === 'en' ? 'Date Range' : 'Datumintervall'}:</label>
+                      <select 
+                        value={reportFilters.dateRange} 
+                        onChange={(e) => setReportFilters({...reportFilters, dateRange: e.target.value})}
+                        style={styles.filterSelect}
+                      >
+                        <option value="today">{language === 'en' ? 'Today' : 'Idag'}</option>
+                        <option value="week">{language === 'en' ? 'This Week' : 'Denna Vecka'}</option>
+                        <option value="month">{language === 'en' ? 'This Month' : 'Denna Månad'}</option>
+                        <option value="quarter">{language === 'en' ? 'This Quarter' : 'Detta Kvartal'}</option>
+                        <option value="year">{language === 'en' ? 'This Year' : 'Detta År'}</option>
+                        <option value="custom">{language === 'en' ? 'Custom Range' : 'Anpassat Intervall'}</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {reportFilters.dateRange === 'custom' && (
+                    <div style={styles.customDateRange}>
+                      <div style={styles.filterGroup}>
+                        <label style={styles.filterLabel}>{lang.startDate}:</label>
+                        <input 
+                          type="date" 
+                          value={reportFilters.startDate} 
+                          onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
+                          style={styles.filterInput}
+                        />
+                      </div>
+                      <div style={styles.filterGroup}>
+                        <label style={styles.filterLabel}>{lang.endDate}:</label>
+                        <input 
+                          type="date" 
+                          value={reportFilters.endDate} 
+                          onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
+                          style={styles.filterInput}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Report Cards */}
+            <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))'}}>
               <div style={styles.reportCard}>
-                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
-                <button onClick={generateAttendanceReport} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.generateReport}</button>
+                <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.attendance}</h3>
+                <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
+                  {language === 'en' ? 'Employee attendance summary' : 'Sammanfattning av anställdas närvaro'}
+                </p>
+                <button 
+                  onClick={generateAttendanceReport} 
+                  disabled={generatingReport}
+                  style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1}}
+                >
+                  {generatingReport ? (
+                    <><i className="fas fa-spinner fa-spin"></i> {language === 'en' ? 'Generating...' : 'Genererar...'}</>
+                  ) : (
+                    lang.generateReport
+                  )}
+                </button>
               </div>
+              
               <div style={styles.reportCard}>
-                <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
-                <button onClick={exportToPDF} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.exportPDF}</button>
+                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
+                <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
+                  {language === 'en' ? 'Total hours worked summary' : 'Sammanfattning av arbetade timmar'}
+                </p>
+                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
               </div>
+              
               <div style={styles.reportCard}>
-                <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '24px' : '28px', marginBottom: '12px' }}></i>
-                <h3 style={{color: 'white', fontSize: isSmall ? '13px' : '14px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
-                <button onClick={exportToExcel} style={{...styles.reportButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.exportExcel}</button>
+                <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
+                <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
+                  {language === 'en' ? 'Export report as PDF' : 'Exportera rapport som PDF'}
+                </p>
+                <button onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
+              </div>
+              
+              <div style={styles.reportCard}>
+                <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
+                <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
+                <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
+                  {language === 'en' ? 'Export report as CSV' : 'Exportera rapport som CSV'}
+                </p>
+                <button onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
               </div>
             </div>
+            
+            {/* Report Data Preview */}
+            {reportData && (
+              <div style={styles.reportPreview}>
+                <div style={styles.reportPreviewHeader}>
+                  <h3 style={{color: 'white', margin: 0}}>
+                    <i className="fas fa-chart-line"></i> {language === 'en' ? 'Report Preview' : 'Förhandsgranskning'}
+                  </h3>
+                  <button onClick={() => setReportData(null)} style={styles.clearReportButton}>✕</button>
+                </div>
+                <div style={styles.reportPreviewContent}>
+                  <pre style={{margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'pre-wrap'}}>
+                    {JSON.stringify(reportData, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1709,22 +1963,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             </div>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>{lang.auditLogs}</h3>
-              <button onClick={() => { fetchAuditLogs(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px'}}>{lang.viewAudit}</button>
+              <button onClick={() => { fetchAuditLogsEnhanced(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px'}}>
+                <i className="fas fa-history"></i> {lang.viewAudit}
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Audit Log Modal */}
+      {/* Enhanced Audit Log Modal */}
       {showAuditModal && (
         <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
-          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '600px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.auditLogs}</h2>
+          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '800px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>
+              <i className="fas fa-history"></i> {lang.auditLogs}
+            </h2>
             {loadingAudit ? (
               <div style={styles.loadingSpinner}></div>
+            ) : auditLogs.length === 0 ? (
+              <div style={{textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)'}}>
+                <i className="fas fa-search" style={{fontSize: '48px', marginBottom: '16px', display: 'block'}}></i>
+                {language === 'en' ? 'No audit logs found' : 'Inga granskningsloggar hittades'}
+              </div>
             ) : (
               <div style={styles.tableContainer}>
-                <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
+                <table style={{...styles.table, minWidth: isSmall ? '500px' : '700px'}}>
                   <thead>
                     <tr style={styles.tableHeaderRow}>
                       <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th>
@@ -1735,13 +1998,28 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {auditLogs.slice(0, 50).map(log => (
+                    {auditLogs.map(log => (
                       <tr key={log._id} style={styles.tableRow}>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.action}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                          <span style={{
+                            ...styles.statusBadge,
+                            background: log.action === 'create' ? '#10b981' : 
+                                       log.action === 'update' ? '#3b82f6' :
+                                       log.action === 'delete' ? '#ef4444' : '#6b7280'
+                          }}>
+                            {log.action}
+                          </span>
+                        </td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{new Date(log.createdAt).toLocaleString()}</td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', color: 'white'}}>{JSON.stringify(log.changes, null, 2)}</pre></td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                          <pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>
+                            {JSON.stringify(log.changes, null, 2)}
+                          </pre>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1755,7 +2033,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      {/* All modals - keep as is from original */}
+      {/* All other modals remain the same */}
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
@@ -2003,69 +2281,69 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       </button>
 
       {showChat && (
-  <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
-    <div style={styles.chatHeader}>
-      <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-      <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
-    </div>
-    
-    <div style={styles.chatMessages}>
-      {chatMessages.map((msg, i) => (
-        <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-          <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
-            {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
-            <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
-            <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
+        <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
+          <div style={styles.chatHeader}>
+            <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
+            <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
+          </div>
+          
+          <div style={styles.chatMessages}>
+            {chatMessages.map((msg, i) => (
+              <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
+                <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
+                  {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
+                  <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
+                  <div style={{...styles.messageTime, fontSize: isSmall ? '8px' : '9px'}}>{msg.time}</div>
+                </div>
+              </div>
+            ))}
+            {isAiTyping && (
+              <div style={styles.typingIndicator}>
+                <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
+                {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
+              </div>
+            )}
+          </div>
+          
+          {/* Quick Questions */}
+          <div style={styles.quickQuestionsContainer}>
+            <div style={styles.quickQuestionsHeader}>
+              <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+            </div>
+            <div style={styles.quickQuestionsGrid}>
+              {quickQuestions[language].map((q, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => sendChatMessage(q)}
+                  style={styles.quickQuestionButton}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Text input field */}
+          <div style={styles.chatInputContainer}>
+            <input
+              type="text"
+              placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+              style={styles.chatInput}
+            />
+            <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+              <i className="fas fa-paper-plane"></i>
+            </button>
           </div>
         </div>
-      ))}
-      {isAiTyping && (
-        <div style={styles.typingIndicator}>
-          <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
-          {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
-        </div>
       )}
-    </div>
-    
-    {/* Quick Questions - Always visible */}
-    <div style={styles.quickQuestionsContainer}>
-      <div style={styles.quickQuestionsHeader}>
-        <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
-      </div>
-      <div style={styles.quickQuestionsGrid}>
-        {quickQuestions[language].map((q, idx) => (
-          <button
-            key={idx}
-            onClick={() => sendChatMessage(q)}
-            style={styles.quickQuestionButton}
-          >
-            {q}
-          </button>
-        ))}
-      </div>
-    </div>
-    
-    {/* ✅ ADD THIS - Text input field */}
-    <div style={styles.chatInputContainer}>
-      <input
-        type="text"
-        placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
-        value={chatInput}
-        onChange={(e) => setChatInput(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-        style={styles.chatInput}
-      />
-      <button onClick={() => sendChatMessage()} style={styles.chatSend}>
-        <i className="fas fa-paper-plane"></i>
-      </button>
-    </div>
-  </div>
-)}
     </div>
   );
 }
 
-// Keep ALL original styles
+// Keep ALL original styles plus new ones
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
   toast: { position: 'fixed', bottom: '20px', right: '20px', color: 'white', padding: '12px 20px', borderRadius: '8px', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
@@ -2178,6 +2456,22 @@ const styles = {
   branchCheckboxItem: { padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' },
   checkboxLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: 'white', cursor: 'pointer' },
   checkbox: { width: '16px', height: '16px', cursor: 'pointer' },
+  // Report filter styles
+  reportFiltersCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' },
+  reportFiltersHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,209,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
+  reportFiltersBody: { padding: '16px' },
+  customDateRange: { display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' },
+  filterInput: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', fontSize: '13px', width: '150px' },
+  reportPreview: { marginTop: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' },
+  reportPreviewHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,209,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  clearReportButton: { background: 'rgba(239,68,68,0.2)', border: 'none', borderRadius: '6px', padding: '4px 8px', color: '#ef4444', cursor: 'pointer', fontSize: '12px' },
+  reportPreviewContent: { padding: '16px', maxHeight: '400px', overflowY: 'auto' },
+  filterToggleButton: { background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '4px 8px', color: 'white', cursor: 'pointer', fontSize: '12px' },
+  filterRow: { display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' },
+  filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' },
+  filterLabel: { color: 'rgba(255,255,255,0.7)', fontSize: '12px' },
+  filterSelect: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
+  // Chat styles
   quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
   quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
@@ -2191,13 +2485,9 @@ const styles = {
   messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '16px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right' },
   typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '16px', width: '70px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' },
-  quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
-  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
-  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
-  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '16px', padding: '4px 8px', color: '#00d1ff', fontSize: '9px', cursor: 'pointer' },
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)' },
   chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
   chatSend: { padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  };
+};
 
 export default SuperAdminDashboard;
