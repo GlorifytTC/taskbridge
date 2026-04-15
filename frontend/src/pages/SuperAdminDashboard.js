@@ -52,8 +52,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isAiTyping, setIsAiTyping] = useState(false);
+  
   const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
   const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
   const [language, setLanguage] = useState(() => {
@@ -2046,19 +2045,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             </div>
           )}
           
-          <div style={styles.chatInputContainer}>
-            <input
-              type="text"
-              placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}}
-            />
-            <button onClick={() => sendChatMessage()} style={styles.chatSend}>
-              <i className="fas fa-paper-plane"></i>
-            </button>
-          </div>
+          {/* No text input - only quick questions */}
+
         </div>
       )}
     </div>
@@ -2182,19 +2170,19 @@ const styles = {
   quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
-  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
-  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '380px', maxHeight: '550px', height: 'auto', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001, boxShadow: '0 10px 40px rgba(0,0,0,0.3)' },
+  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
+  chatModal: { position: 'fixed', bottom: '75px', right: '20px', width: '300px', maxHeight: '400px', height: 'auto', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
   chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white' },
   chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', borderRadius: '8px' },
-  chatMessages: { flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '300px', maxHeight: '400px' },
+  chatMessages: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '250px', minHeight: '150px' },
   chatMessage: { display: 'flex' },
   messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '16px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right' },
   typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '16px', width: '70px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' },
   quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
   quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
-  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
+  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
+  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '16px', padding: '4px 8px', color: '#00d1ff', fontSize: '9px', cursor: 'pointer' },
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)' },
   chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
   chatSend: { padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
