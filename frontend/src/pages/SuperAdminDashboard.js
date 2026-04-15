@@ -15,6 +15,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [showCreateEmployeeModal, setShowCreateEmployeeModal] = useState(false);
   const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
@@ -2026,25 +2027,34 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             )}
           </div>
           
-          {/* Quick Questions */}
-          {chatMessages.length < 3 && (
-            <div style={styles.quickQuestionsContainer}>
-              <div style={styles.quickQuestionsHeader}>
-                <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
-              </div>
-              <div style={styles.quickQuestionsGrid}>
-                {quickQuestions[language].map((q, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => sendChatMessage(q)}
-                    style={styles.quickQuestionButton}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Quick Questions - Show only if no conversation yet OR if user wants to see them */}
+{(chatMessages.length <= 2 || showQuickQuestions) && (
+  <div style={styles.quickQuestionsContainer}>
+    <div style={styles.quickQuestionsHeader}>
+      <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+      <button 
+        onClick={() => setShowQuickQuestions(!showQuickQuestions)} 
+        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#00d1ff', cursor: 'pointer', fontSize: '11px' }}
+      >
+        {showQuickQuestions ? 'Hide' : 'Show'}
+      </button>
+    </div>
+    <div style={styles.quickQuestionsGrid}>
+      {quickQuestions[language].map((q, idx) => (
+        <button
+          key={idx}
+          onClick={() => {
+            sendChatMessage(q);
+            setShowQuickQuestions(false);
+          }}
+          style={styles.quickQuestionButton}
+        >
+          {q}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
           
           {/* No text input - only quick questions */}
 
