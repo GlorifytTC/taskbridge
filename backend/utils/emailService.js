@@ -2,10 +2,15 @@ const nodemailer = require('nodemailer');
 
 // Create SMTP transporter for Brevo
 const createTransporter = () => {
+  console.log('📧 Creating Brevo SMTP transporter...');
+  console.log('   Host:', process.env.BREVO_SMTP_HOST);
+  console.log('   Port:', process.env.BREVO_SMTP_PORT);
+  console.log('   Login:', process.env.BREVO_SMTP_LOGIN);
+  
   return nodemailer.createTransport({
     host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
     port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
-    secure: false, // false for 587, true for 465
+    secure: false,
     auth: {
       user: process.env.BREVO_SMTP_LOGIN,
       pass: process.env.BREVO_SMTP_KEY
@@ -26,6 +31,7 @@ const defaultSender = {
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
+    console.log('📧 Subject:', subject);
     
     if (!to) {
       console.error('❌ Recipient email is empty!');
@@ -33,6 +39,10 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     }
     
     const transporter = createTransporter();
+    
+    // Verify SMTP connection first
+    await transporter.verify();
+    console.log('✅ SMTP connection verified');
     
     const mailOptions = {
       from: `"${defaultSender.name}" <${defaultSender.email}>`,
@@ -44,9 +54,11 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent! Message ID:', info.messageId);
+    console.log('✅ Response:', info.response);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Email error:', error.message);
+    console.error('❌ Full error:', error);
     return { error: error.message };
   }
 };
@@ -246,10 +258,6 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
   console.log('📧 Preparing plan change email for:', organization.email);
   console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
   
-  // Get plan features for the new plan
-  const Subscription = require('../models/Subscription');
-  const planFeatures = Subscription.PLAN_FEATURES[newPlan];
-  
   const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
   const vatAmount = (totalAmount * 0.25).toFixed(2);
   
@@ -264,9 +272,9 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
         
         <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin: 0 0 15px 0; color: #1e40af;">New Plan Features:</h3>
-          <p style="margin: 5px 0;"><strong>Employees:</strong> Up to ${planFeatures?.maxEmployees || 0}</p>
-          <p style="margin: 5px 0;"><strong>Branches:</strong> Up to ${planFeatures?.maxBranches || 0}</p>
-          <p style="margin: 5px 0;"><strong>Admins:</strong> Up to ${planFeatures?.maxAdmins || 0}</p>
+          <p style="margin: 5px 0;"><strong>Employees:</strong> Up to ${subscriptionData?.maxEmployees || 0}</p>
+          <p style="margin: 5px 0;"><strong>Branches:</strong> Up to ${subscriptionData?.maxBranches || 0}</p>
+          <p style="margin: 5px 0;"><strong>Admins:</strong> Up to ${subscriptionData?.maxAdmins || 0}</p>
         </div>
         
         <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
