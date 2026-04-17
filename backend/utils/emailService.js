@@ -1,27 +1,23 @@
 // utils/emailService.js
 const nodemailer = require('nodemailer');
 
-// Create SMTP transporter for Brevo
-const createTransporter = () => {
-  console.log('📧 Creating Brevo SMTP transporter...');
-  console.log('   Host:', process.env.BREVO_SMTP_HOST);
-  console.log('   Port:', process.env.BREVO_SMTP_PORT);
-  console.log('   Login:', process.env.BREVO_SMTP_LOGIN ? '✓ Set' : '✗ Missing');
-  console.log('   Key:', process.env.BREVO_SMTP_KEY ? '✓ Set' : '✗ Missing');
-  
-  return nodemailer.createTransport({
-    host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-    port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-      user: process.env.BREVO_SMTP_LOGIN,
-      pass: process.env.BREVO_SMTP_KEY
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-};
+// Create SMTP transporter for Brevo - NO VERIFICATION
+const transporter = nodemailer.createTransport({
+  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_LOGIN,
+    pass: process.env.BREVO_SMTP_KEY
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  // Add timeout settings
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 10000
+});
 
 // Default sender information
 const defaultSender = {
@@ -29,7 +25,7 @@ const defaultSender = {
   name: process.env.BREVO_FROM_NAME || 'TaskBridge'
 };
 
-// Main send email function
+// Main send email function - NO VERIFICATION
 exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   try {
     console.log('📧 Sending email to:', to);
@@ -40,12 +36,6 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       return { error: 'Recipient email is empty' };
     }
     
-    const transporter = createTransporter();
-    
-    // Verify SMTP connection first
-    await transporter.verify();
-    console.log('✅ SMTP connection verified');
-    
     const mailOptions = {
       from: `"${defaultSender.name}" <${defaultSender.email}>`,
       to: to,
@@ -54,6 +44,7 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       text: text || html?.replace(/<[^>]*>/g, '')
     };
     
+    // Send without waiting for verification
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent! Message ID:', info.messageId);
     return { success: true, messageId: info.messageId };
@@ -63,7 +54,7 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
   }
 };
 
-// ✅ FIXED: Send password reset email
+// Send password reset email
 exports.sendPasswordResetEmail = async (user, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
   
@@ -257,7 +248,6 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
 // Send plan change notification email
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
   console.log('📧 Preparing plan change email for:', organization.email);
-  console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
   
   const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
   const vatAmount = (totalAmount * 0.25).toFixed(2);
