@@ -1,10 +1,22 @@
-// utils/emailService.js - Using Brevo HTTP API (port 443)
+// utils/emailService.js - Using Brevo HTTP API
 const SibApiV3Sdk = require('sib-api-v3-sdk');
+
+// Debug: Check if API key is loaded
+console.log('🔧 Loading Brevo API configuration...');
+console.log('   BREVO_API_KEY exists:', !!process.env.BREVO_API_KEY);
+console.log('   BREVO_API_KEY length:', process.env.BREVO_API_KEY?.length || 0);
+console.log('   BREVO_FROM_EMAIL:', process.env.BREVO_FROM_EMAIL);
+console.log('   BREVO_FROM_NAME:', process.env.BREVO_FROM_NAME);
 
 // Initialize Brevo API client
 let defaultClient = SibApiV3Sdk.ApiClient.instance;
 let apiKey = defaultClient.authentications['api-key'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
+
+// Verify API key is set
+if (!apiKey.apiKey) {
+  console.error('❌ BREVO_API_KEY is not set in environment variables!');
+}
 
 let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
@@ -24,6 +36,12 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       return { error: 'Recipient email is empty' };
     }
     
+    // Double check API key
+    if (!process.env.BREVO_API_KEY) {
+      console.error('❌ BREVO_API_KEY missing!');
+      return { error: 'API key not configured' };
+    }
+    
     let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     sendSmtpEmail.subject = subject;
     sendSmtpEmail.sender = defaultSender;
@@ -31,11 +49,13 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     sendSmtpEmail.htmlContent = html;
     sendSmtpEmail.textContent = text || html?.replace(/<[^>]*>/g, '');
     
+    console.log('📧 Attempting to send via Brevo API...');
     const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log('✅ Email sent! Message ID:', response.messageId);
     return { success: true, messageId: response.messageId };
   } catch (error) {
     console.error('❌ Email error:', error.response?.body || error.message);
+    console.error('❌ Full error object:', error);
     return { error: error.message };
   }
 };
@@ -45,6 +65,7 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
   
   console.log('📧 Sending password reset email to:', user.email);
+  console.log('📧 Reset URL:', resetUrl);
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
