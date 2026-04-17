@@ -73,22 +73,6 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'API is working!' });
 });
 
-
-app.get('/api/test-mailjet', async (req, res) => {
-  try {
-    const { sendEmail } = require('./utils/emailService');
-    const result = await sendEmail({
-      to: 'taskbridge.noreply@gmail.com', // Your email
-      subject: 'Test from Mailjet',
-      html: '<h1>Success!</h1><p>Mailjet is working!</p>'
-    });
-    res.json({ success: true, result });
-  } catch (error) {
-    res.json({ success: false, error: error.message });
-  }
-});
-
-
 // Debug endpoint to check users
 app.get('/api/debug/users', async (req, res) => {
   try {

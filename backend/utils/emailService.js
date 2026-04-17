@@ -1,3 +1,4 @@
+// utils/emailService.js
 const nodemailer = require('nodemailer');
 
 // Create SMTP transporter for Brevo
@@ -5,7 +6,8 @@ const createTransporter = () => {
   console.log('📧 Creating Brevo SMTP transporter...');
   console.log('   Host:', process.env.BREVO_SMTP_HOST);
   console.log('   Port:', process.env.BREVO_SMTP_PORT);
-  console.log('   Login:', process.env.BREVO_SMTP_LOGIN);
+  console.log('   Login:', process.env.BREVO_SMTP_LOGIN ? '✓ Set' : '✗ Missing');
+  console.log('   Key:', process.env.BREVO_SMTP_KEY ? '✓ Set' : '✗ Missing');
   
   return nodemailer.createTransport({
     host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
@@ -54,16 +56,47 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
     
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent! Message ID:', info.messageId);
-    console.log('✅ Response:', info.response);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Email error:', error.message);
-    console.error('❌ Full error:', error);
     return { error: error.message };
   }
 };
 
-// Send welcome email with invoice (for new organization creation)
+// ✅ FIXED: Send password reset email
+exports.sendPasswordResetEmail = async (user, resetToken) => {
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  
+  console.log('📧 Sending password reset email to:', user.email);
+  console.log('📧 Reset URL:', resetUrl);
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0;">Reset Your Password</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello ${user.name || user.email.split('@')[0]},</p>
+        <p style="color: #334155;">We received a request to reset your password. Click the button below to create a new password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p style="color: #475569; font-size: 14px;">This link will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+        <hr style="margin: 20px 0;" />
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  return await exports.sendEmail({ 
+    to: user.email, 
+    subject: 'Reset Your TaskBridge Password', 
+    html,
+    organizationId: user.organization?._id || 'general'
+  });
+};
+
+// Send welcome email with invoice
 exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, invoicePath, paymentData) => {
   const subject = `Welcome to TaskBridge - ${organization.name} - Invoice #${paymentData.invoiceNumber}`;
   
@@ -146,38 +179,6 @@ exports.sendWelcomeEmail = async (user, organization) => {
     subject, 
     html,
     organizationId: organization._id 
-  });
-};
-
-// Send password reset email
-exports.sendPasswordResetEmail = async (user, resetToken) => {
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-  
-  console.log('📧 Reset URL:', resetUrl);
-  
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0;">Reset Your Password</h1>
-      </div>
-      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Hello ${user.name || user.email.split('@')[0]},</p>
-        <p style="color: #334155;">We received a request to reset your password. Click the button below to create a new password:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
-        </div>
-        <p style="color: #475569; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, please ignore this email.</p>
-        <hr style="margin: 20px 0;" />
-        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
-      </div>
-    </div>
-  `;
-  
-  await exports.sendEmail({ 
-    to: user.email, 
-    subject: 'Reset Your TaskBridge Password', 
-    html,
-    organizationId: user.organization?._id || 'general'
   });
 };
 
@@ -272,9 +273,9 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
         
         <div style="background: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin: 0 0 15px 0; color: #1e40af;">New Plan Features:</h3>
-          <p style="margin: 5px 0;"><strong>Employees:</strong> Up to ${subscriptionData?.maxEmployees || 0}</p>
-          <p style="margin: 5px 0;"><strong>Branches:</strong> Up to ${subscriptionData?.maxBranches || 0}</p>
-          <p style="margin: 5px 0;"><strong>Admins:</strong> Up to ${subscriptionData?.maxAdmins || 0}</p>
+          <p style="margin: 5px 0;"><strong>Employees:</strong> Contact support for details</p>
+          <p style="margin: 5px 0;"><strong>Branches:</strong> Contact support for details</p>
+          <p style="margin: 5px 0;"><strong>Admins:</strong> Contact support for details</p>
         </div>
         
         <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
