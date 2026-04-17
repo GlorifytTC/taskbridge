@@ -1,32 +1,30 @@
-// utils/emailService.js - Using Brevo HTTP API
-const SibApiV3Sdk = require('sib-api-v3-sdk');
+// utils/emailService.js - Using SMTP (your current credentials)
+const nodemailer = require('nodemailer');
 
-// Debug: Check if API key is loaded
-console.log('🔧 Loading Brevo API configuration...');
-console.log('   BREVO_API_KEY exists:', !!process.env.BREVO_API_KEY);
-console.log('   BREVO_API_KEY length:', process.env.BREVO_API_KEY?.length || 0);
-console.log('   BREVO_FROM_EMAIL:', process.env.BREVO_FROM_EMAIL);
-console.log('   BREVO_FROM_NAME:', process.env.BREVO_FROM_NAME);
-
-// Initialize Brevo API client
-let defaultClient = SibApiV3Sdk.ApiClient.instance;
-let apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
-
-// Verify API key is set
-if (!apiKey.apiKey) {
-  console.error('❌ BREVO_API_KEY is not set in environment variables!');
-}
-
-let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+// Create SMTP transporter for Brevo
+const transporter = nodemailer.createTransport({
+  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_LOGIN,
+    pass: process.env.BREVO_SMTP_KEY
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000
+});
 
 const defaultSender = {
   email: process.env.BREVO_FROM_EMAIL || 'noreply@taskbridge.com',
   name: process.env.BREVO_FROM_NAME || 'TaskBridge'
 };
 
-// Main send email function using Brevo API
-exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
+// Main send email function
+exports.sendEmail = async ({ to, subject, html, text }) => {
   try {
     console.log('📧 Sending email to:', to);
     console.log('📧 Subject:', subject);
@@ -36,26 +34,19 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       return { error: 'Recipient email is empty' };
     }
     
-    // Double check API key
-    if (!process.env.BREVO_API_KEY) {
-      console.error('❌ BREVO_API_KEY missing!');
-      return { error: 'API key not configured' };
-    }
+    const mailOptions = {
+      from: `"${defaultSender.name}" <${defaultSender.email}>`,
+      to: to,
+      subject: subject,
+      html: html,
+      text: text || html?.replace(/<[^>]*>/g, '')
+    };
     
-    let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.subject = subject;
-    sendSmtpEmail.sender = defaultSender;
-    sendSmtpEmail.to = [{ email: to, name: to.split('@')[0] }];
-    sendSmtpEmail.htmlContent = html;
-    sendSmtpEmail.textContent = text || html?.replace(/<[^>]*>/g, '');
-    
-    console.log('📧 Attempting to send via Brevo API...');
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log('✅ Email sent! Message ID:', response.messageId);
-    return { success: true, messageId: response.messageId };
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent! Message ID:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Email error:', error.response?.body || error.message);
-    console.error('❌ Full error object:', error);
+    console.error('❌ Email error:', error.message);
     return { error: error.message };
   }
 };
@@ -65,7 +56,6 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
   
   console.log('📧 Sending password reset email to:', user.email);
-  console.log('📧 Reset URL:', resetUrl);
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -106,9 +96,9 @@ exports.sendWelcomeEmailWithInvoice = async (organization, admin, tempPassword, 
         <p style="color: #334155;">Your organization <strong>${organization.name}</strong> has been successfully created.</p>
         <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin: 0 0 15px 0; color: #1e293b;">Account Details:</h3>
-          <p style="margin: 5px 0;"><strong>Organization:</strong> ${organization.name}</p>
-          <p style="margin: 5px 0;"><strong>Your Email:</strong> ${admin.email}</p>
-          <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: white; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
+          <p><strong>Organization:</strong> ${organization.name}</p>
+          <p><strong>Your Email:</strong> ${admin.email}</p>
+          <p><strong>Temporary Password:</strong> <code style="background: white; padding: 4px 8px; border-radius: 4px;">${tempPassword}</code></p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${process.env.FRONTEND_URL}/create-account?email=${encodeURIComponent(admin.email)}" 
@@ -136,7 +126,7 @@ exports.sendWelcomeEmail = async (user, organization) => {
       <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
         <p style="font-size: 16px; color: #1e293b;">Hello ${user.name},</p>
         <p style="color: #334155;">Your account has been created for <strong>${organization.name}</strong>.</p>
-        <p style="color: #334155;"><strong>Your login email:</strong> ${user.email}</p>
+        <p><strong>Your login email:</strong> ${user.email}</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${process.env.FRONTEND_URL}/login" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In</a>
         </div>
@@ -158,17 +148,17 @@ exports.sendTaskNotification = async (employee, task, organizationId) => {
         <h1 style="color: white; margin: 0;">New Task Available</h1>
       </div>
       <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Hello ${employee.name},</p>
-        <p style="color: #334155;">A new task has been assigned to you:</p>
+        <p>Hello ${employee.name},</p>
+        <p>A new task has been assigned to you:</p>
         <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0; color: #1e293b;">${task.title}</h3>
+          <h3>${task.title}</h3>
           <p><strong>Date:</strong> ${new Date(task.date).toLocaleDateString()}</p>
           <p><strong>Time:</strong> ${task.startTime} - ${task.endTime}</p>
         </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL}/tasks/${task._id}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">View & Apply</a>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/tasks/${task._id}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px;">View & Apply</a>
         </div>
-        <hr style="margin: 20px 0;" />
+        <hr />
         <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
       </div>
     </div>
@@ -188,13 +178,13 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
         <h1 style="color: white; margin: 0;">Application ${status.toUpperCase()}</h1>
       </div>
       <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Hello ${employee.name},</p>
-        <p style="color: #334155;">Your application for <strong>${task.title}</strong> has been <strong style="color: ${statusColor};">${status}</strong>.</p>
+        <p>Hello ${employee.name},</p>
+        <p>Your application for <strong>${task.title}</strong> has been <strong style="color: ${statusColor};">${status}</strong>.</p>
         ${reason ? `<p style="color: #ef4444;"><strong>Reason:</strong> ${reason}</p>` : ''}
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL}/calendar" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">View Calendar</a>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/calendar" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px;">View Calendar</a>
         </div>
-        <hr style="margin: 20px 0;" />
+        <hr />
         <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
       </div>
     </div>
@@ -214,17 +204,17 @@ exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, t
         <h1 style="color: white; margin: 0;">Plan Updated!</h1>
       </div>
       <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Hello ${organization.name || 'Administrator'},</p>
-        <p style="color: #334155;">Your plan has been changed from <strong>${oldPlan?.toUpperCase() || 'TRIAL'}</strong> to <strong>${newPlan.toUpperCase()}</strong>.</p>
-        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p>Hello ${organization.name || 'Administrator'},</p>
+        <p>Your plan has been changed from <strong>${oldPlan?.toUpperCase() || 'TRIAL'}</strong> to <strong>${newPlan.toUpperCase()}</strong>.</p>
+        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px;">
           <p><strong>Duration:</strong> ${duration} months</p>
           <p><strong>Total:</strong> ${totalAmount} SEK</p>
           <p><strong>VAT (25%):</strong> ${vatAmount} SEK</p>
         </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Manage Subscription</a>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px;">Manage Subscription</a>
         </div>
-        <hr style="margin: 20px 0;" />
+        <hr />
         <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
       </div>
     </div>
@@ -242,12 +232,12 @@ exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
         <h1 style="color: white; margin: 0;">Subscription Expiration Notice</h1>
       </div>
       <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #1e293b;">Hello ${organization.name} Administrator,</p>
-        <p style="color: #334155;">Your subscription will expire in <strong style="color: #EF4444;">${daysLeft} days</strong>.</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Manage Subscription</a>
+        <p>Hello ${organization.name} Administrator,</p>
+        <p>Your subscription will expire in <strong style="color: #EF4444;">${daysLeft} days</strong>.</p>
+        <div style="text-align: center;">
+          <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px;">Manage Subscription</a>
         </div>
-        <hr style="margin: 20px 0;" />
+        <hr />
         <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
       </div>
     </div>
