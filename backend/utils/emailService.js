@@ -1,6 +1,12 @@
 // utils/emailService.js - Using Brevo HTTP API (port 443)
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 
+
+// utils/emailService.js
+console.log('🔍 DEBUG: Checking Brevo API Key...');
+console.log('   BREVO_API_KEY exists:', !!process.env.BREVO_API_KEY);
+console.log('   BREVO_API_KEY length:', process.env.BREVO_API_KEY?.length || 0);
+console.log('   BREVO_API_KEY starts with xkeysib:', process.env.BREVO_API_KEY?.startsWith('xkeysib-'));
 // Initialize Brevo API client
 let defaultClient = SibApiV3Sdk.ApiClient.instance;
 let apiKey = defaultClient.authentications['api-key'];
