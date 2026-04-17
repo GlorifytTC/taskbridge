@@ -1,22 +1,12 @@
-// utils/emailService.js - Using SMTP (your current credentials)
-const nodemailer = require('nodemailer');
+// utils/emailService.js - Using Brevo HTTP API (port 443)
+const SibApiV3Sdk = require('sib-api-v3-sdk');
 
-// Create SMTP transporter for Brevo
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000
-});
+// Initialize Brevo API client
+let defaultClient = SibApiV3Sdk.ApiClient.instance;
+let apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const defaultSender = {
   email: process.env.BREVO_FROM_EMAIL || 'noreply@taskbridge.com',
@@ -34,19 +24,18 @@ exports.sendEmail = async ({ to, subject, html, text }) => {
       return { error: 'Recipient email is empty' };
     }
     
-    const mailOptions = {
-      from: `"${defaultSender.name}" <${defaultSender.email}>`,
-      to: to,
-      subject: subject,
-      html: html,
-      text: text || html?.replace(/<[^>]*>/g, '')
-    };
+    let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.sender = defaultSender;
+    sendSmtpEmail.to = [{ email: to, name: to.split('@')[0] }];
+    sendSmtpEmail.htmlContent = html;
+    sendSmtpEmail.textContent = text || html?.replace(/<[^>]*>/g, '');
     
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent! Message ID:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log('✅ Email sent! Message ID:', response.messageId);
+    return { success: true, messageId: response.messageId };
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    console.error('❌ Email error:', error.response?.body || error.message);
     return { error: error.message };
   }
 };
