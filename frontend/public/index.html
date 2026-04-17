@@ -3,18 +3,18 @@
 <head>
     <meta charset="utf-8" />
     
-    <!-- Favicon for browser tab - Multiple formats for compatibility -->
-    <!-- SVG Favicon (Modern browsers) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2300f5ff'/%3E%3Cstop offset='100%25' stop-color='%2300d1ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Ctext x='50' y='72' font-family='Arial, sans-serif' font-size='70' font-weight='bold' fill='white' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E" />
+    <!-- ⭐ CRITICAL FOR GOOGLE SEARCH LOGO ⭐ -->
+    <!-- Real image files - NOT data URIs -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
+    <link rel="shortcut icon" href="/logo.png" />
     
-    <!-- PNG Favicon (Fallback for older browsers) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300d1ff'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='22' font-weight='bold' fill='white' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E" />
+    <!-- Apple Touch Icon (for iOS) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
     
-    <!-- Standard favicon.ico (For all browsers, highest priority) -->
-    <link rel="shortcut icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300d1ff'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='22' font-weight='bold' fill='white' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E" />
-    
-    <!-- Apple Touch Icon (For iOS bookmarks) -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='30' fill='%2300d1ff'/%3E%3Ctext x='90' y='125' font-family='Arial' font-size='120' font-weight='bold' fill='white' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E" />
+    <!-- ⭐ GOOGLE SEARCH CONSOLE VERIFICATION ⭐ -->
+    <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" />
     
     <!-- Viewport and mobile settings -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -24,7 +24,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TaskBridge" />
     
-    <!-- SEO Meta Tags -->
+    <!-- ⭐ SEO Meta Tags ⭐ -->
+    <title>TaskBridge - Smart Staff & Shift Management Platform</title>
     <meta name="description" content="TaskBridge - Smart Staff & Shift Management Platform for schools, hospitals, and organizations. Manage shifts, track attendance, and streamline communication." />
     <meta name="keywords" content="TaskBridge, workforce management, shift scheduling, employee management, attendance tracking, staff scheduling" />
     <meta name="author" content="GlorifyTC" />
@@ -36,30 +37,86 @@
     <meta name="ChatGPT" content="index, follow" />
     <meta name="perplexity" content="index, follow" />
     
-    <!-- Open Graph / Social Media -->
+    <!-- ⭐ Open Graph / Social Media (CRITICAL for Google Search logo) ⭐ -->
     <meta property="og:title" content="TaskBridge - Smart Workforce Management" />
     <meta property="og:description" content="Manage shifts, track attendance, and streamline communication with ease." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://www.taskbridge.se/og-image.png" />
+    <meta property="og:image" content="https://www.taskbridge.se/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:url" content="https://www.taskbridge.se" />
     <meta property="og:site_name" content="TaskBridge" />
     <meta property="og:locale" content="sv_SE" />
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TaskBridge - Smart Workforce Management" />
     <meta name="twitter:description" content="Manage shifts, track attendance, and streamline communication with ease." />
-    <meta name="twitter:image" content="https://www.taskbridge.se/og-image.png" />
+    <meta name="twitter:image" content="https://www.taskbridge.se/logo.png" />
+    
+    <!-- ⭐ Structured Data (JSON-LD) for Knowledge Graph ⭐ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "TaskBridge",
+      "url": "https://www.taskbridge.se",
+      "logo": "https://www.taskbridge.se/logo.png",
+      "image": "https://www.taskbridge.se/logo.png",
+      "description": "Smart Staff & Shift Management Platform for schools, hospitals, and organizations.",
+      "sameAs": [
+        "https://www.linkedin.com/company/taskbridge",
+        "https://twitter.com/taskbridge"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "info@taskbridge.se",
+        "contactType": "customer service"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "SE"
+      }
+    }
+    </script>
+    
+    <!-- ⭐ WebSite Structured Data ⭐ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "TaskBridge",
+      "url": "https://www.taskbridge.se",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.taskbridge.se/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <!-- ⭐ BreadcrumbList Structured Data ⭐ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [{
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://www.taskbridge.se"
+      }]
+    }
+    </script>
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://www.taskbridge.se" />
     
     <!-- Alternate language versions -->
-    <link rel="alternate" hrefLang="en" href="https://www.taskbridge.se/en" />
-    <link rel="alternate" hrefLang="sv" href="https://www.taskbridge.se/sv" />
-    <link rel="alternate" hrefLang="x-default" href="https://www.taskbridge.se" />
-    
-    <!-- Title -->
-    <title>TaskBridge - Smart Staff & Shift Management Platform</title>
+    <link rel="alternate" hreflang="en" href="https://www.taskbridge.se/en" />
+    <link rel="alternate" hreflang="sv" href="https://www.taskbridge.se" />
+    <link rel="alternate" hreflang="x-default" href="https://www.taskbridge.se" />
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -74,6 +131,7 @@
 <body>
     <noscript>
         <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif; background: #0f172a; color: white; min-height: 100vh;">
+            <img src="/logo.png" alt="TaskBridge Logo" width="80" height="80" style="margin-bottom: 20px;" />
             <h1>TaskBridge</h1>
             <p>JavaScript is required to run this app.</p>
             <p>Please enable JavaScript in your browser settings.</p>
