@@ -474,6 +474,14 @@ exports.changePassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
     
+    // ✅ SEND PASSWORD CHANGED NOTIFICATION EMAIL
+    const { sendPasswordChangedNotification } = require('../utils/emailService');
+    await sendPasswordChangedNotification(
+      user, 
+      req.ip, 
+      req.headers['user-agent']
+    );
+    
     await AuditLog.create({
       user: req.user.id,
       organization: user.organization,
@@ -487,11 +495,69 @@ exports.changePassword = async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: 'Password changed successfully' 
+      message: 'Password changed successfully. A confirmation email has been sent to your registered email address.' 
     });
     
   } catch (error) {
     console.error('Change password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
+// @desc    Change email
+// @route   PUT /api/auth/change-email
+// @access  Private
+exports.changeEmail = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const bcrypt = require('bcryptjs');
+    
+    const user = await User.findById(req.user.id).select('+password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Password is incorrect' });
+    }
+    
+    const oldEmail = user.email;
+    user.email = email;
+    await user.save();
+    
+    // ✅ SEND NOTIFICATION EMAIL TO BOTH OLD AND NEW
+    const { sendEmailChangedNotification } = require('../utils/emailService');
+    await sendEmailChangedNotification(
+      user, 
+      oldEmail, 
+      email, 
+      req.ip, 
+      req.headers['user-agent']
+    );
+    
+    await AuditLog.create({
+      user: req.user.id,
+      organization: user.organization,
+      action: 'update',
+      entityType: 'user',
+      entityId: user._id,
+      changes: { email: `changed from ${oldEmail} to ${email}` },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Email changed successfully. Confirmation emails have been sent.' 
+    });
+    
+  } catch (error) {
+    console.error('Change email error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error: ' + error.message 
