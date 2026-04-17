@@ -251,33 +251,81 @@ exports.sendApplicationStatusEmail = async (employee, task, status, organization
 
 // Send plan change notification email
 exports.sendPlanChangeEmail = async (organization, oldPlan, newPlan, duration, totalAmount) => {
-  const subject = `Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
+  console.log('📧 Preparing plan change email for:', organization.email);
+  console.log('   Old plan:', oldPlan, '→ New plan:', newPlan);
+  console.log('   Duration:', duration, 'months');
+  console.log('   Total amount:', totalAmount, 'SEK');
+  
+  const subject = `📋 Plan Changed: ${oldPlan?.toUpperCase() || 'TRIAL'} → ${newPlan.toUpperCase()}`;
   const vatAmount = (totalAmount * 0.25).toFixed(2);
   
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; margin: 0;">Plan Updated!</h1>
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 24px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">📋 Plan Updated!</h1>
       </div>
-      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px;">
-        <p>Hello ${organization.name || 'Administrator'},</p>
-        <p>Your plan has been changed from <strong>${oldPlan?.toUpperCase() || 'TRIAL'}</strong> to <strong>${newPlan.toUpperCase()}</strong>.</p>
-        <div style="background: #e2e8f0; padding: 20px; border-radius: 8px;">
-          <p><strong>Duration:</strong> ${duration} months</p>
-          <p><strong>Total:</strong> ${totalAmount} SEK</p>
-          <p><strong>VAT (25%):</strong> ${vatAmount} SEK</p>
+      
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello <strong>${organization.name || 'Administrator'}</strong>,</p>
+        
+        <p style="color: #334155;">Your TaskBridge subscription plan has been changed.</p>
+        
+        <div style="background: #e2e8f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 8px 0; color: #0f172a;">
+            <strong>📊 Plan Change:</strong> 
+            <span style="color: #ef4444;">${oldPlan?.toUpperCase() || 'TRIAL'}</span> 
+            → 
+            <span style="color: #10b981;">${newPlan.toUpperCase()}</span>
+          </p>
+          <p style="margin: 8px 0; color: #0f172a;">
+            <strong>⏱️ Duration:</strong> ${duration} ${duration === 1 ? 'month' : 'months'}
+          </p>
+          <p style="margin: 8px 0; color: #0f172a;">
+            <strong>💰 Total Amount:</strong> ${totalAmount} SEK
+          </p>
+          <p style="margin: 8px 0; color: #0f172a;">
+            <strong>📝 VAT (25%):</strong> ${vatAmount} SEK
+          </p>
         </div>
-        <div style="text-align: center;">
-          <a href="${process.env.FRONTEND_URL}/billing" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px;">Manage Subscription</a>
+        
+        <div style="background: #dbeafe; padding: 16px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; color: #1e40af; font-size: 14px;">
+            💡 Your new plan features are now active.
+          </p>
         </div>
-        <hr />
-        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${process.env.FRONTEND_URL}/dashboard" 
+             style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Go to Dashboard →
+          </a>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #94a3b8; font-size: 11px; text-align: center;">
+          TaskBridge - Smart Workforce Management<br>
+          Questions? Contact us at support@taskbridge.com
+        </p>
       </div>
     </div>
   `;
   
-  await exports.sendEmail({ to: organization.email, subject, html });
+  try {
+    const result = await exports.sendEmail({ 
+      to: organization.email, 
+      subject, 
+      html
+    });
+    console.log('✅ Plan change email sent successfully');
+    return result;
+  } catch (error) {
+    console.error('❌ Failed to send plan change email:', error.message);
+    return { error: error.message };
+  }
 };
+
+
 // Send password changed notification email
 exports.sendPasswordChangedNotification = async (user, ipAddress, userAgent) => {
   const subject = `🔐 Your TaskBridge password was changed`;

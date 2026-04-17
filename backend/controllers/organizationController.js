@@ -17,51 +17,123 @@ const JobDescription = require('../models/JobDescription');
 // @desc    Change organization subscription plan
 // @route   PUT /api/organizations/:id/plan
 // @access  Private/Master
-// In your changePlan function
 exports.changePlan = async (req, res) => {
   try {
-    const { plan, duration = 1 } = req.body;
+    const { plan, duration = 1, customFeatures } = req.body;
     const organization = await Organization.findById(req.params.id);
     
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
     const currentPlan = organization.subscription?.plan || 'trial';
+    const Subscription = require('../models/Subscription');
+    
+    // Get plan prices
+    const getPlanPrice = (planName) => {
+      const prices = {
+        trial: 0,
+        basic: 399,
+        standard: 799,
+        pro: 1299,
+        business: 2499,
+        enterprise: 4999,
+        corporate: 9999,
+        custom: customFeatures?.price || 0
+      };
+      return prices[planName] || 0;
+    };
+    
     const currentPrice = getPlanPrice(currentPlan);
     const newPrice = getPlanPrice(plan);
     
     let effectiveDate = new Date();
     let newEndDate;
+    let totalAmount;
+    
+    // Handle custom plan
+    if (plan === 'custom' && customFeatures) {
+      // Create custom plan features
+      const customPlanFeatures = {
+        name: 'Custom',
+        price: customFeatures.price,
+        maxEmployees: customFeatures.maxEmployees,
+        maxBranches: customFeatures.maxBranches,
+        maxEmailsPerMonth: customFeatures.maxEmailsPerMonth,
+        maxAdmins: customFeatures.maxAdmins,
+        reportLevel: 'custom',
+        exportReports: true,
+        customReports: true,
+        apiAccess: true,
+        prioritySupport: true,
+        dedicatedSupport: true
+      };
+      
+      // Add to PLAN_FEATURES dynamically
+      Subscription.PLAN_FEATURES.custom = customPlanFeatures;
+      totalAmount = customFeatures.price * duration;
+    } else {
+      const planFeatures = Subscription.PLAN_FEATURES[plan];
+      totalAmount = (planFeatures?.price || 0) * duration;
+      
+      // Apply discounts for longer durations
+      if (duration >= 3) totalAmount = totalAmount * 0.95;
+      if (duration >= 6) totalAmount = totalAmount * 0.9;
+      if (duration >= 12) totalAmount = totalAmount * 0.85;
+    }
     
     // UPGRADE (new price > current price) → Apply immediately
     if (newPrice > currentPrice) {
-      // Calculate prorated amount or charge full new price
       newEndDate = new Date(effectiveDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
       console.log('⬆️ UPGRADE: Applying immediately');
+      
+      // Update subscription
+      organization.subscription = {
+        ...organization.subscription,
+        plan: plan,
+        endDate: newEndDate,
+        status: 'active'
+      };
+      await organization.save();
+      
+      // Update Subscription model
+      await Subscription.findOneAndUpdate(
+        { organization: organization._id },
+        { 
+          plan: plan,
+          endDate: newEndDate,
+          status: 'active',
+          price: { amount: totalAmount, currency: 'SEK' }
+        },
+        { upsert: true }
+      );
+      
+      // ✅ SEND PLAN CHANGE EMAIL NOTIFICATION
+      console.log('📧 Attempting to send plan change email...');
+      try {
+        const { sendPlanChangeEmail } = require('../utils/emailService');
+        await sendPlanChangeEmail(
+          organization,
+          currentPlan,
+          plan,
+          duration,
+          Math.round(totalAmount)
+        );
+        console.log('✅ Plan change email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Failed to send plan change email:', emailError.message);
+        // Don't fail the plan change if email fails
+      }
+      
+      return res.json({ 
+        success: true, 
+        message: `Plan changed to ${plan} immediately`,
+        endDate: newEndDate,
+        totalAmount: Math.round(totalAmount)
+      });
     } 
-    // Handle custom plan
-if (plan === 'custom') {
-  const { customFeatures } = req.body;
-  
-  // Create custom plan features
-  const customPlanFeatures = {
-    name: 'Custom',
-    price: customFeatures.price,
-    maxEmployees: customFeatures.maxEmployees,
-    maxBranches: customFeatures.maxBranches,
-    maxEmailsPerMonth: customFeatures.maxEmailsPerMonth,
-    maxAdmins: customFeatures.maxAdmins,
-    reportLevel: 'custom',
-    exportReports: true,
-    customReports: true,
-    apiAccess: true,
-    prioritySupport: true,
-    dedicatedSupport: true
-  };
-  
-  // Add to PLAN_FEATURES dynamically
-  Subscription.PLAN_FEATURES.custom = customPlanFeatures;
-}
     // DOWNGRADE (new price < current price) → Apply at next billing cycle
     else if (newPrice < currentPrice) {
-      // Keep current plan until current period ends
       newEndDate = organization.subscription?.endDate || new Date();
       console.log('⬇️ DOWNGRADE: Will apply at end of current billing cycle');
       
@@ -73,34 +145,74 @@ if (plan === 'custom') {
       };
       await organization.save();
       
+      // ✅ SEND PLAN CHANGE EMAIL NOTIFICATION (for scheduled change)
+      try {
+        const { sendPlanChangeEmail } = require('../utils/emailService');
+        await sendPlanChangeEmail(
+          organization,
+          currentPlan,
+          plan,
+          duration,
+          Math.round(totalAmount)
+        );
+        console.log('✅ Scheduled plan change email sent');
+      } catch (emailError) {
+        console.error('❌ Failed to send plan change email:', emailError.message);
+      }
+      
       return res.json({ 
         success: true, 
         message: `Plan will change to ${plan} on ${newEndDate.toLocaleDateString()}`,
-        effectiveDate: newEndDate
+        effectiveDate: newEndDate,
+        totalAmount: Math.round(totalAmount)
       });
     }
     // SAME PRICE → Apply immediately
     else {
       newEndDate = new Date(effectiveDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000);
+      
+      organization.subscription = {
+        ...organization.subscription,
+        plan: plan,
+        endDate: newEndDate
+      };
+      await organization.save();
+      
+      await Subscription.findOneAndUpdate(
+        { organization: organization._id },
+        { plan: plan, endDate: newEndDate },
+        { upsert: true }
+      );
+      
+      // ✅ SEND PLAN CHANGE EMAIL NOTIFICATION
+      try {
+        const { sendPlanChangeEmail } = require('../utils/emailService');
+        await sendPlanChangeEmail(
+          organization,
+          currentPlan,
+          plan,
+          duration,
+          Math.round(totalAmount)
+        );
+        console.log('✅ Plan change email sent');
+      } catch (emailError) {
+        console.error('❌ Failed to send plan change email:', emailError.message);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Plan changed to ${plan} immediately`,
+        endDate: newEndDate,
+        totalAmount: Math.round(totalAmount)
+      });
     }
     
-    // Update subscription with new end date
-    organization.subscription = {
-      ...organization.subscription,
-      plan: plan,
-      endDate: newEndDate
-    };
-    await organization.save();
-    
-    res.json({ 
-      success: true, 
-      message: `Plan changed to ${plan} immediately`,
-      endDate: newEndDate
-    });
-    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error changing plan:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
@@ -198,13 +310,26 @@ exports.getEmailQuotaStatus = async (req, res) => {
 };
 
 // Helper function to get plan price
-function getPlanPrice(plan, months) {
+function getPlanPrice(plan, months = 1) {
   const prices = {
-    basic: 49,
-    professional: 99,
-    enterprise: 299
+    trial: 0,
+    basic: 399,
+    standard: 799,
+    pro: 1299,
+    business: 2499,
+    enterprise: 4999,
+    corporate: 9999,
+    custom: 0
   };
-  return (prices[plan] || 0) * months;
+  
+  let price = (prices[plan] || 0) * months;
+  
+  // Apply discounts for longer durations
+  if (months >= 3) price = price * 0.95;
+  if (months >= 6) price = price * 0.9;
+  if (months >= 12) price = price * 0.85;
+  
+  return Math.round(price);
 }
 
 
