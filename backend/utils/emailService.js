@@ -1,10 +1,12 @@
-// utils/emailService.js - Using Brevo API (no SMTP timeout issues)
-const brevo = require('@getbrevo/brevo');
+// utils/emailService.js - Using Brevo HTTP API (port 443)
+const SibApiV3Sdk = require('sib-api-v3-sdk');
 
-let apiInstance = new brevo.TransactionalEmailsApi();
-
-let apiKey = apiInstance.authentications['apiKey'];
+// Initialize Brevo API client
+let defaultClient = SibApiV3Sdk.ApiClient.instance;
+let apiKey = defaultClient.authentications['api-key'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
+
+let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const defaultSender = {
   email: process.env.BREVO_FROM_EMAIL || 'noreply@taskbridge.com',
@@ -22,7 +24,7 @@ exports.sendEmail = async ({ to, subject, html, text, organizationId }) => {
       return { error: 'Recipient email is empty' };
     }
     
-    let sendSmtpEmail = new brevo.SendSmtpEmail();
+    let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     sendSmtpEmail.subject = subject;
     sendSmtpEmail.sender = defaultSender;
     sendSmtpEmail.to = [{ email: to, name: to.split('@')[0] }];
