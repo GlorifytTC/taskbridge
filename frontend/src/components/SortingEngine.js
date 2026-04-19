@@ -18,7 +18,7 @@ const SortingEngine = ({ user, onNavigate }) => {
     en: {
       title: 'Sorting Engine',
       subtitle: 'Automatically match groups to the best available rooms and workers',
-      back: '← Back to Dashboard',
+      back: 'X',
       autoSort: '✨ Sort Into Rooms',
       viewMap: '🗺️ View Map',
       pendingGroups: '📋 Pending Groups',
@@ -55,7 +55,7 @@ const SortingEngine = ({ user, onNavigate }) => {
     sv: {
       title: 'Sorteringsmotor',
       subtitle: 'Matcha automatiskt grupper till de bästa tillgängliga rummen och arbetarna',
-      back: '← Tillbaka till instrumentpanelen',
+      back: 'X',
       autoSort: '✨ Sortera in i rum',
       viewMap: '🗺️ Visa karta',
       pendingGroups: '📋 Väntande grupper',

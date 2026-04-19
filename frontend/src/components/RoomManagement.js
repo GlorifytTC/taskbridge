@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import '../styles/roomAssignment.css';
 
-const RoomManagement = ({ user }) => {
+const RoomManagement = ({ user, onNavigate }) => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -14,6 +15,78 @@ const RoomManagement = ({ user }) => {
     capacity: 30,
     roomType: 'Classroom'
   });
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+
+  const t = {
+    en: {
+      title: 'Room Management',
+      subtitle: 'Manage all physical spaces in your organization',
+      close: '✕',
+      bulkCreate: '+ Bulk Create Rooms',
+      setCapacity: 'Set Capacity for Selected',
+      roomNumber: 'Room #',
+      roomName: 'Room Name',
+      capacity: 'Capacity',
+      roomType: 'Room Type',
+      status: 'Status',
+      available: 'Available',
+      unavailable: 'Unavailable',
+      actions: 'Actions',
+      edit: 'Edit',
+      delete: 'Delete',
+      save: 'Save',
+      cancel: 'Cancel',
+      createRooms: 'Create Rooms',
+      startNumber: 'Start Number',
+      endNumber: 'End Number',
+      prefix: 'Prefix (e.g., A, Room )',
+      selectRoomType: 'Select Room Type',
+      classroom: 'Classroom',
+      laboratory: 'Laboratory',
+      medical: 'Medical',
+      office: 'Office',
+      factory: 'Factory',
+      conference: 'Conference',
+      loading: 'Loading...',
+      noRooms: 'No rooms found. Click "Bulk Create Rooms" to get started.'
+    },
+    sv: {
+      title: 'Rumshantering',
+      subtitle: 'Hantera alla fysiska utrymmen i din organisation',
+      close: '✕',
+      bulkCreate: '+ Skapa rum i bulk',
+      setCapacity: 'Ange kapacitet för valda',
+      roomNumber: 'Rum #',
+      roomName: 'Rumsnamn',
+      capacity: 'Kapacitet',
+      roomType: 'Rumstyp',
+      status: 'Status',
+      available: 'Tillgänglig',
+      unavailable: 'Inte tillgänglig',
+      actions: 'Åtgärder',
+      edit: 'Redigera',
+      delete: 'Radera',
+      save: 'Spara',
+      cancel: 'Avbryt',
+      createRooms: 'Skapa rum',
+      startNumber: 'Startnummer',
+      endNumber: 'Slutnummer',
+      prefix: 'Prefix (t.ex. A, Rum )',
+      selectRoomType: 'Välj rumstyp',
+      classroom: 'Klassrum',
+      laboratory: 'Laboratorium',
+      medical: 'Medicinskt',
+      office: 'Kontor',
+      factory: 'Fabrik',
+      conference: 'Konferens',
+      loading: 'Laddar...',
+      noRooms: 'Inga rum hittades. Klicka på "Skapa rum i bulk" för att börja.'
+    }
+  };
+
+  const lang = t[language];
 
   useEffect(() => {
     fetchRooms();
@@ -43,6 +116,7 @@ const RoomManagement = ({ user }) => {
       fetchRooms();
     } catch (error) {
       console.error('Error bulk creating rooms:', error);
+      alert('Error creating rooms');
     }
   };
 
@@ -60,7 +134,7 @@ const RoomManagement = ({ user }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this room? This will remove all assignments.')) return;
+    if (!window.confirm(lang.delete + ' this room?')) return;
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${process.env.REACT_APP_API_URL}/api/rooms/${id}`, {
@@ -103,194 +177,233 @@ const RoomManagement = ({ user }) => {
     setRooms(rooms.map(r => r._id === id ? { ...r, selected: !r.selected } : r));
   };
 
-  if (loading) return <div className="text-white text-center py-10">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="room-assignment-container">
+        <div className="loading-spinner">{lang.loading}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#0f172a] min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-white">🏠 Room Management</h1>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              + Bulk Create Rooms
-            </button>
-            <button
-              onClick={handleBulkCapacity}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              Set Capacity for Selected
-            </button>
+    <div className="room-assignment-container">
+      <div className="header">
+        <div className="header-left">
+          <div>
+            <h1>🏠 {lang.title}</h1>
+            <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="action-buttons">
+            <button className="btn-primary" onClick={() => setShowBulkModal(true)}>
+              {lang.bulkCreate}
+            </button>
+            <button className="btn-secondary" onClick={handleBulkCapacity}>
+              {lang.setCapacity}
+            </button>
+          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+            }}
+          >
+            {lang.close}
+          </button>
+        </div>
+      </div>
 
-        <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#0f172a]">
-                <tr>
-                  <th className="p-3 text-left">
-                    <input type="checkbox" onChange={toggleSelectAll} className="w-4 h-4" />
-                  </th>
-                  <th className="p-3 text-left text-white">Room #</th>
-                  <th className="p-3 text-left text-white">Name</th>
-                  <th className="p-3 text-left text-white">Capacity</th>
-                  <th className="p-3 text-left text-white">Type</th>
-                  <th className="p-3 text-left text-white">Status</th>
-                  <th className="p-3 text-left text-white">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rooms.map((room) => (
-                  <tr key={room._id} className="border-t border-gray-700 hover:bg-[#2d3a5e]">
-                    <td className="p-3">
-                      <input 
-                        type="checkbox" 
-                        checked={room.selected || false}
-                        onChange={() => toggleSelect(room._id)}
-                        className="w-4 h-4"
+      <div className="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" onChange={toggleSelectAll} /></th>
+              <th>{lang.roomNumber}</th>
+              <th>{lang.roomName}</th>
+              <th>{lang.capacity}</th>
+              <th>{lang.roomType}</th>
+              <th>{lang.status}</th>
+              <th>{lang.actions}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rooms.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                  {lang.noRooms}
+                </td>
+              </tr>
+            ) : (
+              rooms.map((room) => (
+                <tr key={room._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={room.selected || false}
+                      onChange={() => toggleSelect(room._id)}
+                    />
+                  </td>
+                  <td>
+                    {editingId === room._id ? (
+                      <input
+                        type="text"
+                        value={editData.roomNumber || room.roomNumber}
+                        onChange={(e) => setEditData({ ...editData, roomNumber: e.target.value })}
+                        className="form-input"
+                        style={{ margin: 0, width: '100px' }}
                       />
-                    </td>
-                    <td className="p-3 text-white">
-                      {editingId === room._id ? (
-                        <input
-                          type="text"
-                          value={editData.roomNumber || room.roomNumber}
-                          onChange={(e) => setEditData({ ...editData, roomNumber: e.target.value })}
-                          className="bg-[#0f172a] text-white px-2 py-1 rounded"
-                        />
-                      ) : (
-                        room.roomNumber
-                      )}
-                    </td>
-                    <td className="p-3 text-white">
-                      {editingId === room._id ? (
-                        <input
-                          type="text"
-                          value={editData.name || room.name}
-                          onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                          className="bg-[#0f172a] text-white px-2 py-1 rounded"
-                        />
-                      ) : (
-                        room.name || '-'
-                      )}
-                    </td>
-                    <td className="p-3 text-white">
-                      {editingId === room._id ? (
-                        <input
-                          type="number"
-                          value={editData.capacity || room.capacity}
-                          onChange={(e) => setEditData({ ...editData, capacity: parseInt(e.target.value) })}
-                          className="bg-[#0f172a] text-white px-2 py-1 rounded w-20"
-                        />
-                      ) : (
-                        room.capacity
-                      )}
-                    </td>
-                    <td className="p-3 text-white">
-                      {editingId === room._id ? (
-                        <select
-                          value={editData.type || room.type}
-                          onChange={(e) => setEditData({ ...editData, type: e.target.value })}
-                          className="bg-[#0f172a] text-white px-2 py-1 rounded"
-                        >
-                          <option>Classroom</option>
-                          <option>Laboratory</option>
-                          <option>Medical</option>
-                          <option>Office</option>
-                          <option>Factory</option>
-                          <option>Conference</option>
-                        </select>
-                      ) : (
-                        room.type
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${room.isAvailable ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-                        {room.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {editingId === room._id ? (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleUpdate(room._id)} className="text-green-400 hover:text-green-300">Save</button>
-                          <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-300">Cancel</button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button onClick={() => { setEditingId(room._id); setEditData({}); }} className="text-blue-400 hover:text-blue-300">Edit</button>
-                          <button onClick={() => handleDelete(room._id)} className="text-red-400 hover:text-red-300">Delete</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    ) : (
+                      room.roomNumber
+                    )}
+                  </td>
+                  <td>
+                    {editingId === room._id ? (
+                      <input
+                        type="text"
+                        value={editData.name || room.name}
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="form-input"
+                        style={{ margin: 0 }}
+                      />
+                    ) : (
+                      room.name || '-'
+                    )}
+                  </td>
+                  <td>
+                    {editingId === room._id ? (
+                      <input
+                        type="number"
+                        value={editData.capacity || room.capacity}
+                        onChange={(e) => setEditData({ ...editData, capacity: parseInt(e.target.value) })}
+                        className="form-input"
+                        style={{ margin: 0, width: '80px' }}
+                      />
+                    ) : (
+                      room.capacity
+                    )}
+                  </td>
+                  <td>
+                    {editingId === room._id ? (
+                      <select
+                        value={editData.type || room.type}
+                        onChange={(e) => setEditData({ ...editData, type: e.target.value })}
+                        className="form-select"
+                        style={{ margin: 0 }}
+                      >
+                        <option value="Classroom">{lang.classroom}</option>
+                        <option value="Laboratory">{lang.laboratory}</option>
+                        <option value="Medical">{lang.medical}</option>
+                        <option value="Office">{lang.office}</option>
+                        <option value="Factory">{lang.factory}</option>
+                        <option value="Conference">{lang.conference}</option>
+                      </select>
+                    ) : (
+                      <span className="badge badge-info">{room.type}</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`badge ${room.isAvailable ? 'badge-success' : 'badge-danger'}`}>
+                      {room.isAvailable ? lang.available : lang.unavailable}
+                    </span>
+                  </td>
+                  <td>
+                    {editingId === room._id ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn-success" onClick={() => handleUpdate(room._id)}>{lang.save}</button>
+                        <button className="btn-warning" onClick={() => setEditingId(null)}>{lang.cancel}</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn-secondary" style={{ padding: '4px 12px' }} onClick={() => { setEditingId(room._id); setEditData({}); }}>{lang.edit}</button>
+                        <button className="btn-danger" style={{ padding: '4px 12px' }} onClick={() => handleDelete(room._id)}>{lang.delete}</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Bulk Create Modal */}
-        {showBulkModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#1e293b] rounded-xl p-6 w-96">
-              <h2 className="text-xl font-bold text-white mb-4">Bulk Create Rooms</h2>
-              <div className="space-y-3">
-                <input
-                  type="number"
-                  placeholder="Start Number"
-                  value={bulkData.startNumber}
-                  onChange={(e) => setBulkData({ ...bulkData, startNumber: parseInt(e.target.value) })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="number"
-                  placeholder="End Number"
-                  value={bulkData.endNumber}
-                  onChange={(e) => setBulkData({ ...bulkData, endNumber: parseInt(e.target.value) })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="Prefix (e.g., 'A' or 'Room ')"
-                  value={bulkData.prefix}
-                  onChange={(e) => setBulkData({ ...bulkData, prefix: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="number"
-                  placeholder="Capacity"
-                  value={bulkData.capacity}
-                  onChange={(e) => setBulkData({ ...bulkData, capacity: parseInt(e.target.value) })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <select
-                  value={bulkData.roomType}
-                  onChange={(e) => setBulkData({ ...bulkData, roomType: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                >
-                  <option>Classroom</option>
-                  <option>Laboratory</option>
-                  <option>Medical</option>
-                  <option>Office</option>
-                  <option>Factory</option>
-                  <option>Conference</option>
-                </select>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={handleBulkCreate} className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Create {bulkData.endNumber - bulkData.startNumber + 1} Rooms
-                </button>
-                <button onClick={() => setShowBulkModal(false)} className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  Cancel
-                </button>
-              </div>
+      {/* Bulk Create Modal */}
+      {showBulkModal && (
+        <div className="modal-overlay" onClick={() => setShowBulkModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.bulkCreate}</h2>
+              <button className="modal-close" onClick={() => setShowBulkModal(false)}>×</button>
+            </div>
+            <div className="form-row">
+              <input
+                type="number"
+                placeholder={lang.startNumber}
+                value={bulkData.startNumber}
+                onChange={(e) => setBulkData({ ...bulkData, startNumber: parseInt(e.target.value) })}
+                className="form-input"
+              />
+              <input
+                type="number"
+                placeholder={lang.endNumber}
+                value={bulkData.endNumber}
+                onChange={(e) => setBulkData({ ...bulkData, endNumber: parseInt(e.target.value) })}
+                className="form-input"
+              />
+            </div>
+            <input
+              type="text"
+              placeholder={lang.prefix}
+              value={bulkData.prefix}
+              onChange={(e) => setBulkData({ ...bulkData, prefix: e.target.value })}
+              className="form-input"
+            />
+            <div className="form-row">
+              <input
+                type="number"
+                placeholder={lang.capacity}
+                value={bulkData.capacity}
+                onChange={(e) => setBulkData({ ...bulkData, capacity: parseInt(e.target.value) })}
+                className="form-input"
+              />
+              <select
+                value={bulkData.roomType}
+                onChange={(e) => setBulkData({ ...bulkData, roomType: e.target.value })}
+                className="form-select"
+              >
+                <option value="Classroom">{lang.classroom}</option>
+                <option value="Laboratory">{lang.laboratory}</option>
+                <option value="Medical">{lang.medical}</option>
+                <option value="Office">{lang.office}</option>
+                <option value="Factory">{lang.factory}</option>
+                <option value="Conference">{lang.conference}</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={handleBulkCreate}>
+                {lang.createRooms} ({bulkData.endNumber - bulkData.startNumber + 1})
+              </button>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowBulkModal(false)}>
+                {lang.cancel}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

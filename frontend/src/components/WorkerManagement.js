@@ -22,7 +22,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
     en: {
       title: 'Worker Management',
       subtitle: 'Manage all staff members and their specializations',
-      back: '← Back to Dashboard',
+      back: 'X',
       addWorker: '+ Add Worker',
       bulkAvailability: 'Bulk Update Availability',
       name: 'Name',
@@ -48,7 +48,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
     sv: {
       title: 'Arbetarhantering',
       subtitle: 'Hantera all personal och deras specialiseringar',
-      back: '← Tillbaka till instrumentpanelen',
+      back: 'X',
       addWorker: '+ Lägg till arbetare',
       bulkAvailability: 'Massuppdatera tillgänglighet',
       name: 'Namn',

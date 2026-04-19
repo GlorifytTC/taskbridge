@@ -28,7 +28,7 @@ const GroupManagement = ({ user, onNavigate }) => {
     en: {
       title: 'Group Management',
       subtitle: 'Create groups that need to be placed in rooms',
-      back: '← Back to Dashboard',
+      back: 'X',
       addGroup: '+ Add Group',
       bulkAdd: '+ Bulk Add Groups',
       groupName: 'Group Name',
@@ -64,7 +64,7 @@ const GroupManagement = ({ user, onNavigate }) => {
     sv: {
       title: 'Grupphantering',
       subtitle: 'Skapa grupper som behöver placeras i rum',
-      back: '← Tillbaka till instrumentpanelen',
+      back: 'X',
       addGroup: '+ Lägg till grupp',
       bulkAdd: '+ Lägg till grupper i bulk',
       groupName: 'Gruppnamn',
