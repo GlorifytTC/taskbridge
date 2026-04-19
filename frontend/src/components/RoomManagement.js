@@ -19,6 +19,8 @@ const RoomManagement = ({ user, onNavigate }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const t = {
     en: {
       title: 'Room Management',
@@ -95,12 +97,14 @@ const RoomManagement = ({ user, onNavigate }) => {
   const fetchRooms = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/rooms`, {
+      // ✅ FIXED: Removed duplicate /api
+      const res = await axios.get(`${API_URL}/rooms`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRooms(res.data.data);
     } catch (error) {
       console.error('Error fetching rooms:', error);
+      alert('Error fetching rooms: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -109,27 +113,31 @@ const RoomManagement = ({ user, onNavigate }) => {
   const handleBulkCreate = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/rooms/bulk`, bulkData, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.post(`${API_URL}/rooms/bulk`, bulkData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowBulkModal(false);
       fetchRooms();
+      alert('Rooms created successfully!');
     } catch (error) {
       console.error('Error bulk creating rooms:', error);
-      alert('Error creating rooms');
+      alert('Error creating rooms: ' + (error.response?.data?.error || error.message));
     }
   };
 
   const handleUpdate = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/rooms/${id}`, editData, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.put(`${API_URL}/rooms/${id}`, editData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEditingId(null);
       fetchRooms();
     } catch (error) {
       console.error('Error updating room:', error);
+      alert('Error updating room: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -137,12 +145,14 @@ const RoomManagement = ({ user, onNavigate }) => {
     if (!window.confirm(lang.delete + ' this room?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/rooms/${id}`, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.delete(`${API_URL}/rooms/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchRooms();
     } catch (error) {
       console.error('Error deleting room:', error);
+      alert('Error deleting room: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -158,13 +168,16 @@ const RoomManagement = ({ user, onNavigate }) => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/rooms/bulk/capacity`, 
+      // ✅ FIXED: Removed duplicate /api
+      await axios.put(`${API_URL}/rooms/bulk/capacity`, 
         { capacity: parseInt(newCapacity), roomIds: selectedRooms },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchRooms();
+      alert('Capacities updated successfully!');
     } catch (error) {
       console.error('Error updating capacities:', error);
+      alert('Error updating capacities: ' + (error.response?.data?.error || error.message));
     }
   };
 
