@@ -95,7 +95,7 @@ const RoomManagement = ({ user, onNavigate }) => {
   const fetchRooms = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/rooms`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/rooms`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRooms(res.data.data);
