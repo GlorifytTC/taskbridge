@@ -24,7 +24,10 @@ const subscriptionRoutes = require('./routes/subscriptions');
 const notificationRoutes = require('./routes/notifications');
 const reportRoutes = require('./routes/reports');
 const dashboardRoutes = require('./routes/dashboard');
-
+const roomRoutes = require('./routes/rooms');
+const workerRoutes = require('./routes/workers');
+const groupRoutes = require('./routes/groups');
+const sortingRoutes = require('./routes/sorting');
 const app = express();
 
 // ============ CORS ============
@@ -51,7 +54,10 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-
+app.use('/api/rooms', roomRoutes);
+app.use('/api/workers', workerRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/sorting', sortingRoutes);
 // ============ TEST ROUTES ============
 app.get('/', (req, res) => {
   res.json({ 

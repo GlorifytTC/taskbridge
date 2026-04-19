@@ -415,7 +415,99 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       timestamp: 'Timestamp',
       changes: 'Changes',
       limitWarning: 'You have reached the limit for this feature. Please upgrade your plan.',
-      upgradeRequired: 'Upgrade Required'
+      upgradeRequired: 'Upgrade Required',
+      
+      // ============ ROOM ASSIGNMENT SYSTEM ============
+      rooms: 'Rooms',
+      workers: 'Workers',
+      groups: 'Groups',
+      sorting: 'Sorting',
+      roomManagement: 'Room Management',
+      workerManagement: 'Worker Management',
+      groupManagement: 'Group Management',
+      sortingEngine: 'Sorting Engine',
+      
+      // Room Management
+      roomNumber: 'Room #',
+      roomName: 'Room Name',
+      capacity: 'Capacity',
+      roomType: 'Room Type',
+      status: 'Status',
+      available: 'Available',
+      unavailable: 'Unavailable',
+      bulkCreateRooms: 'Bulk Create Rooms',
+      setCapacityForSelected: 'Set Capacity for Selected',
+      startNumber: 'Start Number',
+      endNumber: 'End Number',
+      prefix: 'Prefix',
+      createRooms: 'Create Rooms',
+      classroom: 'Classroom',
+      laboratory: 'Laboratory',
+      medical: 'Medical',
+      office: 'Office',
+      factory: 'Factory',
+      conference: 'Conference',
+      
+      // Worker Management
+      workerName: 'Worker Name',
+      email: 'Email',
+      specializations: 'Specializations',
+      workerType: 'Worker Type',
+      regular: 'Regular',
+      substitute: 'Substitute',
+      addWorker: 'Add Worker',
+      bulkUpdateAvailability: 'Bulk Update Availability',
+      addSpecialization: 'Add Specialization',
+      
+      // Group Management
+      groupName: 'Group Name',
+      peopleCount: 'People',
+      requiredSkill: 'Required Skill',
+      priority: 'Priority',
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      urgent: 'Urgent',
+      time: 'Time',
+      startTime: 'Start Time',
+      endTime: 'End Time',
+      notes: 'Notes',
+      addGroup: 'Add Group',
+      bulkAddGroups: 'Bulk Add Groups',
+      preferredRoomType: 'Preferred Room Type',
+      
+      // Sorting Engine
+      autoSort: 'Sort Into Rooms',
+      viewMap: 'View Map',
+      pendingGroups: 'Pending Groups',
+      suggestedAssignments: 'Suggested Assignments',
+      matchScore: 'Match Score',
+      suggestedRoom: 'Suggested Room',
+      suggestedWorker: 'Suggested Worker',
+      confirmAssignment: 'Confirm',
+      overrideAssignment: 'Override',
+      noSuitableMatch: 'No suitable match found',
+      capacityWarning: 'Room capacity is less than group size',
+      skillWarning: 'Worker does not have required skill',
+      roomUnavailable: 'Room is not available at this time',
+      workerUnavailable: 'Worker is not available at this time',
+      
+      // Map View
+      roomAssignmentMap: 'Room Assignment Map',
+      print: 'Print',
+      legend: 'Legend',
+      good: 'Good',
+      warning: 'Warning',
+      critical: 'Critical',
+      assignedTo: 'Assigned To',
+      noAssignment: 'No assignment yet',
+      
+      // Learning System
+      learningSystem: 'Learning System',
+      systemLearnsFromOverrides: 'System learns from your overrides',
+      successfulAssignments: 'Successful assignments',
+      userOverrides: 'User overrides',
+      lastUsed: 'Last used'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -485,7 +577,99 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       timestamp: 'Tidpunkt',
       changes: 'Ändringar',
       limitWarning: 'Du har nått gränsen för denna funktion. Uppgradera din plan.',
-      upgradeRequired: 'Uppgradering krävs'
+      upgradeRequired: 'Uppgradering krävs',
+      
+      // ============ ROOM ASSIGNMENT SYSTEM ============
+      rooms: 'Rum',
+      workers: 'Arbetare',
+      groups: 'Grupper',
+      sorting: 'Sortering',
+      roomManagement: 'Rumshantering',
+      workerManagement: 'Arbetarhantering',
+      groupManagement: 'Grupphantering',
+      sortingEngine: 'Sorteringsmotor',
+      
+      // Room Management
+      roomNumber: 'Rum #',
+      roomName: 'Rumsnamn',
+      capacity: 'Kapacitet',
+      roomType: 'Rumstyp',
+      status: 'Status',
+      available: 'Tillgänglig',
+      unavailable: 'Inte tillgänglig',
+      bulkCreateRooms: 'Skapa rum i bulk',
+      setCapacityForSelected: 'Ange kapacitet för valda',
+      startNumber: 'Startnummer',
+      endNumber: 'Slutnummer',
+      prefix: 'Prefix',
+      createRooms: 'Skapa rum',
+      classroom: 'Klassrum',
+      laboratory: 'Laboratorium',
+      medical: 'Medicinskt',
+      office: 'Kontor',
+      factory: 'Fabrik',
+      conference: 'Konferens',
+      
+      // Worker Management
+      workerName: 'Arbetarnamn',
+      email: 'E-post',
+      specializations: 'Specialiseringar',
+      workerType: 'Arbetartyp',
+      regular: 'Ordinarie',
+      substitute: 'Vikarie',
+      addWorker: 'Lägg till arbetare',
+      bulkUpdateAvailability: 'Massuppdatera tillgänglighet',
+      addSpecialization: 'Lägg till specialisering',
+      
+      // Group Management
+      groupName: 'Gruppnamn',
+      peopleCount: 'Personer',
+      requiredSkill: 'Erforderlig kompetens',
+      priority: 'Prioritet',
+      low: 'Låg',
+      medium: 'Medel',
+      high: 'Hög',
+      urgent: 'Brådskande',
+      time: 'Tid',
+      startTime: 'Starttid',
+      endTime: 'Sluttid',
+      notes: 'Anteckningar',
+      addGroup: 'Lägg till grupp',
+      bulkAddGroups: 'Lägg till grupper i bulk',
+      preferredRoomType: 'Önskad rumstyp',
+      
+      // Sorting Engine
+      autoSort: 'Sortera in i rum',
+      viewMap: 'Visa karta',
+      pendingGroups: 'Väntande grupper',
+      suggestedAssignments: 'Föreslagna tilldelningar',
+      matchScore: 'Matchpoäng',
+      suggestedRoom: 'Föreslaget rum',
+      suggestedWorker: 'Föreslagen arbetare',
+      confirmAssignment: 'Bekräfta',
+      overrideAssignment: 'Åsidosätt',
+      noSuitableMatch: 'Ingen lämplig matchning hittades',
+      capacityWarning: 'Rummets kapacitet är mindre än gruppstorleken',
+      skillWarning: 'Arbetaren har inte erforderlig kompetens',
+      roomUnavailable: 'Rummet är inte tillgängligt vid denna tid',
+      workerUnavailable: 'Arbetaren är inte tillgänglig vid denna tid',
+      
+      // Map View
+      roomAssignmentMap: 'Rumstilldelningskarta',
+      print: 'Skriv ut',
+      legend: 'Teckenförklaring',
+      good: 'Bra',
+      warning: 'Varning',
+      critical: 'Kritisk',
+      assignedTo: 'Tilldelad till',
+      noAssignment: 'Ingen tilldelning ännu',
+      
+      // Learning System
+      learningSystem: 'Inlärningssystem',
+      systemLearnsFromOverrides: 'Systemet lär sig från dina åsidosättningar',
+      successfulAssignments: 'Lyckade tilldelningar',
+      userOverrides: 'Användaråsidosättningar',
+      lastUsed: 'Senast använd'
     }
   };
 
@@ -1472,18 +1656,34 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         </div>
       )}
 
-      <div style={{...styles.tabs, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap', paddingBottom: isMobile ? '8px' : '10px'}}>
-        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.dashboard}</button>
-        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.admins}</button>
-        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.staff}</button>
-        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.branches}</button>
-        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.calendar}</button>
-        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.roles}</button>
-        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.tasks}</button>
-        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
-        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
-        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
-      </div>
+      // In your SuperAdminDashboard.js, find the tabs section and add these buttons:
+
+<div style={{...styles.tabs, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap', paddingBottom: isMobile ? '8px' : '10px'}}>
+  <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.dashboard}</button>
+  <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.admins}</button>
+  <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.staff}</button>
+  <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.branches}</button>
+  <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.calendar}</button>
+  <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.roles}</button>
+  <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.tasks}</button>
+  <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
+  <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
+  <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
+  
+  {/* ============ NEW ROOM ASSIGNMENT SYSTEM TABS ============ */}
+  <button onClick={() => onNavigate('rooms')} style={{...styles.tab, background: activeTab === 'rooms' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
+    🏠 Rooms
+  </button>
+  <button onClick={() => onNavigate('workers')} style={{...styles.tab, background: activeTab === 'workers' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
+    👥 Workers
+  </button>
+  <button onClick={() => onNavigate('groups')} style={{...styles.tab, background: activeTab === 'groups' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
+    📋 Groups
+  </button>
+  <button onClick={() => onNavigate('sorting')} style={{...styles.tab, background: activeTab === 'sorting' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
+    ⚙️ Sorting
+  </button>
+</div>
 
       <div style={{...styles.content, padding: isSmall ? '12px' : '16px'}}>
         {activeTab === 'dashboard' && (

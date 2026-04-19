@@ -15,6 +15,12 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import ResetPassword from './pages/ResetPassword';
 
+// NEW IMPORTS FOR ROOM ASSIGNMENT SYSTEM
+import RoomManagement from './components/RoomManagement';
+import WorkerManagement from './components/WorkerManagement';
+import GroupManagement from './components/GroupManagement';
+import SortingEngine from './components/SortingEngine';
+
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [user, setUser] = useState(null);
@@ -146,6 +152,25 @@ function App() {
 
   if (currentPage === 'contact') {
     return <Contact user={user} onNavigate={handleNavigate} />;
+  }
+
+  // ============ NEW ROOM ASSIGNMENT SYSTEM ROUTES ============
+  // These routes are accessible to SuperAdmin, Master, and Admin roles
+  
+  if (currentPage === 'rooms' && user) {
+    return <RoomManagement user={user} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'workers' && user) {
+    return <WorkerManagement user={user} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'groups' && user) {
+    return <GroupManagement user={user} onNavigate={handleNavigate} />;
+  }
+
+  if (currentPage === 'sorting' && user) {
+    return <SortingEngine user={user} onNavigate={handleNavigate} />;
   }
 
   // Protected routes with role-based dashboards
