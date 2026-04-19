@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import '../styles/roomAssignment.css';
 
-const WorkerManagement = ({ user }) => {
+const WorkerManagement = ({ user, onNavigate }) => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -13,7 +14,66 @@ const WorkerManagement = ({ user }) => {
     isAvailable: true
   });
   const [skillInput, setSkillInput] = useState('');
-  const [editingId, setEditingId] = useState(null);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+
+  const t = {
+    en: {
+      title: 'Worker Management',
+      subtitle: 'Manage all staff members and their specializations',
+      back: '← Back to Dashboard',
+      addWorker: '+ Add Worker',
+      bulkAvailability: 'Bulk Update Availability',
+      name: 'Name',
+      email: 'Email',
+      specializations: 'Specializations',
+      workerType: 'Type',
+      status: 'Status',
+      actions: 'Actions',
+      available: 'Available',
+      unavailable: 'Unavailable',
+      regular: 'Regular',
+      substitute: 'Substitute',
+      delete: 'Delete',
+      addNewWorker: 'Add New Worker',
+      fullName: 'Full Name',
+      addSkill: 'Add',
+      skillPlaceholder: 'Add Specialization (e.g., Math, Science)',
+      cancel: 'Cancel',
+      create: 'Create',
+      loading: 'Loading...',
+      noWorkers: 'No workers found. Click "Add Worker" to get started.'
+    },
+    sv: {
+      title: 'Arbetarhantering',
+      subtitle: 'Hantera all personal och deras specialiseringar',
+      back: '← Tillbaka till instrumentpanelen',
+      addWorker: '+ Lägg till arbetare',
+      bulkAvailability: 'Massuppdatera tillgänglighet',
+      name: 'Namn',
+      email: 'E-post',
+      specializations: 'Specialiseringar',
+      workerType: 'Typ',
+      status: 'Status',
+      actions: 'Åtgärder',
+      available: 'Tillgänglig',
+      unavailable: 'Inte tillgänglig',
+      regular: 'Ordinarie',
+      substitute: 'Vikarie',
+      delete: 'Radera',
+      addNewWorker: 'Lägg till ny arbetare',
+      fullName: 'Fullständigt namn',
+      addSkill: 'Lägg till',
+      skillPlaceholder: 'Lägg till specialisering (t.ex. Matematik, Naturkunskap)',
+      cancel: 'Avbryt',
+      create: 'Skapa',
+      loading: 'Laddar...',
+      noWorkers: 'Inga arbetare hittades. Klicka på "Lägg till arbetare" för att börja.'
+    }
+  };
+
+  const lang = t[language];
 
   useEffect(() => {
     fetchWorkers();
@@ -34,6 +94,10 @@ const WorkerManagement = ({ user }) => {
   };
 
   const handleAddWorker = async () => {
+    if (!newWorker.name || !newWorker.email) {
+      alert('Please fill in name and email');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${process.env.REACT_APP_API_URL}/api/workers`, newWorker, {
@@ -44,6 +108,7 @@ const WorkerManagement = ({ user }) => {
       fetchWorkers();
     } catch (error) {
       console.error('Error adding worker:', error);
+      alert('Error adding worker');
     }
   };
 
@@ -78,7 +143,7 @@ const WorkerManagement = ({ user }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this worker? This will remove all assignments.')) return;
+    if (!window.confirm(lang.delete + ' this worker?')) return;
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${process.env.REACT_APP_API_URL}/api/workers/${id}`, {
@@ -120,162 +185,168 @@ const WorkerManagement = ({ user }) => {
     setWorkers(workers.map(w => w._id === id ? { ...w, selected: !w.selected } : w));
   };
 
-  if (loading) return <div className="text-white text-center py-10">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="room-assignment-container">
+        <div className="loading-spinner">{lang.loading}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#0f172a] min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-white">👥 Worker Management</h1>
-          <div className="flex gap-3">
-            <button
-              onClick={handleBulkAvailability}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-            >
-              Bulk Update Availability
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              + Add Worker
-            </button>
+    <div className="room-assignment-container">
+      <div className="header">
+        <div className="header-left">
+          <button className="back-button" onClick={() => onNavigate('superadmin')}>
+            ← {lang.back}
+          </button>
+          <div>
+            <h1>👥 {lang.title}</h1>
+            <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
-
-        <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#0f172a]">
-                <tr>
-                  <th className="p-3 text-left">
-                    <input type="checkbox" onChange={toggleSelectAll} className="w-4 h-4" />
-                  </th>
-                  <th className="p-3 text-left text-white">Name</th>
-                  <th className="p-3 text-left text-white">Email</th>
-                  <th className="p-3 text-left text-white">Specializations</th>
-                  <th className="p-3 text-left text-white">Type</th>
-                  <th className="p-3 text-left text-white">Status</th>
-                  <th className="p-3 text-left text-white">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workers.map((worker) => (
-                  <tr key={worker._id} className="border-t border-gray-700 hover:bg-[#2d3a5e]">
-                    <td className="p-3">
-                      <input 
-                        type="checkbox" 
-                        checked={worker.selected || false}
-                        onChange={() => toggleSelect(worker._id)}
-                        className="w-4 h-4"
-                      />
-                    </td>
-                    <td className="p-3 text-white">{worker.name}</td>
-                    <td className="p-3 text-white">{worker.email}</td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {worker.specializations.map(skill => (
-                          <span key={skill} className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${worker.workerType === 'regular' ? 'bg-green-600' : 'bg-orange-600'} text-white`}>
-                        {worker.workerType}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleToggleAvailability(worker._id, worker.isAvailable)}
-                        className={`px-2 py-1 rounded text-xs ${worker.isAvailable ? 'bg-green-600' : 'bg-red-600'} text-white`}
-                      >
-                        {worker.isAvailable ? 'Available' : 'Unavailable'}
-                      </button>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => handleDelete(worker._id)} className="text-red-400 hover:text-red-300">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="action-buttons">
+          <button className="btn-primary" onClick={handleBulkAvailability}>
+            {lang.bulkAvailability}
+          </button>
+          <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
+            {lang.addWorker}
+          </button>
         </div>
+      </div>
 
-        {/* Add Worker Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#1e293b] rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
-              <h2 className="text-xl font-bold text-white mb-4">Add New Worker</h2>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={newWorker.name}
-                  onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={newWorker.email}
-                  onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add Specialization (e.g., Math, Science)"
-                      value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
-                      className="flex-1 p-2 bg-[#0f172a] text-white rounded"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+      <div className="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" onChange={toggleSelectAll} /></th>
+              <th>{lang.name}</th>
+              <th>{lang.email}</th>
+              <th>{lang.specializations}</th>
+              <th>{lang.workerType}</th>
+              <th>{lang.status}</th>
+              <th>{lang.actions}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {workers.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+                  {lang.noWorkers}
+                </td>
+              </tr>
+            ) : (
+              workers.map((worker) => (
+                <tr key={worker._id}>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={worker.selected || false}
+                      onChange={() => toggleSelect(worker._id)}
                     />
-                    <button onClick={handleAddSkill} className="px-3 py-2 bg-blue-600 text-white rounded">Add</button>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {newWorker.specializations.map(skill => (
-                      <span key={skill} className="px-2 py-1 bg-blue-600 text-white text-xs rounded flex items-center gap-1">
-                        {skill}
-                        <button onClick={() => handleRemoveSkill(skill)} className="text-white hover:text-red-300">×</button>
-                      </span>
+                  </td>
+                  <td>{worker.name}</td>
+                  <td>{worker.email}</td>
+                  <td>
+                    {worker.specializations.map(skill => (
+                      <span key={skill} className="skill-tag">{skill}</span>
                     ))}
-                  </div>
-                </div>
-                <select
-                  value={newWorker.workerType}
-                  onChange={(e) => setNewWorker({ ...newWorker, workerType: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                >
-                  <option value="regular">Regular (Always Available)</option>
-                  <option value="substitute">Substitute (On Call)</option>
-                </select>
-                <label className="flex items-center gap-2 text-white">
-                  <input
-                    type="checkbox"
-                    checked={newWorker.isAvailable}
-                    onChange={(e) => setNewWorker({ ...newWorker, isAvailable: e.target.checked })}
-                  />
-                  Available for assignments
-                </label>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={handleAddWorker} className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Add Worker
-                </button>
-                <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  Cancel
-                </button>
-              </div>
+                  </td>
+                  <td>
+                    <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
+                      {worker.workerType === 'regular' ? lang.regular : lang.substitute}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => handleToggleAvailability(worker._id, worker.isAvailable)}
+                      className={`badge ${worker.isAvailable ? 'badge-success' : 'badge-danger'}`}
+                      style={{ cursor: 'pointer', border: 'none' }}
+                    >
+                      {worker.isAvailable ? lang.available : lang.unavailable}
+                    </button>
+                  </td>
+                  <td>
+                    <button className="btn-danger" style={{ padding: '4px 12px' }} onClick={() => handleDelete(worker._id)}>
+                      {lang.delete}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add Worker Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.addNewWorker}</h2>
+              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            </div>
+            <input
+              type="text"
+              placeholder={lang.fullName}
+              value={newWorker.name}
+              onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })}
+              className="form-input"
+            />
+            <input
+              type="email"
+              placeholder={lang.email}
+              value={newWorker.email}
+              onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
+              className="form-input"
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder={lang.skillPlaceholder}
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                className="form-input"
+                style={{ flex: 1 }}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+              />
+              <button className="btn-secondary" onClick={handleAddSkill}>{lang.addSkill}</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+              {newWorker.specializations.map(skill => (
+                <span key={skill} className="skill-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  {skill}
+                  <button onClick={() => handleRemoveSkill(skill)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}>×</button>
+                </span>
+              ))}
+            </div>
+            <select
+              value={newWorker.workerType}
+              onChange={(e) => setNewWorker({ ...newWorker, workerType: e.target.value })}
+              className="form-select"
+            >
+              <option value="regular">{lang.regular}</option>
+              <option value="substitute">{lang.substitute}</option>
+            </select>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={newWorker.isAvailable}
+                onChange={(e) => setNewWorker({ ...newWorker, isAvailable: e.target.checked })}
+              />
+              {lang.available} for assignments
+            </label>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={handleAddWorker}>
+                {lang.create}
+              </button>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>
+                {lang.cancel}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

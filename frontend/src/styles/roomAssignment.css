@@ -1,0 +1,355 @@
+/* Room Assignment System Styles */
+.room-assignment-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  padding: 80px 20px 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.room-assignment-container .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.room-assignment-container .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.room-assignment-container .back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.room-assignment-container .back-button:hover {
+  background: rgba(0, 209, 255, 0.2);
+  border-color: #00d1ff;
+}
+
+.room-assignment-container h1 {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  margin: 0;
+}
+
+.room-assignment-container .subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.room-assignment-container .action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.room-assignment-container .btn-primary {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00f5ff, #00d1ff);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.room-assignment-container .btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+.room-assignment-container .btn-secondary {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.room-assignment-container .btn-secondary:hover {
+  background: rgba(0, 209, 255, 0.2);
+  border-color: #00d1ff;
+}
+
+.room-assignment-container .btn-danger {
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.room-assignment-container .btn-danger:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.room-assignment-container .btn-success {
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  color: #10b981;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.room-assignment-container .btn-success:hover {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+.room-assignment-container .btn-warning {
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  color: #f59e0b;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.room-assignment-container .data-table {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-assignment-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.room-assignment-container th {
+  padding: 12px 16px;
+  text-align: left;
+  color: #00d1ff;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 209, 255, 0.05);
+}
+
+.room-assignment-container td {
+  padding: 12px 16px;
+  color: white;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.room-assignment-container tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.room-assignment-container .badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.room-assignment-container .badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid #10b981;
+}
+
+.room-assignment-container .badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.room-assignment-container .badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.room-assignment-container .badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.room-assignment-container .skill-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(0, 209, 255, 0.2);
+  border-radius: 12px;
+  font-size: 11px;
+  color: #00d1ff;
+  margin: 2px;
+}
+
+.room-assignment-container .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.room-assignment-container .modal {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-assignment-container .modal-large {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-assignment-container .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.room-assignment-container .modal-header h2 {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.room-assignment-container .modal-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.room-assignment-container .modal-close:hover {
+  color: #ef4444;
+}
+
+.room-assignment-container .form-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.room-assignment-container .form-input:focus {
+  outline: none;
+  border-color: #00d1ff;
+}
+
+.room-assignment-container .form-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.room-assignment-container .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.room-assignment-container .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+.room-assignment-container .loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: #00d1ff;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .room-assignment-container {
+    padding: 70px 12px 12px;
+  }
+  
+  .room-assignment-container .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .room-assignment-container .action-buttons {
+    width: 100%;
+  }
+  
+  .room-assignment-container .btn-primary,
+  .room-assignment-container .btn-secondary {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .room-assignment-container .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .room-assignment-container th,
+  .room-assignment-container td {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

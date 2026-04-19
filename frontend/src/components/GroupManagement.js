@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import '../styles/roomAssignment.css';
 
-const GroupManagement = ({ user }) => {
+const GroupManagement = ({ user, onNavigate }) => {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -19,6 +20,86 @@ const GroupManagement = ({ user }) => {
   const [bulkGroups, setBulkGroups] = useState([
     { name: '', peopleCount: 1, requiredSkill: '', priority: 'medium' }
   ]);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+
+  const t = {
+    en: {
+      title: 'Group Management',
+      subtitle: 'Create groups that need to be placed in rooms',
+      back: '← Back to Dashboard',
+      addGroup: '+ Add Group',
+      bulkAdd: '+ Bulk Add Groups',
+      groupName: 'Group Name',
+      people: 'People',
+      requiredSkill: 'Required Skill',
+      priority: 'Priority',
+      time: 'Time',
+      status: 'Status',
+      assignedTo: 'Assigned To',
+      actions: 'Actions',
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      urgent: 'Urgent',
+      pending: 'Pending',
+      assigned: 'Assigned',
+      completed: 'Completed',
+      delete: 'Delete',
+      addNewGroup: 'Add New Group',
+      peopleCount: 'Number of People',
+      selectPriority: 'Select Priority',
+      preferredRoom: 'Preferred Room Type (Optional)',
+      startTime: 'Start Time',
+      endTime: 'End Time',
+      notes: 'Notes (Optional)',
+      cancel: 'Cancel',
+      create: 'Create',
+      bulkAddTitle: 'Bulk Add Groups',
+      addRow: '+ Add Row',
+      loading: 'Loading...',
+      noGroups: 'No groups found. Click "Add Group" to get started.'
+    },
+    sv: {
+      title: 'Grupphantering',
+      subtitle: 'Skapa grupper som behöver placeras i rum',
+      back: '← Tillbaka till instrumentpanelen',
+      addGroup: '+ Lägg till grupp',
+      bulkAdd: '+ Lägg till grupper i bulk',
+      groupName: 'Gruppnamn',
+      people: 'Personer',
+      requiredSkill: 'Erforderlig kompetens',
+      priority: 'Prioritet',
+      time: 'Tid',
+      status: 'Status',
+      assignedTo: 'Tilldelad till',
+      actions: 'Åtgärder',
+      low: 'Låg',
+      medium: 'Medel',
+      high: 'Hög',
+      urgent: 'Brådskande',
+      pending: 'Väntande',
+      assigned: 'Tilldelad',
+      completed: 'Slutförd',
+      delete: 'Radera',
+      addNewGroup: 'Lägg till ny grupp',
+      peopleCount: 'Antal personer',
+      selectPriority: 'Välj prioritet',
+      preferredRoom: 'Önskad rumstyp (Valfritt)',
+      startTime: 'Starttid',
+      endTime: 'Sluttid',
+      notes: 'Anteckningar (Valfritt)',
+      cancel: 'Avbryt',
+      create: 'Skapa',
+      bulkAddTitle: 'Lägg till grupper i bulk',
+      addRow: '+ Lägg till rad',
+      loading: 'Laddar...',
+      noGroups: 'Inga grupper hittades. Klicka på "Lägg till grupp" för att börja.'
+    }
+  };
+
+  const lang = t[language];
 
   useEffect(() => {
     fetchGroups();
@@ -39,6 +120,10 @@ const GroupManagement = ({ user }) => {
   };
 
   const handleAddGroup = async () => {
+    if (!newGroup.name || !newGroup.requiredSkill) {
+      alert('Please fill in group name and required skill');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${process.env.REACT_APP_API_URL}/api/groups`, newGroup, {
@@ -49,6 +134,7 @@ const GroupManagement = ({ user }) => {
       fetchGroups();
     } catch (error) {
       console.error('Error adding group:', error);
+      alert('Error adding group');
     }
   };
 
@@ -64,6 +150,7 @@ const GroupManagement = ({ user }) => {
       fetchGroups();
     } catch (error) {
       console.error('Error bulk adding groups:', error);
+      alert('Error adding groups');
     }
   };
 
@@ -82,7 +169,7 @@ const GroupManagement = ({ user }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this group?')) return;
+    if (!window.confirm(lang.delete + ' this group?')) return;
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${process.env.REACT_APP_API_URL}/api/groups/${id}`, {
@@ -96,219 +183,252 @@ const GroupManagement = ({ user }) => {
 
   const getPriorityColor = (priority) => {
     switch(priority) {
-      case 'urgent': return 'bg-red-600';
-      case 'high': return 'bg-orange-600';
-      case 'medium': return 'bg-yellow-600';
-      default: return 'bg-gray-600';
+      case 'urgent': return 'badge-danger';
+      case 'high': return 'badge-warning';
+      case 'medium': return 'badge-info';
+      default: return 'badge-secondary';
     }
   };
 
-  if (loading) return <div className="text-white text-center py-10">Loading...</div>;
+  const getPriorityText = (priority) => {
+    switch(priority) {
+      case 'urgent': return lang.urgent;
+      case 'high': return lang.high;
+      case 'medium': return lang.medium;
+      default: return lang.low;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'assigned': return 'badge-success';
+      case 'completed': return 'badge-info';
+      default: return 'badge-warning';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="room-assignment-container">
+        <div className="loading-spinner">{lang.loading}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#0f172a] min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-white">📋 Group/Request Management</h1>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowBulkModal(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              + Bulk Add Groups
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              + Add Group
-            </button>
+    <div className="room-assignment-container">
+      <div className="header">
+        <div className="header-left">
+          <button className="back-button" onClick={() => onNavigate('superadmin')}>
+            ← {lang.back}
+          </button>
+          <div>
+            <h1>📋 {lang.title}</h1>
+            <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
-
-        <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#0f172a]">
-                <tr>
-                  <th className="p-3 text-left text-white">Group Name</th>
-                  <th className="p-3 text-left text-white">People</th>
-                  <th className="p-3 text-left text-white">Required Skill</th>
-                  <th className="p-3 text-left text-white">Priority</th>
-                  <th className="p-3 text-left text-white">Time</th>
-                  <th className="p-3 text-left text-white">Status</th>
-                  <th className="p-3 text-left text-white">Assigned To</th>
-                  <th className="p-3 text-left text-white">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group) => (
-                  <tr key={group._id} className="border-t border-gray-700 hover:bg-[#2d3a5e]">
-                    <td className="p-3 text-white">{group.name}</td>
-                    <td className="p-3 text-white">{group.peopleCount}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">{group.requiredSkill}</span>
-                    </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${getPriorityColor(group.priority)} text-white`}>
-                        {group.priority}
-                      </span>
-                    </td>
-                    <td className="p-3 text-white">{group.startTime} - {group.endTime}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${group.status === 'assigned' ? 'bg-green-600' : group.status === 'completed' ? 'bg-blue-600' : 'bg-yellow-600'} text-white`}>
-                        {group.status || 'pending'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-white">
-                      {group.assignedRoom ? `${group.assignedRoom.roomNumber} / ${group.assignedWorker?.name || '-'}` : '-'}
-                    </td>
-                    <td className="p-3">
-                      <button onClick={() => handleDelete(group._id)} className="text-red-400 hover:text-red-300">Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="action-buttons">
+          <button className="btn-primary" onClick={() => setShowBulkModal(true)}>
+            {lang.bulkAdd}
+          </button>
+          <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
+            {lang.addGroup}
+          </button>
         </div>
-
-        {/* Add Single Group Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#1e293b] rounded-xl p-6 w-96 max-h-[80vh] overflow-y-auto">
-              <h2 className="text-xl font-bold text-white mb-4">Add New Group</h2>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Group Name (e.g., Math Class, Surgery Team)"
-                  value={newGroup.name}
-                  onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="number"
-                  placeholder="Number of People"
-                  value={newGroup.peopleCount}
-                  onChange={(e) => setNewGroup({ ...newGroup, peopleCount: parseInt(e.target.value) })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="Required Skill (e.g., Math, Cardiology)"
-                  value={newGroup.requiredSkill}
-                  onChange={(e) => setNewGroup({ ...newGroup, requiredSkill: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <select
-                  value={newGroup.priority}
-                  onChange={(e) => setNewGroup({ ...newGroup, priority: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                >
-                  <option value="low">Low Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="high">High Priority</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Preferred Room Type (Optional)"
-                  value={newGroup.preferredRoomType}
-                  onChange={(e) => setNewGroup({ ...newGroup, preferredRoomType: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="time"
-                    value={newGroup.startTime}
-                    onChange={(e) => setNewGroup({ ...newGroup, startTime: e.target.value })}
-                    className="flex-1 p-2 bg-[#0f172a] text-white rounded"
-                  />
-                  <input
-                    type="time"
-                    value={newGroup.endTime}
-                    onChange={(e) => setNewGroup({ ...newGroup, endTime: e.target.value })}
-                    className="flex-1 p-2 bg-[#0f172a] text-white rounded"
-                  />
-                </div>
-                <textarea
-                  placeholder="Notes (Optional)"
-                  value={newGroup.notes}
-                  onChange={(e) => setNewGroup({ ...newGroup, notes: e.target.value })}
-                  className="w-full p-2 bg-[#0f172a] text-white rounded"
-                  rows="2"
-                />
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={handleAddGroup} className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Add Group
-                </button>
-                <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Bulk Add Groups Modal */}
-        {showBulkModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#1e293b] rounded-xl p-6 w-[600px] max-h-[80vh] overflow-y-auto">
-              <h2 className="text-xl font-bold text-white mb-4">Bulk Add Groups</h2>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {bulkGroups.map((group, idx) => (
-                  <div key={idx} className="flex gap-2 p-2 border-b border-gray-700">
-                    <input
-                      type="text"
-                      placeholder="Group Name"
-                      value={group.name}
-                      onChange={(e) => updateBulkRow(idx, 'name', e.target.value)}
-                      className="flex-1 p-2 bg-[#0f172a] text-white rounded text-sm"
-                    />
-                    <input
-                      type="number"
-                      placeholder="People"
-                      value={group.peopleCount}
-                      onChange={(e) => updateBulkRow(idx, 'peopleCount', parseInt(e.target.value))}
-                      className="w-20 p-2 bg-[#0f172a] text-white rounded text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Skill"
-                      value={group.requiredSkill}
-                      onChange={(e) => updateBulkRow(idx, 'requiredSkill', e.target.value)}
-                      className="w-28 p-2 bg-[#0f172a] text-white rounded text-sm"
-                    />
-                    <select
-                      value={group.priority}
-                      onChange={(e) => updateBulkRow(idx, 'priority', e.target.value)}
-                      className="w-24 p-2 bg-[#0f172a] text-white rounded text-sm"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                    <button onClick={() => removeBulkRow(idx)} className="px-2 text-red-400 hover:text-red-300">✕</button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-3 mt-4">
-                <button onClick={addBulkRow} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  + Add Row
-                </button>
-                <button onClick={handleBulkAdd} className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Create {bulkGroups.filter(g => g.name).length} Groups
-                </button>
-                <button onClick={() => setShowBulkModal(false)} className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      <div className="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>{lang.groupName}</th>
+              <th>{lang.people}</th>
+              <th>{lang.requiredSkill}</th>
+              <th>{lang.priority}</th>
+              <th>{lang.time}</th>
+              <th>{lang.status}</th>
+              <th>{lang.assignedTo}</th>
+              <th>{lang.actions}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.length === 0 ? (
+              <tr>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                  {lang.noGroups}
+                </td>
+              </tr>
+            ) : (
+              groups.map((group) => (
+                <tr key={group._id}>
+                  <td>{group.name}</td>
+                  <td>{group.peopleCount}</td>
+                  <td><span className="skill-tag">{group.requiredSkill}</span></td>
+                  <td><span className={`badge ${getPriorityColor(group.priority)}`}>{getPriorityText(group.priority)}</span></td>
+                  <td>{group.startTime} - {group.endTime}</td>
+                  <td><span className={`badge ${getStatusColor(group.status)}`}>{group.status || lang.pending}</span></td>
+                  <td>
+                    {group.assignedRoom ? (
+                      <span className="badge badge-success">
+                        {group.assignedRoom.roomNumber} / {group.assignedWorker?.name || '-'}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td>
+                    <button className="btn-danger" style={{ padding: '4px 12px' }} onClick={() => handleDelete(group._id)}>
+                      {lang.delete}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add Single Group Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.addNewGroup}</h2>
+              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            </div>
+            <input
+              type="text"
+              placeholder={lang.groupName}
+              value={newGroup.name}
+              onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+              className="form-input"
+            />
+            <input
+              type="number"
+              placeholder={lang.peopleCount}
+              value={newGroup.peopleCount}
+              onChange={(e) => setNewGroup({ ...newGroup, peopleCount: parseInt(e.target.value) })}
+              className="form-input"
+            />
+            <input
+              type="text"
+              placeholder={lang.requiredSkill}
+              value={newGroup.requiredSkill}
+              onChange={(e) => setNewGroup({ ...newGroup, requiredSkill: e.target.value })}
+              className="form-input"
+            />
+            <select
+              value={newGroup.priority}
+              onChange={(e) => setNewGroup({ ...newGroup, priority: e.target.value })}
+              className="form-select"
+            >
+              <option value="low">{lang.low}</option>
+              <option value="medium">{lang.medium}</option>
+              <option value="high">{lang.high}</option>
+              <option value="urgent">{lang.urgent}</option>
+            </select>
+            <input
+              type="text"
+              placeholder={lang.preferredRoom}
+              value={newGroup.preferredRoomType}
+              onChange={(e) => setNewGroup({ ...newGroup, preferredRoomType: e.target.value })}
+              className="form-input"
+            />
+            <div className="form-row">
+              <input
+                type="time"
+                value={newGroup.startTime}
+                onChange={(e) => setNewGroup({ ...newGroup, startTime: e.target.value })}
+                className="form-input"
+              />
+              <input
+                type="time"
+                value={newGroup.endTime}
+                onChange={(e) => setNewGroup({ ...newGroup, endTime: e.target.value })}
+                className="form-input"
+              />
+            </div>
+            <textarea
+              placeholder={lang.notes}
+              value={newGroup.notes}
+              onChange={(e) => setNewGroup({ ...newGroup, notes: e.target.value })}
+              className="form-input"
+              rows="2"
+            />
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={handleAddGroup}>
+                {lang.create}
+              </button>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>
+                {lang.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Add Groups Modal */}
+      {showBulkModal && (
+        <div className="modal-overlay" onClick={() => setShowBulkModal(false)}>
+          <div className="modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.bulkAddTitle}</h2>
+              <button className="modal-close" onClick={() => setShowBulkModal(false)}>×</button>
+            </div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {bulkGroups.map((group, idx) => (
+                <div key={idx} className="form-row" style={{ marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder={lang.groupName}
+                    value={group.name}
+                    onChange={(e) => updateBulkRow(idx, 'name', e.target.value)}
+                    className="form-input"
+                    style={{ margin: 0 }}
+                  />
+                  <input
+                    type="number"
+                    placeholder={lang.people}
+                    value={group.peopleCount}
+                    onChange={(e) => updateBulkRow(idx, 'peopleCount', parseInt(e.target.value))}
+                    className="form-input"
+                    style={{ margin: 0, width: '80px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder={lang.requiredSkill}
+                    value={group.requiredSkill}
+                    onChange={(e) => updateBulkRow(idx, 'requiredSkill', e.target.value)}
+                    className="form-input"
+                    style={{ margin: 0 }}
+                  />
+                  <select
+                    value={group.priority}
+                    onChange={(e) => updateBulkRow(idx, 'priority', e.target.value)}
+                    className="form-select"
+                    style={{ margin: 0, width: '100px' }}
+                  >
+                    <option value="low">{lang.low}</option>
+                    <option value="medium">{lang.medium}</option>
+                    <option value="high">{lang.high}</option>
+                    <option value="urgent">{lang.urgent}</option>
+                  </select>
+                  <button className="btn-danger" onClick={() => removeBulkRow(idx)} style={{ padding: '8px 12px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <button className="btn-secondary" onClick={addBulkRow} style={{ marginTop: '12px', width: '100%' }}>
+              {lang.addRow}
+            </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={handleBulkAdd}>
+                {lang.create} ({bulkGroups.filter(g => g.name).length})
+              </button>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowBulkModal(false)}>
+                {lang.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
