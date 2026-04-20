@@ -14,11 +14,13 @@ const SortingEngine = ({ user, onNavigate }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const t = {
     en: {
       title: 'Sorting Engine',
       subtitle: 'Automatically match groups to the best available rooms and workers',
-      back: 'X',
+      close: '✕',
       autoSort: '✨ Sort Into Rooms',
       viewMap: '🗺️ View Map',
       pendingGroups: '📋 Pending Groups',
@@ -55,7 +57,7 @@ const SortingEngine = ({ user, onNavigate }) => {
     sv: {
       title: 'Sorteringsmotor',
       subtitle: 'Matcha automatiskt grupper till de bästa tillgängliga rummen och arbetarna',
-      back: 'X',
+      close: '✕',
       autoSort: '✨ Sortera in i rum',
       viewMap: '🗺️ Visa karta',
       pendingGroups: '📋 Väntande grupper',
@@ -102,13 +104,15 @@ const SortingEngine = ({ user, onNavigate }) => {
     try {
       const token = localStorage.getItem('token');
       
-      const groupsRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/groups`, {
+      // ✅ FIXED: Removed duplicate /api
+      const groupsRes = await axios.get(`${API_URL}/groups`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setGroups(groupsRes.data.data.filter(g => g.status === 'pending'));
     } catch (error) {
       console.error('Error fetching data:', error);
+      alert('Error fetching data: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -118,7 +122,8 @@ const SortingEngine = ({ user, onNavigate }) => {
     setSorting(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/sorting/auto-assign`, 
+      // ✅ FIXED: Removed duplicate /api
+      const res = await axios.post(`${API_URL}/sorting/auto-assign`, 
         { date: selectedDate },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -127,7 +132,7 @@ const SortingEngine = ({ user, onNavigate }) => {
       alert(lang.sortSuccess.replace('{assigned}', res.data.assignments.filter(a => a.room).length).replace('{total}', res.data.summary.totalGroups));
     } catch (error) {
       console.error('Error auto-sorting:', error);
-      alert('Error during sorting');
+      alert('Error during sorting: ' + (error.response?.data?.error || error.message));
     } finally {
       setSorting(false);
     }
@@ -136,14 +141,17 @@ const SortingEngine = ({ user, onNavigate }) => {
   const handleConfirmAssignment = async (assignmentId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/sorting/confirm/${assignmentId}`, {},
+      // ✅ FIXED: Removed duplicate /api
+      await axios.post(`${API_URL}/sorting/confirm/${assignmentId}`, {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchData();
       // Remove from assignments list
       setAssignments(assignments.filter(a => a.assignmentId !== assignmentId));
+      alert('Assignment confirmed!');
     } catch (error) {
       console.error('Error confirming assignment:', error);
+      alert('Error confirming assignment: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -151,13 +159,15 @@ const SortingEngine = ({ user, onNavigate }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/sorting/map?date=${selectedDate}`, {
+      // ✅ FIXED: Removed duplicate /api
+      const res = await axios.get(`${API_URL}/sorting/map?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMapView(res.data);
       setShowMap(true);
     } catch (error) {
       console.error('Error loading map:', error);
+      alert('Error loading map: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -241,27 +251,48 @@ const SortingEngine = ({ user, onNavigate }) => {
     <div className="room-assignment-container">
       <div className="header">
         <div className="header-left">
-          <button className="back-button" onClick={() => onNavigate('superadmin')}>
-            ← {lang.back}
-          </button>
           <div>
             <h1>⚙️ {lang.title}</h1>
             <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
-        <div className="action-buttons">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="form-input"
-            style={{ width: 'auto', margin: 0 }}
-          />
-          <button className="btn-primary" onClick={handleAutoSort} disabled={sorting}>
-            {sorting ? '🔄 ' + lang.sortingInProgress : lang.autoSort}
-          </button>
-          <button className="btn-secondary" onClick={handleViewMap}>
-            {lang.viewMap}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="action-buttons">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="form-input"
+              style={{ width: 'auto', margin: 0 }}
+            />
+            <button className="btn-primary" onClick={handleAutoSort} disabled={sorting}>
+              {sorting ? '🔄 ' + lang.sortingInProgress : lang.autoSort}
+            </button>
+            <button className="btn-secondary" onClick={handleViewMap}>
+              {lang.viewMap}
+            </button>
+          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+            }}
+          >
+            {lang.close}
           </button>
         </div>
       </div>
@@ -337,7 +368,7 @@ const SortingEngine = ({ user, onNavigate }) => {
                         <div style={{ background: '#0f172a', padding: '12px', borderRadius: '8px' }}>
                           <div style={{ color: '#10b981', fontSize: '12px', marginBottom: '4px' }}>{lang.suggestedWorker}</div>
                           <div style={{ color: 'white', fontWeight: 'bold' }}>{assignment.worker.name}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>{lang.specializations}: {assignment.worker.specializations?.join(', ')}</div>
+                          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>Specializations: {assignment.worker.specializations?.join(', ')}</div>
                         </div>
                       </div>
                     ) : (
@@ -389,12 +420,7 @@ const SortingEngine = ({ user, onNavigate }) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px', maxHeight: '500px', overflowY: 'auto' }}>
               {mapView.data.map((item, idx) => (
-                <div key={idx} className={`p-4 rounded-lg border-l-4 ${
-                  item.status === 'good' ? 'bg-green-900/20 border-green-500' :
-                  item.status === 'capacity-warning' ? 'bg-yellow-900/20 border-yellow-500' :
-                  item.status === 'skill-warning' ? 'bg-orange-900/20 border-orange-500' :
-                  'bg-red-900/20 border-red-500'
-                }`} style={{ background: '#0f172a', padding: '16px', borderRadius: '8px', borderLeft: `4px solid ${
+                <div key={idx} style={{ background: '#0f172a', padding: '16px', borderRadius: '8px', borderLeft: `4px solid ${
                   item.status === 'good' ? '#10b981' :
                   item.status === 'capacity-warning' ? '#f59e0b' :
                   item.status === 'skill-warning' ? '#fd7e14' : '#ef4444'

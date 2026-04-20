@@ -24,11 +24,13 @@ const GroupManagement = ({ user, onNavigate }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const t = {
     en: {
       title: 'Group Management',
       subtitle: 'Create groups that need to be placed in rooms',
-      back: 'X',
+      close: '✕',
       addGroup: '+ Add Group',
       bulkAdd: '+ Bulk Add Groups',
       groupName: 'Group Name',
@@ -64,7 +66,7 @@ const GroupManagement = ({ user, onNavigate }) => {
     sv: {
       title: 'Grupphantering',
       subtitle: 'Skapa grupper som behöver placeras i rum',
-      back: 'X',
+      close: '✕',
       addGroup: '+ Lägg till grupp',
       bulkAdd: '+ Lägg till grupper i bulk',
       groupName: 'Gruppnamn',
@@ -108,12 +110,14 @@ const GroupManagement = ({ user, onNavigate }) => {
   const fetchGroups = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/groups`, {
+      // ✅ FIXED: Removed duplicate /api
+      const res = await axios.get(`${API_URL}/groups`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setGroups(res.data.data);
     } catch (error) {
       console.error('Error fetching groups:', error);
+      alert('Error fetching groups: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -126,31 +130,35 @@ const GroupManagement = ({ user, onNavigate }) => {
     }
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/groups`, newGroup, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.post(`${API_URL}/groups`, newGroup, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowAddModal(false);
       setNewGroup({ name: '', peopleCount: 1, requiredSkill: '', priority: 'medium', preferredRoomType: '', startTime: '09:00', endTime: '17:00', notes: '' });
       fetchGroups();
+      alert('Group added successfully!');
     } catch (error) {
       console.error('Error adding group:', error);
-      alert('Error adding group');
+      alert('Error adding group: ' + (error.response?.data?.error || error.message));
     }
   };
 
   const handleBulkAdd = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/groups/bulk`, 
+      // ✅ FIXED: Removed duplicate /api
+      await axios.post(`${API_URL}/groups/bulk`, 
         { groups: bulkGroups.filter(g => g.name) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setShowBulkModal(false);
       setBulkGroups([{ name: '', peopleCount: 1, requiredSkill: '', priority: 'medium' }]);
       fetchGroups();
+      alert('Groups added successfully!');
     } catch (error) {
       console.error('Error bulk adding groups:', error);
-      alert('Error adding groups');
+      alert('Error adding groups: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -172,12 +180,14 @@ const GroupManagement = ({ user, onNavigate }) => {
     if (!window.confirm(lang.delete + ' this group?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/groups/${id}`, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.delete(`${API_URL}/groups/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchGroups();
     } catch (error) {
       console.error('Error deleting group:', error);
+      alert('Error deleting group: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -219,20 +229,41 @@ const GroupManagement = ({ user, onNavigate }) => {
     <div className="room-assignment-container">
       <div className="header">
         <div className="header-left">
-          <button className="back-button" onClick={() => onNavigate('superadmin')}>
-            ← {lang.back}
-          </button>
           <div>
             <h1>📋 {lang.title}</h1>
             <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
-        <div className="action-buttons">
-          <button className="btn-primary" onClick={() => setShowBulkModal(true)}>
-            {lang.bulkAdd}
-          </button>
-          <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
-            {lang.addGroup}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="action-buttons">
+            <button className="btn-primary" onClick={() => setShowBulkModal(true)}>
+              {lang.bulkAdd}
+            </button>
+            <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
+              {lang.addGroup}
+            </button>
+          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+            }}
+          >
+            {lang.close}
           </button>
         </div>
       </div>

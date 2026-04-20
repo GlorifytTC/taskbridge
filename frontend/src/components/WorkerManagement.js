@@ -18,11 +18,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const t = {
     en: {
       title: 'Worker Management',
       subtitle: 'Manage all staff members and their specializations',
-      back: 'X',
+      close: '✕',
       addWorker: '+ Add Worker',
       bulkAvailability: 'Bulk Update Availability',
       name: 'Name',
@@ -48,7 +50,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
     sv: {
       title: 'Arbetarhantering',
       subtitle: 'Hantera all personal och deras specialiseringar',
-      back: 'X',
+      close: '✕',
       addWorker: '+ Lägg till arbetare',
       bulkAvailability: 'Massuppdatera tillgänglighet',
       name: 'Namn',
@@ -82,12 +84,14 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const fetchWorkers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/workers`, {
+      // ✅ FIXED: Removed duplicate /api
+      const res = await axios.get(`${API_URL}/workers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWorkers(res.data.data);
     } catch (error) {
       console.error('Error fetching workers:', error);
+      alert('Error fetching workers: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -100,15 +104,17 @@ const WorkerManagement = ({ user, onNavigate }) => {
     }
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/workers`, newWorker, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.post(`${API_URL}/workers`, newWorker, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowAddModal(false);
       setNewWorker({ name: '', email: '', specializations: [], workerType: 'regular', isAvailable: true });
       fetchWorkers();
+      alert('Worker added successfully!');
     } catch (error) {
       console.error('Error adding worker:', error);
-      alert('Error adding worker');
+      alert('Error adding worker: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -132,13 +138,15 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const handleToggleAvailability = async (workerId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/workers/${workerId}`, 
+      // ✅ FIXED: Removed duplicate /api
+      await axios.put(`${API_URL}/workers/${workerId}`, 
         { isAvailable: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchWorkers();
     } catch (error) {
       console.error('Error updating worker:', error);
+      alert('Error updating worker: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -146,12 +154,14 @@ const WorkerManagement = ({ user, onNavigate }) => {
     if (!window.confirm(lang.delete + ' this worker?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/workers/${id}`, {
+      // ✅ FIXED: Removed duplicate /api
+      await axios.delete(`${API_URL}/workers/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchWorkers();
     } catch (error) {
       console.error('Error deleting worker:', error);
+      alert('Error deleting worker: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -166,13 +176,16 @@ const WorkerManagement = ({ user, onNavigate }) => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}/api/workers/bulk/availability`,
+      // ✅ FIXED: Removed duplicate /api
+      await axios.put(`${API_URL}/workers/bulk/availability`,
         { workerIds: selectedWorkers, isAvailable: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchWorkers();
+      alert('Availability updated successfully!');
     } catch (error) {
       console.error('Error updating availabilities:', error);
+      alert('Error updating availabilities: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -197,20 +210,41 @@ const WorkerManagement = ({ user, onNavigate }) => {
     <div className="room-assignment-container">
       <div className="header">
         <div className="header-left">
-          <button className="back-button" onClick={() => onNavigate('superadmin')}>
-            ← {lang.back}
-          </button>
           <div>
             <h1>👥 {lang.title}</h1>
             <p className="subtitle">{lang.subtitle}</p>
           </div>
         </div>
-        <div className="action-buttons">
-          <button className="btn-primary" onClick={handleBulkAvailability}>
-            {lang.bulkAvailability}
-          </button>
-          <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
-            {lang.addWorker}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="action-buttons">
+            <button className="btn-primary" onClick={handleBulkAvailability}>
+              {lang.bulkAvailability}
+            </button>
+            <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
+              {lang.addWorker}
+            </button>
+          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+            }}
+          >
+            {lang.close}
           </button>
         </div>
       </div>
