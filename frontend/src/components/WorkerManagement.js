@@ -558,166 +558,117 @@ const WorkerManagement = ({ user, onNavigate }) => {
       )}
 
       {/* Import Workers Modal */}
-{showImportModal && (
-  <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
-    <div className="modal-large" onClick={(e) => e.stopPropagation()}>
-      <div className="modal-header">
-        <h2>{lang.importWorkersTitle}</h2>
-        <button className="modal-close" onClick={() => setShowImportModal(false)}>×</button>
-      </div>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <button className="btn-secondary" onClick={downloadTemplate} style={{ marginBottom: '16px', marginRight: '12px' }}>
-          📥 {lang.downloadTemplate}
-        </button>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginBottom: '16px' }}>
-          {lang.templateColumns}
-        </p>
-        
-        {/* File selection area - VISIBLE BUTTONS */}
-        <div style={{
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '16px',
-          textAlign: 'center'
-        }}>
-          {/* Choose File Button - VISIBLE */}
-          <button 
-            onClick={() => document.getElementById('excel-file-input').click()}
-            style={{
-              padding: '12px 24px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              marginRight: '12px',
-              marginBottom: '12px'
-            }}
-          >
-            📂 {lang.chooseFile}
-          </button>
-          <input
-            type="file"
-            id="excel-file-input"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-          />
-          
-          {/* Upload & Preview Button - VISIBLE */}
-          <button 
-            onClick={handleUploadAndPreview}
-            style={{
-              padding: '12px 24px',
-              background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              marginRight: '12px',
-              marginBottom: '12px'
-            }}
-          >
-            🔍 {lang.uploadAndPreview}
-          </button>
-          
-          {/* Clear Button - VISIBLE */}
-          {selectedFile && (
-            <button 
-              onClick={clearFile}
-              style={{
-                padding: '12px 24px',
-                background: 'rgba(239, 68, 68, 0.2)',
-                color: '#ef4444',
-                border: '1px solid #ef4444',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                marginBottom: '12px'
-              }}
-            >
-              🗑️ {lang.clearFile}
-            </button>
-          )}
-          
-          {/* File status message */}
-          {selectedFile && (
-            <div style={{ marginTop: '16px' }}>
-              <p style={{ color: '#10b981', fontSize: '13px' }}>
-                ✓ {lang.fileSelected.replace('{name}', selectedFile.name)}
-              </p>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>
-                {lang.clickToUpload}
-              </p>
+      {showImportModal && (
+        <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+          <div className="modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.importWorkersTitle}</h2>
+              <button className="modal-close" onClick={() => setShowImportModal(false)}>×</button>
             </div>
-          )}
-          
-          {/* No file selected message */}
-          {!selectedFile && (
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '16px' }}>
-              No file selected. Click "Choose File" to select an Excel or CSV file.
-            </p>
-          )}
-        </div>
-      </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn-secondary" onClick={downloadTemplate} style={{ marginBottom: '16px', marginRight: '12px' }}>
+                {lang.downloadTemplate}
+              </button>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginBottom: '16px' }}>
+                {lang.templateColumns}
+              </p>
+              
+              {/* File selection area */}
+              <div style={{
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '16px'
+              }}>
+                <label htmlFor="excel-file-input" style={{
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginRight: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {lang.chooseFile}
+                </label>
+                <input
+                  type="file"
+                  id="excel-file-input"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <button className="btn-primary" onClick={handleUploadAndPreview} style={{ marginRight: '12px', marginBottom: '12px' }}>
+                  {lang.uploadAndPreview}
+                </button>
+                {selectedFile && (
+                  <>
+                    <button className="btn-secondary" onClick={clearFile} style={{ marginBottom: '12px' }}>
+                      {lang.clearFile}
+                    </button>
+                    <p style={{ color: '#10b981', fontSize: '13px', marginTop: '12px' }}>
+                      ✓ {lang.fileSelected.replace('{name}', selectedFile.name)}
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>
+                      {lang.clickToUpload}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
 
-      {importPreview.length > 0 && (
-        <>
-          <h3 style={{ color: 'white', marginBottom: '12px' }}>{lang.preview} (First 10 rows)</h3>
-          <div className="data-table" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            <table style={{ fontSize: '12px' }}>
-              <thead>
-                <tr>
-                  <th>{lang.name}</th>
-                  <th>{lang.email}</th>
-                  <th>{lang.specializations}</th>
-                  <th>{lang.workerType}</th>
-                  <th>{lang.status}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {importPreview.map((worker, idx) => (
-                  <tr key={idx}>
-                    <td>{worker.name}</td>
-                    <td>{worker.email}</td>
-                    <td>{worker.specializations?.join(', ')}</td>
-                    <td>
-                      <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
-                        {worker.workerType === 'regular' ? lang.regular : lang.substitute}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${worker.isAvailable ? 'badge-success' : 'badge-danger'}`}>
-                        {worker.isAvailable ? lang.available : lang.unavailable}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {importPreview.length > 0 && (
+              <>
+                <h3 style={{ color: 'white', marginBottom: '12px' }}>{lang.preview} (First 10 rows)</h3>
+                <div className="data-table" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <table style={{ fontSize: '12px' }}>
+                    <thead>
+                      <tr>
+                        <th>{lang.name}</th>
+                        <th>{lang.email}</th>
+                        <th>{lang.specializations}</th>
+                        <th>{lang.workerType}</th>
+                        <th>{lang.status}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.map((worker, idx) => (
+                        <tr key={idx}>
+                          <td>{worker.name}</td>
+                          <td>{worker.email}</td>
+                          <td>{worker.specializations?.join(', ')}</td>
+                          <td>
+                            <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
+                              {worker.workerType === 'regular' ? lang.regular : lang.substitute}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${worker.isAvailable ? 'badge-success' : 'badge-danger'}`}>
+                              {worker.isAvailable ? lang.available : lang.unavailable}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                  <button className="btn-primary" style={{ flex: 1 }} onClick={handleImportWorkers}>
+                    {lang.import} ({importData.length} workers)
+                  </button>
+                  <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowImportModal(false)}>
+                    {lang.cancel}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-            <button className="btn-primary" style={{ flex: 1 }} onClick={handleImportWorkers}>
-              {lang.import} ({importData.length} workers)
-            </button>
-            <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowImportModal(false)}>
-              {lang.cancel}
-            </button>
-          </div>
-        </>
+        </div>
       )}
     </div>
-  </div>
-)}
-    </div>
   );
-}
+};
 
 export default WorkerManagement;
