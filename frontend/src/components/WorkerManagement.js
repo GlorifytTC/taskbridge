@@ -11,6 +11,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState([]);
   const [importPreview, setImportPreview] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [newWorker, setNewWorker] = useState({
     name: '',
     email: '',
@@ -46,9 +47,10 @@ const WorkerManagement = ({ user, onNavigate }) => {
       delete: 'Delete',
       addNewWorker: 'Add New Worker',
       importWorkersTitle: 'Import Workers from File',
-      downloadTemplate: 'Download Template',
-      uploadFile: 'Upload Excel/CSV File',
-      dragDrop: 'Drag and drop or click to upload',
+      downloadTemplate: '📥 Download Excel Template',
+      chooseFile: '📂 Choose File',
+      uploadAndPreview: 'Upload & Preview',
+      clearFile: 'Clear',
       preview: 'Preview',
       import: 'Import',
       fullName: 'Full Name',
@@ -61,7 +63,9 @@ const WorkerManagement = ({ user, onNavigate }) => {
       error: 'Error loading workers. Please try again.',
       selectFile: 'Please select a file first',
       importSuccess: 'Successfully imported {count} workers',
-      templateColumns: 'Excel Format: Name | Email | Specializations | WorkerType | Available'
+      templateColumns: 'Excel Format: Name | Email | Specializations | WorkerType | Available',
+      fileSelected: 'File selected: {name}',
+      clickToUpload: 'Click "Upload & Preview" to see preview'
     },
     sv: {
       title: 'Arbetarhantering',
@@ -83,9 +87,10 @@ const WorkerManagement = ({ user, onNavigate }) => {
       delete: 'Radera',
       addNewWorker: 'Lägg till ny arbetare',
       importWorkersTitle: 'Importera arbetare från fil',
-      downloadTemplate: 'Ladda ner mall',
-      uploadFile: 'Ladda upp Excel/CSV fil',
-      dragDrop: 'Dra och släpp eller klicka för att ladda upp',
+      downloadTemplate: '📥 Ladda ner Excel mall',
+      chooseFile: '📂 Välj fil',
+      uploadAndPreview: 'Ladda upp & förhandsgranska',
+      clearFile: 'Rensa',
       preview: 'Förhandsgranska',
       import: 'Importera',
       fullName: 'Fullständigt namn',
@@ -98,7 +103,9 @@ const WorkerManagement = ({ user, onNavigate }) => {
       error: 'Fel vid laddning av arbetare. Försök igen.',
       selectFile: 'Vänligen välj en fil först',
       importSuccess: '{count} arbetare importerades',
-      templateColumns: 'Excel Format: Namn | E-post | Specialiseringar | Typ | Tillgänglig'
+      templateColumns: 'Excel Format: Namn | E-post | Specialiseringar | Typ | Tillgänglig',
+      fileSelected: 'Fil vald: {name}',
+      clickToUpload: 'Klicka på "Ladda upp & förhandsgranska" för att se förhandsgranskning'
     }
   };
 
@@ -152,9 +159,18 @@ const WorkerManagement = ({ user, onNavigate }) => {
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUploadAndPreview = () => {
+    if (!selectedFile) {
+      alert(lang.selectFile);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -176,7 +192,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
       setImportPreview(mappedData.slice(0, 10));
       setImportData(mappedData);
     };
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(selectedFile);
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    setImportPreview([]);
+    setImportData([]);
   };
 
   const downloadTemplate = () => {
@@ -219,6 +241,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
       setShowImportModal(false);
       setImportData([]);
       setImportPreview([]);
+      setSelectedFile(null);
       fetchWorkers();
     } catch (error) {
       console.error('Error importing workers:', error);
@@ -544,33 +567,55 @@ const WorkerManagement = ({ user, onNavigate }) => {
             </div>
             
             <div style={{ marginBottom: '20px' }}>
-              <button className="btn-secondary" onClick={downloadTemplate} style={{ marginBottom: '16px' }}>
-                📥 {lang.downloadTemplate}
+              <button className="btn-secondary" onClick={downloadTemplate} style={{ marginBottom: '16px', marginRight: '12px' }}>
+                {lang.downloadTemplate}
               </button>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginBottom: '16px' }}>
                 {lang.templateColumns}
               </p>
               
+              {/* File selection area */}
               <div style={{
-                border: '2px dashed rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.05)',
                 borderRadius: '12px',
-                padding: '40px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: 'rgba(255,255,255,0.03)'
+                padding: '24px',
+                marginBottom: '16px'
               }}>
+                <label htmlFor="excel-file-input" style={{
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: 'white',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginRight: '12px',
+                  marginBottom: '12px'
+                }}>
+                  {lang.chooseFile}
+                </label>
                 <input
                   type="file"
+                  id="excel-file-input"
                   accept=".xlsx,.xls,.csv"
-                  onChange={handleFileUpload}
+                  onChange={handleFileChange}
                   style={{ display: 'none' }}
-                  id="file-upload"
                 />
-                <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
-                  <p style={{ color: 'white', marginBottom: '8px' }}>{lang.uploadFile}</p>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>{lang.dragDrop}</p>
-                </label>
+                <button className="btn-primary" onClick={handleUploadAndPreview} style={{ marginRight: '12px', marginBottom: '12px' }}>
+                  {lang.uploadAndPreview}
+                </button>
+                {selectedFile && (
+                  <>
+                    <button className="btn-secondary" onClick={clearFile} style={{ marginBottom: '12px' }}>
+                      {lang.clearFile}
+                    </button>
+                    <p style={{ color: '#10b981', fontSize: '13px', marginTop: '12px' }}>
+                      ✓ {lang.fileSelected.replace('{name}', selectedFile.name)}
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>
+                      {lang.clickToUpload}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
