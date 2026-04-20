@@ -5,6 +5,7 @@ import '../styles/roomAssignment.css';
 const WorkerManagement = ({ user, onNavigate }) => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newWorker, setNewWorker] = useState({
     name: '',
@@ -19,6 +20,8 @@ const WorkerManagement = ({ user, onNavigate }) => {
   });
 
   const API_URL = process.env.REACT_APP_API_URL;
+
+  console.log('API_URL:', API_URL);
 
   const t = {
     en: {
@@ -45,7 +48,8 @@ const WorkerManagement = ({ user, onNavigate }) => {
       cancel: 'Cancel',
       create: 'Create',
       loading: 'Loading...',
-      noWorkers: 'No workers found. Click "Add Worker" to get started.'
+      noWorkers: 'No workers found. Click "Add Worker" to get started.',
+      error: 'Error loading workers. Please try again.'
     },
     sv: {
       title: 'Arbetarhantering',
@@ -71,7 +75,8 @@ const WorkerManagement = ({ user, onNavigate }) => {
       cancel: 'Avbryt',
       create: 'Skapa',
       loading: 'Laddar...',
-      noWorkers: 'Inga arbetare hittades. Klicka på "Lägg till arbetare" för att börja.'
+      noWorkers: 'Inga arbetare hittades. Klicka på "Lägg till arbetare" för att börja.',
+      error: 'Fel vid laddning av arbetare. Försök igen.'
     }
   };
 
@@ -82,16 +87,37 @@ const WorkerManagement = ({ user, onNavigate }) => {
   }, []);
 
   const fetchWorkers = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
-      // ✅ FIXED: Removed duplicate /api
+      console.log('Fetching workers from:', `${API_URL}/workers`);
+      console.log('Token exists:', !!token);
+      
+      if (!token) {
+        console.error('No token found!');
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
+      
       const res = await axios.get(`${API_URL}/workers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setWorkers(res.data.data);
+      
+      console.log('Response status:', res.status);
+      console.log('Response data:', res.data);
+      
+      if (res.data && res.data.data) {
+        setWorkers(res.data.data);
+      } else {
+        setWorkers([]);
+      }
     } catch (error) {
       console.error('Error fetching workers:', error);
-      alert('Error fetching workers: ' + (error.response?.data?.error || error.message));
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      setError(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
@@ -104,7 +130,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
     }
     try {
       const token = localStorage.getItem('token');
-      // ✅ FIXED: Removed duplicate /api
       await axios.post(`${API_URL}/workers`, newWorker, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -138,7 +163,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const handleToggleAvailability = async (workerId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      // ✅ FIXED: Removed duplicate /api
       await axios.put(`${API_URL}/workers/${workerId}`, 
         { isAvailable: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -154,7 +178,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
     if (!window.confirm(lang.delete + ' this worker?')) return;
     try {
       const token = localStorage.getItem('token');
-      // ✅ FIXED: Removed duplicate /api
       await axios.delete(`${API_URL}/workers/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -176,7 +199,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
     
     try {
       const token = localStorage.getItem('token');
-      // ✅ FIXED: Removed duplicate /api
       await axios.put(`${API_URL}/workers/bulk/availability`,
         { workerIds: selectedWorkers, isAvailable: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -198,9 +220,76 @@ const WorkerManagement = ({ user, onNavigate }) => {
     setWorkers(workers.map(w => w._id === id ? { ...w, selected: !w.selected } : w));
   };
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="room-assignment-container">
+        <div className="header">
+          <div className="header-left">
+            <div>
+              <h1>👥 {lang.title}</h1>
+              <p className="subtitle">{lang.subtitle}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button 
+              className="close-button" 
+              onClick={() => onNavigate('superadmin')}
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid #ef4444',
+                borderRadius: '8px',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontSize: '18px',
+                padding: '8px 16px'
+              }}
+            >
+              {lang.close}
+            </button>
+          </div>
+        </div>
+        <div className="data-table">
+          <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
+            <p>❌ {lang.error}</p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>{error}</p>
+            <button className="btn-primary" onClick={fetchWorkers} style={{ marginTop: '16px' }}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="room-assignment-container">
+        <div className="header">
+          <div className="header-left">
+            <div>
+              <h1>👥 {lang.title}</h1>
+              <p className="subtitle">{lang.subtitle}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button 
+              className="close-button" 
+              onClick={() => onNavigate('superadmin')}
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid #ef4444',
+                borderRadius: '8px',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontSize: '18px',
+                padding: '8px 16px'
+              }}
+            >
+              {lang.close}
+            </button>
+          </div>
+        </div>
         <div className="loading-spinner">{lang.loading}</div>
       </div>
     );
@@ -282,9 +371,9 @@ const WorkerManagement = ({ user, onNavigate }) => {
                   <td>{worker.name}</td>
                   <td>{worker.email}</td>
                   <td>
-                    {worker.specializations.map(skill => (
-                      <span key={skill} className="skill-tag">{skill}</span>
-                    ))}
+                      {worker.specializations && worker.specializations.map(skill => (
+                        <span key={skill} className="skill-tag">{skill}</span>
+                      ))}
                   </td>
                   <td>
                     <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
