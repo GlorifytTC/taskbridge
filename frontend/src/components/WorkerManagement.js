@@ -19,9 +19,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
     return localStorage.getItem('taskbridge_language') || 'en';
   });
 
-  const API_URL = process.env.REACT_APP_API_URL;
-
-  console.log('API_URL:', API_URL);
+  const API_URL = process.env.REACT_APP_API_URL || 'https://taskbridge-production-9d91.up.railway.app/api';
 
   const t = {
     en: {
@@ -87,30 +85,52 @@ const WorkerManagement = ({ user, onNavigate }) => {
   }, []);
 
   const fetchWorkers = async () => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    console.log('API_URL:', API_URL);
-    console.log('Full URL:', `${API_URL}/workers`);
-    
-    // Try with full URL directly
-    const res = await axios.get(`https://taskbridge-production-9d91.up.railway.app/api/workers`, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
       }
-    });
-    
-    console.log('Response:', res.data);
-    setWorkers(res.data.data);
-  } catch (error) {
-    console.error('Error fetching workers:', error);
-    console.error('Error response:', error.response);
-    alert('Error fetching workers: ' + (error.response?.data?.error || error.message));
-  } finally {
-    setLoading(false);
-  }
-};
+      
+      console.log('Fetching workers from:', `${API_URL}/workers`);
+      
+      const response = await axios.get(`${API_URL}/workers`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      });
+      
+      console.log('Response:', response.data);
+      
+      if (response.data && response.data.success) {
+        setWorkers(response.data.data || []);
+      } else {
+        setWorkers([]);
+      }
+    } catch (err) {
+      console.error('Error fetching workers:', err);
+      let errorMessage = lang.error;
+      
+      if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please check your connection.';
+      } else if (err.response) {
+        errorMessage = err.response.data?.message || err.response.data?.error || `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else {
+        errorMessage = err.message || lang.error;
+      }
+      
+      setError(errorMessage);
+      setWorkers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddWorker = async () => {
     if (!newWorker.name || !newWorker.email) {
@@ -119,16 +139,21 @@ const WorkerManagement = ({ user, onNavigate }) => {
     }
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/workers`, newWorker, {
+      const response = await axios.post(`${API_URL}/workers`, newWorker, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setShowAddModal(false);
-      setNewWorker({ name: '', email: '', specializations: [], workerType: 'regular', isAvailable: true });
-      fetchWorkers();
-      alert('Worker added successfully!');
+      
+      if (response.data && response.data.success) {
+        setShowAddModal(false);
+        setNewWorker({ name: '', email: '', specializations: [], workerType: 'regular', isAvailable: true });
+        fetchWorkers();
+        alert('Worker added successfully!');
+      } else {
+        alert('Error adding worker: ' + (response.data?.message || 'Unknown error'));
+      }
     } catch (error) {
       console.error('Error adding worker:', error);
-      alert('Error adding worker: ' + (error.response?.data?.error || error.message));
+      alert('Error adding worker: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -159,7 +184,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
       fetchWorkers();
     } catch (error) {
       console.error('Error updating worker:', error);
-      alert('Error updating worker: ' + (error.response?.data?.error || error.message));
+      alert('Error updating worker: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -173,7 +198,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
       fetchWorkers();
     } catch (error) {
       console.error('Error deleting worker:', error);
-      alert('Error deleting worker: ' + (error.response?.data?.error || error.message));
+      alert('Error deleting worker: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -196,7 +221,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
       alert('Availability updated successfully!');
     } catch (error) {
       console.error('Error updating availabilities:', error);
-      alert('Error updating availabilities: ' + (error.response?.data?.error || error.message));
+      alert('Error updating availabilities: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -209,7 +234,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
     setWorkers(workers.map(w => w._id === id ? { ...w, selected: !w.selected } : w));
   };
 
-  // Show error state
   if (error) {
     return (
       <div className="room-assignment-container">
@@ -220,23 +244,21 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button 
-              className="close-button" 
-              onClick={() => onNavigate('superadmin')}
-              style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid #ef4444',
-                borderRadius: '8px',
-                color: '#ef4444',
-                cursor: 'pointer',
-                fontSize: '18px',
-                padding: '8px 16px'
-              }}
-            >
-              {lang.close}
-            </button>
-          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px'
+            }}
+          >
+            {lang.close}
+          </button>
         </div>
         <div className="data-table">
           <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
@@ -261,23 +283,21 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button 
-              className="close-button" 
-              onClick={() => onNavigate('superadmin')}
-              style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid #ef4444',
-                borderRadius: '8px',
-                color: '#ef4444',
-                cursor: 'pointer',
-                fontSize: '18px',
-                padding: '8px 16px'
-              }}
-            >
-              {lang.close}
-            </button>
-          </div>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '8px 16px'
+            }}
+          >
+            {lang.close}
+          </button>
         </div>
         <div className="loading-spinner">{lang.loading}</div>
       </div>
