@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import '../styles/roomAssignment.css';
 
 const WorkerManagement = ({ user, onNavigate }) => {
@@ -7,6 +8,9 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState([]);
+  const [importPreview, setImportPreview] = useState([]);
   const [newWorker, setNewWorker] = useState({
     name: '',
     email: '',
@@ -27,6 +31,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
       subtitle: 'Manage all staff members and their specializations',
       close: '✕',
       addWorker: '+ Add Worker',
+      importWorkers: '📁 Import Workers',
       bulkAvailability: 'Bulk Update Availability',
       name: 'Name',
       email: 'Email',
@@ -40,20 +45,30 @@ const WorkerManagement = ({ user, onNavigate }) => {
       substitute: 'Substitute',
       delete: 'Delete',
       addNewWorker: 'Add New Worker',
+      importWorkersTitle: 'Import Workers from File',
+      downloadTemplate: 'Download Template',
+      uploadFile: 'Upload Excel/CSV File',
+      dragDrop: 'Drag and drop or click to upload',
+      preview: 'Preview',
+      import: 'Import',
       fullName: 'Full Name',
       addSkill: 'Add',
       skillPlaceholder: 'Add Specialization (e.g., Math, Science)',
       cancel: 'Cancel',
       create: 'Create',
       loading: 'Loading...',
-      noWorkers: 'No workers found. Click "Add Worker" to get started.',
-      error: 'Error loading workers. Please try again.'
+      noWorkers: 'No workers found. Click "Add Worker" or "Import Workers" to get started.',
+      error: 'Error loading workers. Please try again.',
+      selectFile: 'Please select a file first',
+      importSuccess: 'Successfully imported {count} workers',
+      templateColumns: 'Excel Format: Name | Email | Specializations | WorkerType | Available'
     },
     sv: {
       title: 'Arbetarhantering',
       subtitle: 'Hantera all personal och deras specialiseringar',
       close: '✕',
       addWorker: '+ Lägg till arbetare',
+      importWorkers: '📁 Importera arbetare',
       bulkAvailability: 'Massuppdatera tillgänglighet',
       name: 'Namn',
       email: 'E-post',
@@ -67,14 +82,23 @@ const WorkerManagement = ({ user, onNavigate }) => {
       substitute: 'Vikarie',
       delete: 'Radera',
       addNewWorker: 'Lägg till ny arbetare',
+      importWorkersTitle: 'Importera arbetare från fil',
+      downloadTemplate: 'Ladda ner mall',
+      uploadFile: 'Ladda upp Excel/CSV fil',
+      dragDrop: 'Dra och släpp eller klicka för att ladda upp',
+      preview: 'Förhandsgranska',
+      import: 'Importera',
       fullName: 'Fullständigt namn',
       addSkill: 'Lägg till',
       skillPlaceholder: 'Lägg till specialisering (t.ex. Matematik, Naturkunskap)',
       cancel: 'Avbryt',
       create: 'Skapa',
       loading: 'Laddar...',
-      noWorkers: 'Inga arbetare hittades. Klicka på "Lägg till arbetare" för att börja.',
-      error: 'Fel vid laddning av arbetare. Försök igen.'
+      noWorkers: 'Inga arbetare hittades. Klicka på "Lägg till arbetare" eller "Importera arbetare" för att börja.',
+      error: 'Fel vid laddning av arbetare. Försök igen.',
+      selectFile: 'Vänligen välj en fil först',
+      importSuccess: '{count} arbetare importerades',
+      templateColumns: 'Excel Format: Namn | E-post | Specialiseringar | Typ | Tillgänglig'
     }
   };
 
@@ -94,17 +118,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
         throw new Error('No authentication token found');
       }
       
-      console.log('Fetching workers from:', `${API_URL}/workers`);
-      
       const response = await axios.get(`${API_URL}/workers`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 30000
       });
-      
-      console.log('Response:', response.data);
       
       if (response.data && response.data.success) {
         setWorkers(response.data.data || []);
@@ -129,6 +149,80 @@ const WorkerManagement = ({ user, onNavigate }) => {
       setWorkers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+      
+      // Map the data to worker format
+      const mappedData = jsonData.map(row => ({
+        name: row.Name || row.name || '',
+        email: row.Email || row.email || '',
+        specializations: row.Specializations || row.specializations ? 
+          (row.Specializations || row.specializations).split(',').map(s => s.trim()) : [],
+        workerType: (row.WorkerType || row.workerType || 'regular').toLowerCase(),
+        isAvailable: (row.Available || row.available) === 'Yes' || (row.Available || row.available) === true
+      })).filter(w => w.name && w.email);
+      
+      setImportPreview(mappedData.slice(0, 10));
+      setImportData(mappedData);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const downloadTemplate = () => {
+    const template = [
+      { Name: 'John Doe', Email: 'john@example.com', Specializations: 'Math,Science', WorkerType: 'regular', Available: 'Yes' },
+      { Name: 'Jane Smith', Email: 'jane@example.com', Specializations: 'Physics,Chemistry', WorkerType: 'regular', Available: 'Yes' },
+      { Name: 'Bob Johnson', Email: 'bob@example.com', Specializations: 'Biology', WorkerType: 'substitute', Available: 'No' }
+    ];
+    
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Workers');
+    XLSX.writeFile(wb, 'worker_template.xlsx');
+  };
+
+  const handleImportWorkers = async () => {
+    if (importData.length === 0) {
+      alert(lang.selectFile);
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const worker of importData) {
+        try {
+          await axios.post(`${API_URL}/workers`, worker, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Error importing worker:', worker.name, err);
+          errorCount++;
+        }
+      }
+      
+      alert(lang.importSuccess.replace('{count}', successCount) + (errorCount > 0 ? ` (${errorCount} failed)` : ''));
+      setShowImportModal(false);
+      setImportData([]);
+      setImportPreview([]);
+      fetchWorkers();
+    } catch (error) {
+      console.error('Error importing workers:', error);
+      alert('Error importing workers: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -244,19 +338,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={{
-              background: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '8px 16px'
-            }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')}>
             {lang.close}
           </button>
         </div>
@@ -283,19 +365,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={{
-              background: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '8px 16px'
-            }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')}>
             {lang.close}
           </button>
         </div>
@@ -318,30 +388,14 @@ const WorkerManagement = ({ user, onNavigate }) => {
             <button className="btn-primary" onClick={handleBulkAvailability}>
               {lang.bulkAvailability}
             </button>
+            <button className="btn-primary" onClick={() => setShowImportModal(true)} style={{ background: '#8b5cf6' }}>
+              {lang.importWorkers}
+            </button>
             <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
               {lang.addWorker}
             </button>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={{
-              background: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '8px 16px',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'rgba(239, 68, 68, 0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'rgba(239, 68, 68, 0.2)';
-            }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')}>
             {lang.close}
           </button>
         </div>
@@ -380,9 +434,9 @@ const WorkerManagement = ({ user, onNavigate }) => {
                   <td>{worker.name}</td>
                   <td>{worker.email}</td>
                   <td>
-                      {worker.specializations && worker.specializations.map(skill => (
-                        <span key={skill} className="skill-tag">{skill}</span>
-                      ))}
+                    {worker.specializations && worker.specializations.map(skill => (
+                      <span key={skill} className="skill-tag">{skill}</span>
+                    ))}
                   </td>
                   <td>
                     <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
@@ -476,6 +530,95 @@ const WorkerManagement = ({ user, onNavigate }) => {
                 {lang.cancel}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Workers Modal */}
+      {showImportModal && (
+        <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+          <div className="modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{lang.importWorkersTitle}</h2>
+              <button className="modal-close" onClick={() => setShowImportModal(false)}>×</button>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <button className="btn-secondary" onClick={downloadTemplate} style={{ marginBottom: '16px' }}>
+                📥 {lang.downloadTemplate}
+              </button>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginBottom: '16px' }}>
+                {lang.templateColumns}
+              </p>
+              
+              <div style={{
+                border: '2px dashed rgba(255,255,255,0.2)',
+                borderRadius: '12px',
+                padding: '40px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: 'rgba(255,255,255,0.03)'
+              }}>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" style={{ cursor: 'pointer' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
+                  <p style={{ color: 'white', marginBottom: '8px' }}>{lang.uploadFile}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>{lang.dragDrop}</p>
+                </label>
+              </div>
+            </div>
+
+            {importPreview.length > 0 && (
+              <>
+                <h3 style={{ color: 'white', marginBottom: '12px' }}>{lang.preview} (First 10 rows)</h3>
+                <div className="data-table" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  <table style={{ fontSize: '12px' }}>
+                    <thead>
+                      <tr>
+                        <th>{lang.name}</th>
+                        <th>{lang.email}</th>
+                        <th>{lang.specializations}</th>
+                        <th>{lang.workerType}</th>
+                        <th>{lang.status}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.map((worker, idx) => (
+                        <tr key={idx}>
+                          <td>{worker.name}</td>
+                          <td>{worker.email}</td>
+                          <td>{worker.specializations?.join(', ')}</td>
+                          <td>
+                            <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
+                              {worker.workerType === 'regular' ? lang.regular : lang.substitute}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${worker.isAvailable ? 'badge-success' : 'badge-danger'}`}>
+                              {worker.isAvailable ? lang.available : lang.unavailable}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                  <button className="btn-primary" style={{ flex: 1 }} onClick={handleImportWorkers}>
+                    {lang.import} ({importData.length} workers)
+                  </button>
+                  <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowImportModal(false)}>
+                    {lang.cancel}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
