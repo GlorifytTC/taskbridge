@@ -12,6 +12,16 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const [importData, setImportData] = useState([]);
   const [importPreview, setImportPreview] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileColumns, setFileColumns] = useState([]);
+  const [rawJsonData, setRawJsonData] = useState([]);
+  const [columnMapping, setColumnMapping] = useState({
+    name: '',
+    email: '',
+    specializations: '',
+    workerType: '',
+    available: ''
+  });
+  const [showColumnMapping, setShowColumnMapping] = useState(false);
   const [newWorker, setNewWorker] = useState({
     name: '',
     email: '',
@@ -65,8 +75,17 @@ const WorkerManagement = ({ user, onNavigate }) => {
       importSuccess: 'Successfully imported {count} workers',
       templateColumns: 'Excel Format: Name | Email | Specializations | WorkerType | Available',
       fileSelected: 'File selected: {name}',
-      clickToUpload: 'Click "Upload & Preview" to see preview',
-      processing: 'Processing file...'
+      processing: 'Processing file...',
+      columnMapping: 'Column Mapping',
+      mapColumns: 'Please map your Excel columns to the required fields:',
+      mapName: 'Name column:',
+      mapEmail: 'Email column:',
+      mapSpecializations: 'Specializations column:',
+      mapWorkerType: 'Worker Type column:',
+      mapAvailable: 'Available column:',
+      applyMapping: 'Apply Mapping',
+      detectedColumns: 'Detected columns in your file:',
+      useFirstRowAsHeader: 'Using first row as column headers'
     },
     sv: {
       title: 'Arbetarhantering',
@@ -106,8 +125,17 @@ const WorkerManagement = ({ user, onNavigate }) => {
       importSuccess: '{count} arbetare importerades',
       templateColumns: 'Excel Format: Namn | E-post | Specialiseringar | Typ | Tillgänglig',
       fileSelected: 'Fil vald: {name}',
-      clickToUpload: 'Klicka på "Ladda upp & förhandsgranska" för att se förhandsgranskning',
-      processing: 'Bearbetar fil...'
+      processing: 'Bearbetar fil...',
+      columnMapping: 'Kolumnmappning',
+      mapColumns: 'Vänligen mappa dina Excel-kolumner till de obligatoriska fälten:',
+      mapName: 'Namn kolumn:',
+      mapEmail: 'E-post kolumn:',
+      mapSpecializations: 'Specialiseringar kolumn:',
+      mapWorkerType: 'Typ kolumn:',
+      mapAvailable: 'Tillgänglig kolumn:',
+      applyMapping: 'Tillämpa mappning',
+      detectedColumns: 'Upptäckta kolumner i din fil:',
+      useFirstRowAsHeader: 'Använder första raden som kolumnrubriker'
     }
   };
 
@@ -166,9 +194,11 @@ const WorkerManagement = ({ user, onNavigate }) => {
     if (file) {
       console.log('File selected:', file.name, file.type, file.size);
       setSelectedFile(file);
-      // Clear previous preview when new file is selected
       setImportPreview([]);
       setImportData([]);
+      setFileColumns([]);
+      setRawJsonData([]);
+      setShowColumnMapping(false);
     }
   };
 
@@ -187,30 +217,61 @@ const WorkerManagement = ({ user, onNavigate }) => {
         const data = new Uint8Array(evt.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
         
-        console.log('Parsed JSON data:', jsonData);
+        // Convert to JSON with header option
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
         
-        // Map the data to worker format
-        const mappedData = jsonData.map(row => ({
-          name: row.Name || row.name || '',
-          email: row.Email || row.email || '',
-          specializations: row.Specializations || row.specializations ? 
-            (row.Specializations || row.specializations).split(',').map(s => s.trim()) : [],
-          workerType: (row.WorkerType || row.workerType || 'regular').toLowerCase(),
-          isAvailable: (row.Available || row.available) === 'Yes' || (row.Available || row.available) === true
-        })).filter(w => w.name && w.email);
-        
-        console.log('Mapped data:', mappedData);
-        
-        setImportPreview(mappedData.slice(0, 10));
-        setImportData(mappedData);
-        
-        if (mappedData.length === 0) {
-          alert('No valid workers found in file. Please check the format.');
-        } else {
-          alert(`Found ${mappedData.length} workers. Click Import to add them.`);
+        if (!jsonData || jsonData.length === 0) {
+          alert('File is empty');
+          return;
         }
+        
+        // First row contains column headers
+        const headers = jsonData[0];
+        console.log('Detected headers:', headers);
+        setFileColumns(headers);
+        
+        // Convert remaining rows to objects using headers
+        const rows = jsonData.slice(1).map(row => {
+          const obj = {};
+          headers.forEach((header, idx) => {
+            obj[header] = row[idx] || '';
+          });
+          return obj;
+        }).filter(row => Object.values(row).some(v => v)); // Remove empty rows
+        
+        console.log('Parsed rows:', rows);
+        console.log('Sample row:', rows[0]);
+        
+        setRawJsonData(rows);
+        
+        // Try to auto-detect column mapping based on common column names
+        const autoMapping = {
+          name: headers.find(h => h && ['Name', 'name', 'NAMNE', 'Namn', 'Full Name', 'fullname', 'FULLNAME', 'Worker', 'worker'].includes(String(h).trim())) || '',
+          email: headers.find(h => h && ['Email', 'email', 'E-post', 'EPOST', 'mail', 'Mail', 'EMAIL'].includes(String(h).trim())) || '',
+          specializations: headers.find(h => h && ['Specializations', 'specializations', 'Specialiseringar', 'Skills', 'skills', 'Kompetens', 'Subject', 'subject'].includes(String(h).trim())) || '',
+          workerType: headers.find(h => h && ['WorkerType', 'workerType', 'Type', 'typ', 'worker_type', 'WORKERTYPE', 'Role', 'role'].includes(String(h).trim())) || '',
+          available: headers.find(h => h && ['Available', 'available', 'Tillgänglig', 'status', 'Status', 'ACTIVE', 'Active', 'active'].includes(String(h).trim())) || ''
+        };
+        
+        console.log('Auto mapping:', autoMapping);
+        setColumnMapping(autoMapping);
+        
+        // If we have name and email mapped, apply automatically
+        if (autoMapping.name && autoMapping.email) {
+          applyMappingAndPreview(autoMapping, rows);
+        } else {
+          setShowColumnMapping(true);
+          // Show a sample of the data for preview
+          setImportPreview(rows.slice(0, 5).map(row => ({
+            name: row[autoMapping.name] || '?',
+            email: row[autoMapping.email] || '?',
+            specializations: autoMapping.specializations ? (row[autoMapping.specializations] || '').split(',').map(s => s.trim()) : [],
+            workerType: 'regular',
+            isAvailable: true
+          })));
+        }
+        
       } catch (error) {
         console.error('Error parsing file:', error);
         alert('Error parsing file: ' + error.message);
@@ -223,20 +284,86 @@ const WorkerManagement = ({ user, onNavigate }) => {
     reader.readAsArrayBuffer(selectedFile);
   };
 
+  const applyMappingAndPreview = (mapping, dataRows = null) => {
+    const rowsToMap = dataRows || rawJsonData;
+    
+    console.log('Applying mapping:', mapping);
+    console.log('Rows to map:', rowsToMap.length);
+    
+    // Map the data to worker format
+    const mappedData = rowsToMap.map(row => {
+      const name = mapping.name ? row[mapping.name] : '';
+      const email = mapping.email ? row[mapping.email] : '';
+      
+      // Skip rows without name or email
+      if (!name || !email) return null;
+      
+      let specializations = [];
+      if (mapping.specializations && row[mapping.specializations]) {
+        specializations = String(row[mapping.specializations]).split(',').map(s => s.trim()).filter(s => s);
+      }
+      
+      let workerType = 'regular';
+      if (mapping.workerType && row[mapping.workerType]) {
+        const typeValue = String(row[mapping.workerType]).toLowerCase();
+        workerType = typeValue === 'substitute' || typeValue === 'vikarie' ? 'substitute' : 'regular';
+      }
+      
+      let isAvailable = true;
+      if (mapping.available && row[mapping.available]) {
+        const availableValue = String(row[mapping.available]).toLowerCase();
+        isAvailable = availableValue === 'yes' || availableValue === 'true' || availableValue === 'ja' || availableValue === '1';
+      }
+      
+      return {
+        name: String(name).trim(),
+        email: String(email).trim().toLowerCase(),
+        specializations: specializations,
+        workerType: workerType,
+        isAvailable: isAvailable
+      };
+    }).filter(w => w !== null);
+    
+    console.log('Mapped data count:', mappedData.length);
+    console.log('First mapped worker:', mappedData[0]);
+    
+    setImportPreview(mappedData.slice(0, 10));
+    setImportData(mappedData);
+    setShowColumnMapping(false);
+    
+    if (mappedData.length === 0) {
+      alert('No valid workers found in file. Please check the column mapping.');
+    } else {
+      alert(`Found ${mappedData.length} workers. Click Import to add them.`);
+    }
+  };
+
+  const handleApplyMapping = () => {
+    if (!columnMapping.name || !columnMapping.email) {
+      alert('Please map at least Name and Email columns');
+      return;
+    }
+    applyMappingAndPreview(columnMapping);
+  };
+
   const clearFile = () => {
     setSelectedFile(null);
     setImportPreview([]);
     setImportData([]);
+    setFileColumns([]);
+    setRawJsonData([]);
+    setShowColumnMapping(false);
   };
 
   const downloadTemplate = () => {
     const template = [
-      { Name: 'John Doe', Email: 'john@example.com', Specializations: 'Math,Science', WorkerType: 'regular', Available: 'Yes' },
-      { Name: 'Jane Smith', Email: 'jane@example.com', Specializations: 'Physics,Chemistry', WorkerType: 'regular', Available: 'Yes' },
-      { Name: 'Bob Johnson', Email: 'bob@example.com', Specializations: 'Biology', WorkerType: 'substitute', Available: 'No' }
+      ['Name', 'Email', 'Specializations', 'WorkerType', 'Available'],
+      ['John Doe', 'john@example.com', 'Math,Science', 'regular', 'Yes'],
+      ['Jane Smith', 'jane@example.com', 'Physics,Chemistry', 'regular', 'Yes'],
+      ['Bob Johnson', 'bob@example.com', 'Biology', 'substitute', 'No']
     ];
     
-    const ws = XLSX.utils.json_to_sheet(template);
+    const ws = XLSX.utils.aoa_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Workers');
     XLSX.writeFile(wb, 'worker_template.xlsx');
@@ -248,10 +375,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
       return;
     }
     
+    if (!window.confirm(`Import ${importData.length} workers?`)) return;
+    
     try {
       const token = localStorage.getItem('token');
       let successCount = 0;
       let errorCount = 0;
+      const errors = [];
       
       for (const worker of importData) {
         try {
@@ -262,15 +392,20 @@ const WorkerManagement = ({ user, onNavigate }) => {
         } catch (err) {
           console.error('Error importing worker:', worker.name, err);
           errorCount++;
+          errors.push(`${worker.name}: ${err.response?.data?.message || err.message}`);
         }
       }
       
-      alert(lang.importSuccess.replace('{count}', successCount) + (errorCount > 0 ? ` (${errorCount} failed)` : ''));
-      setShowImportModal(false);
-      setImportData([]);
-      setImportPreview([]);
-      setSelectedFile(null);
-      fetchWorkers();
+      const message = lang.importSuccess.replace('{count}', successCount) + (errorCount > 0 ? `\nFailed: ${errorCount}\n${errors.slice(0, 3).join('\n')}` : '');
+      alert(message);
+      
+      if (successCount > 0) {
+        setShowImportModal(false);
+        setImportData([]);
+        setImportPreview([]);
+        setSelectedFile(null);
+        fetchWorkers();
+      }
     } catch (error) {
       console.error('Error importing workers:', error);
       alert('Error importing workers: ' + (error.response?.data?.message || error.message));
@@ -379,7 +514,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
     setWorkers(workers.map(w => w._id === id ? { ...w, selected: !w.selected } : w));
   };
 
-  // Close button styles
   const closeButtonStyles = {
     background: 'rgba(239, 68, 68, 0.2)',
     border: '1px solid #ef4444',
@@ -403,13 +537,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={closeButtonStyles}
-            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')} style={closeButtonStyles}>
             {lang.close}
           </button>
         </div>
@@ -436,13 +564,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={closeButtonStyles}
-            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')} style={closeButtonStyles}>
             {lang.close}
           </button>
         </div>
@@ -472,13 +594,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
               {lang.addWorker}
             </button>
           </div>
-          <button 
-            className="close-button" 
-            onClick={() => onNavigate('superadmin')}
-            style={closeButtonStyles}
-            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
-          >
+          <button className="close-button" onClick={() => onNavigate('superadmin')} style={closeButtonStyles}>
             {lang.close}
           </button>
         </div>
@@ -634,7 +750,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
                 {lang.templateColumns}
               </p>
               
-              {/* File selection area */}
               <div style={{
                 background: 'rgba(255,255,255,0.05)',
                 borderRadius: '12px',
@@ -676,9 +791,94 @@ const WorkerManagement = ({ user, onNavigate }) => {
               </div>
             </div>
 
+            {/* Column Mapping UI */}
+            {showColumnMapping && fileColumns.length > 0 && (
+              <div style={{
+                background: 'rgba(0, 209, 255, 0.1)',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px',
+                border: '1px solid rgba(0, 209, 255, 0.3)'
+              }}>
+                <h3 style={{ color: '#00d1ff', marginBottom: '12px' }}>{lang.columnMapping}</h3>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', marginBottom: '8px' }}>
+                  {lang.useFirstRowAsHeader}
+                </p>
+                <p style={{ color: '#f59e0b', fontSize: '12px', marginBottom: '16px' }}>
+                  📋 {lang.detectedColumns} {fileColumns.join(', ')}
+                </p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '4px' }}>{lang.mapName} *</label>
+                    <select
+                      value={columnMapping.name}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value })}
+                      className="form-select"
+                      style={{ margin: 0 }}
+                    >
+                      <option value="">Select column...</option>
+                      {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '4px' }}>{lang.mapEmail} *</label>
+                    <select
+                      value={columnMapping.email}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, email: e.target.value })}
+                      className="form-select"
+                      style={{ margin: 0 }}
+                    >
+                      <option value="">Select column...</option>
+                      {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '4px' }}>{lang.mapSpecializations}</label>
+                    <select
+                      value={columnMapping.specializations}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, specializations: e.target.value })}
+                      className="form-select"
+                      style={{ margin: 0 }}
+                    >
+                      <option value="">Skip</option>
+                      {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '4px' }}>{lang.mapWorkerType}</label>
+                    <select
+                      value={columnMapping.workerType}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, workerType: e.target.value })}
+                      className="form-select"
+                      style={{ margin: 0 }}
+                    >
+                      <option value="">Skip (default: regular)</option>
+                      {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '4px' }}>{lang.mapAvailable}</label>
+                    <select
+                      value={columnMapping.available}
+                      onChange={(e) => setColumnMapping({ ...columnMapping, available: e.target.value })}
+                      className="form-select"
+                      style={{ margin: 0 }}
+                    >
+                      <option value="">Skip (default: Yes)</option>
+                      {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button className="btn-primary" onClick={handleApplyMapping} style={{ width: '100%' }}>
+                  {lang.applyMapping}
+                </button>
+              </div>
+            )}
+
             {importPreview.length > 0 && (
               <>
-                <h3 style={{ color: 'white', marginBottom: '12px' }}>{lang.preview} (First 10 rows)</h3>
+                <h3 style={{ color: 'white', marginBottom: '12px' }}>{lang.preview} (First {importPreview.length} rows)</h3>
                 <div className="data-table" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                   <table style={{ fontSize: '12px' }}>
                     <thead>
@@ -695,7 +895,7 @@ const WorkerManagement = ({ user, onNavigate }) => {
                         <tr key={idx}>
                           <td>{worker.name}</td>
                           <td>{worker.email}</td>
-                          <td>{worker.specializations?.join(', ')}</td>
+                          <td>{worker.specializations?.join(', ') || '-'}</td>
                           <td>
                             <span className={`badge ${worker.workerType === 'regular' ? 'badge-success' : 'badge-warning'}`}>
                               {worker.workerType === 'regular' ? lang.regular : lang.substitute}
