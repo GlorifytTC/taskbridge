@@ -87,41 +87,30 @@ const WorkerManagement = ({ user, onNavigate }) => {
   }, []);
 
   const fetchWorkers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching workers from:', `${API_URL}/workers`);
-      console.log('Token exists:', !!token);
-      
-      if (!token) {
-        console.error('No token found!');
-        setError('No authentication token found');
-        setLoading(false);
-        return;
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    console.log('API_URL:', API_URL);
+    console.log('Full URL:', `${API_URL}/workers`);
+    
+    // Try with full URL directly
+    const res = await axios.get(`https://taskbridge-production-9d91.up.railway.app/api/workers`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-      
-      const res = await axios.get(`${API_URL}/workers`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('Response status:', res.status);
-      console.log('Response data:', res.data);
-      
-      if (res.data && res.data.data) {
-        setWorkers(res.data.data);
-      } else {
-        setWorkers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching workers:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      setError(error.response?.data?.message || error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+    
+    console.log('Response:', res.data);
+    setWorkers(res.data.data);
+  } catch (error) {
+    console.error('Error fetching workers:', error);
+    console.error('Error response:', error.response);
+    alert('Error fetching workers: ' + (error.response?.data?.error || error.message));
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddWorker = async () => {
     if (!newWorker.name || !newWorker.email) {
