@@ -1671,16 +1671,16 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   
   {/* ============ NEW ROOM ASSIGNMENT SYSTEM TABS ============ */}
   <button onClick={() => onNavigate('rooms')} style={{...styles.tab, background: activeTab === 'rooms' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-    🏠 Rooms
+     Rooms
   </button>
   <button onClick={() => onNavigate('workers')} style={{...styles.tab, background: activeTab === 'workers' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-    👥 Workers
+     Workers
   </button>
   <button onClick={() => onNavigate('groups')} style={{...styles.tab, background: activeTab === 'groups' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-    📋 Groups
+     Groups
   </button>
   <button onClick={() => onNavigate('sorting')} style={{...styles.tab, background: activeTab === 'sorting' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-    ⚙️ Sorting
+     Sorting
   </button>
 </div>
 

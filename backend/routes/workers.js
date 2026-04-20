@@ -42,4 +42,4 @@ const workerSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Worker', workerSchema);
+module.exports = mongoose.models.Worker || mongoose.model('Worker', workerSchema);
