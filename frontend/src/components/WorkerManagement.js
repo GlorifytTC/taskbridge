@@ -65,7 +65,8 @@ const WorkerManagement = ({ user, onNavigate }) => {
       importSuccess: 'Successfully imported {count} workers',
       templateColumns: 'Excel Format: Name | Email | Specializations | WorkerType | Available',
       fileSelected: 'File selected: {name}',
-      clickToUpload: 'Click "Upload & Preview" to see preview'
+      clickToUpload: 'Click "Upload & Preview" to see preview',
+      processing: 'Processing file...'
     },
     sv: {
       title: 'Arbetarhantering',
@@ -105,7 +106,8 @@ const WorkerManagement = ({ user, onNavigate }) => {
       importSuccess: '{count} arbetare importerades',
       templateColumns: 'Excel Format: Namn | E-post | Specialiseringar | Typ | Tillgänglig',
       fileSelected: 'Fil vald: {name}',
-      clickToUpload: 'Klicka på "Ladda upp & förhandsgranska" för att se förhandsgranskning'
+      clickToUpload: 'Klicka på "Ladda upp & förhandsgranska" för att se förhandsgranskning',
+      processing: 'Bearbetar fil...'
     }
   };
 
@@ -162,7 +164,11 @@ const WorkerManagement = ({ user, onNavigate }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      console.log('File selected:', file.name, file.type, file.size);
       setSelectedFile(file);
+      // Clear previous preview when new file is selected
+      setImportPreview([]);
+      setImportData([]);
     }
   };
 
@@ -172,25 +178,47 @@ const WorkerManagement = ({ user, onNavigate }) => {
       return;
     }
 
+    console.log('Processing file:', selectedFile.name);
+    alert(lang.processing + ' ' + selectedFile.name);
+
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-      
-      // Map the data to worker format
-      const mappedData = jsonData.map(row => ({
-        name: row.Name || row.name || '',
-        email: row.Email || row.email || '',
-        specializations: row.Specializations || row.specializations ? 
-          (row.Specializations || row.specializations).split(',').map(s => s.trim()) : [],
-        workerType: (row.WorkerType || row.workerType || 'regular').toLowerCase(),
-        isAvailable: (row.Available || row.available) === 'Yes' || (row.Available || row.available) === true
-      })).filter(w => w.name && w.email);
-      
-      setImportPreview(mappedData.slice(0, 10));
-      setImportData(mappedData);
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        
+        console.log('Parsed JSON data:', jsonData);
+        
+        // Map the data to worker format
+        const mappedData = jsonData.map(row => ({
+          name: row.Name || row.name || '',
+          email: row.Email || row.email || '',
+          specializations: row.Specializations || row.specializations ? 
+            (row.Specializations || row.specializations).split(',').map(s => s.trim()) : [],
+          workerType: (row.WorkerType || row.workerType || 'regular').toLowerCase(),
+          isAvailable: (row.Available || row.available) === 'Yes' || (row.Available || row.available) === true
+        })).filter(w => w.name && w.email);
+        
+        console.log('Mapped data:', mappedData);
+        
+        setImportPreview(mappedData.slice(0, 10));
+        setImportData(mappedData);
+        
+        if (mappedData.length === 0) {
+          alert('No valid workers found in file. Please check the format.');
+        } else {
+          alert(`Found ${mappedData.length} workers. Click Import to add them.`);
+        }
+      } catch (error) {
+        console.error('Error parsing file:', error);
+        alert('Error parsing file: ' + error.message);
+      }
+    };
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      alert('Error reading file');
     };
     reader.readAsArrayBuffer(selectedFile);
   };
@@ -351,6 +379,20 @@ const WorkerManagement = ({ user, onNavigate }) => {
     setWorkers(workers.map(w => w._id === id ? { ...w, selected: !w.selected } : w));
   };
 
+  // Close button styles
+  const closeButtonStyles = {
+    background: 'rgba(239, 68, 68, 0.2)',
+    border: '1px solid #ef4444',
+    borderRadius: '8px',
+    color: '#ef4444',
+    cursor: 'pointer',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    padding: '8px 16px',
+    transition: 'all 0.3s ease',
+    marginLeft: '16px'
+  };
+
   if (error) {
     return (
       <div className="room-assignment-container">
@@ -361,7 +403,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button className="close-button" onClick={() => onNavigate('superadmin')}>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={closeButtonStyles}
+            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+          >
             {lang.close}
           </button>
         </div>
@@ -388,7 +436,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
               <p className="subtitle">{lang.subtitle}</p>
             </div>
           </div>
-          <button className="close-button" onClick={() => onNavigate('superadmin')}>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={closeButtonStyles}
+            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+          >
             {lang.close}
           </button>
         </div>
@@ -418,7 +472,13 @@ const WorkerManagement = ({ user, onNavigate }) => {
               {lang.addWorker}
             </button>
           </div>
-          <button className="close-button" onClick={() => onNavigate('superadmin')}>
+          <button 
+            className="close-button" 
+            onClick={() => onNavigate('superadmin')}
+            style={closeButtonStyles}
+            onMouseEnter={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.3)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+          >
             {lang.close}
           </button>
         </div>
@@ -610,9 +670,6 @@ const WorkerManagement = ({ user, onNavigate }) => {
                     </button>
                     <p style={{ color: '#10b981', fontSize: '13px', marginTop: '12px' }}>
                       ✓ {lang.fileSelected.replace('{name}', selectedFile.name)}
-                    </p>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>
-                      {lang.clickToUpload}
                     </p>
                   </>
                 )}
