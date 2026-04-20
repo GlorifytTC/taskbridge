@@ -32,7 +32,7 @@ const About = ({ onNavigate, user }) => {
       },
       { threshold: 0.2 }
     );
-    const elements = ['hero', 'mission', 'services', 'features', 'owner'];
+    const elements = ['hero', 'mission', 'services', 'features', 'howItWorks', 'owner'];
     elements.forEach((id) => {
       const element = document.getElementById(id);
       if (element) observer.observe(element);
@@ -76,9 +76,37 @@ const About = ({ onNavigate, user }) => {
       employeeAppDesc: 'Employees can view shifts, apply for openings, and track their hours.',
       reporting: 'Reporting',
       reportingDesc: 'Export detailed reports on attendance, payroll, and branch performance.',
+      
+      // NEW: How It Works Section
+      howItWorksTitle: 'How TaskBridge Works',
+      step1Title: '1. Create Organization & Branches',
+      step1Desc: 'Set up your organization, add multiple branches, and configure your workforce structure.',
+      step2Title: '2. Add Staff & Define Roles',
+      step2Desc: 'Add employees, admins, and super admins. Define job descriptions and specializations.',
+      step3Title: '3. Create Tasks & Shifts',
+      step3Desc: 'Create tasks with specific dates, times, locations, and required skills. Set maximum employees per shift.',
+      step4Title: '4. Employees Apply for Tasks',
+      step4Desc: 'Employees view available tasks matching their skills and apply for shifts they want.',
+      step5Title: '5. Admin Approves Applications',
+      step5Desc: 'Administrators review and approve/reject applications. Approved shifts appear on employee calendars.',
+      step6Title: '6. Track & Report',
+      step6Desc: 'Generate reports on attendance, hours worked, and workforce performance.',
+      
+      // NEW: Room Assignment System Section
+      roomSystemTitle: '🏠 Smart Room Assignment System',
+      roomSystemDesc: 'Our intelligent room allocation system automatically matches groups to the best available rooms and staff members.',
+      roomStep1: '📋 Create Groups - Define groups that need placement (classes, teams, patients)',
+      roomStep2: '🏠 Manage Rooms - Set up rooms with capacity and type (classroom, lab, medical)',
+      roomStep3: '👥 Add Workers - Register staff with their specializations and availability',
+      roomStep4: '⚙️ Auto-Sort - Click one button to automatically match groups to rooms and workers',
+      roomStep5: '🗺️ View Map - See all assignments in a visual map layout',
+      roomStep6: '🧠 Learning System - The system learns from your overrides to improve future suggestions',
+      
       ownerTitle: 'Project Owner & Lead Developer',
       developedBy: 'Developed by',
-      pic1Caption: 'Central Dashboard', pic2Caption: 'Smart Calendar', pic3Caption: 'Analytics'
+      pic1Caption: 'Central Dashboard', 
+      pic2Caption: 'Smart Calendar', 
+      pic3Caption: 'Analytics'
     },
     sv: {
       nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
@@ -88,9 +116,12 @@ const About = ({ onNavigate, user }) => {
       missionTitle: 'Vårt Uppdrag',
       missionText: 'TaskBridge ger skolor, sjukhus och organisationer intelligent schemaläggning, realtidsnärvaro och sömlös kommunikation — allt i en plattform.',
       whoItServes: 'Vem Vi Tjänar',
-      schools: 'Skolor', schoolsDesc: 'Hantera lärarscheman, vikarietäckning och extracurricular aktiviteter',
-      hospitals: 'Sjukhus', hospitalsDesc: 'Koordinera skift för sjuksköterskor, läkarrotationer och akuttäckning',
-      organizations: 'Företag', organizationsDesc: 'Effektivisera personalverksamhet över flera filialer och avdelningar',
+      schools: 'Skolor', 
+      schoolsDesc: 'Hantera lärarscheman, vikarietäckning och extracurricular aktiviteter',
+      hospitals: 'Sjukhus', 
+      hospitalsDesc: 'Koordinera skift för sjuksköterskor, läkarrotationer och akuttäckning',
+      organizations: 'Företag', 
+      organizationsDesc: 'Effektivisera personalverksamhet över flera filialer och avdelningar',
       featuresTitle: 'Plattformsfunktioner',
       shiftManagement: 'Skifthallning',
       shiftManagementDesc: 'Skapa, tilldela och spåra skift med automatisk konfliktdetektering och godkännandeprocesser.',
@@ -104,9 +135,37 @@ const About = ({ onNavigate, user }) => {
       employeeAppDesc: 'Anställda kan se skift, söka lediga pass och följa sina timmar.',
       reporting: 'Rapportering',
       reportingDesc: 'Exportera detaljerade rapporter om närvaro, löner och filialprestanda.',
+      
+      // NEW: How It Works Section
+      howItWorksTitle: 'Hur TaskBridge Fungerar',
+      step1Title: '1. Skapa Organisation & Filialer',
+      step1Desc: 'Skapa din organisation, lägg till flera filialer och konfigurera din personalstruktur.',
+      step2Title: '2. Lägg till Personal & Definiera Roller',
+      step2Desc: 'Lägg till anställda, administratörer och superadministratörer. Definiera arbetsbeskrivningar och specialiseringar.',
+      step3Title: '3. Skapa Uppgifter & Skift',
+      step3Desc: 'Skapa uppgifter med specifika datum, tider, platser och erforderliga kompetenser. Ange max antal anställda per skift.',
+      step4Title: '4. Anställda Ansöker om Uppgifter',
+      step4Desc: 'Anställda ser tillgängliga uppgifter som matchar deras kompetenser och ansöker om skift de vill ha.',
+      step5Title: '5. Admin Godkänner Ansökningar',
+      step5Desc: 'Administratörer granskar och godkänner/avslår ansökningar. Godkända skift visas i anställdas kalendrar.',
+      step6Title: '6. Spåra & Rapportera',
+      step6Desc: 'Generera rapporter om närvaro, arbetade timmar och personalprestanda.',
+      
+      // NEW: Room Assignment System Section
+      roomSystemTitle: '🏠 Smart Rumsplacering',
+      roomSystemDesc: 'Vårt intelligenta rumsplaceringssystem matchar automatiskt grupper till de bästa tillgängliga rummen och personalen.',
+      roomStep1: '📋 Skapa Grupper - Definiera grupper som behöver placeras (klasser, team, patienter)',
+      roomStep2: '🏠 Hantera Rum - Skapa rum med kapacitet och typ (klassrum, labb, medicinskt)',
+      roomStep3: '👥 Lägg till Personal - Registrera personal med deras specialiseringar och tillgänglighet',
+      roomStep4: '⚙️ Auto-Sortera - Klicka på en knapp för att automatiskt matcha grupper till rum och personal',
+      roomStep5: '🗺️ Visa Karta - Se alla tilldelningar i en visuell kartlayout',
+      roomStep6: '🧠 Inlärningssystem - Systemet lär sig från dina åsidosättningar för att förbättra framtida förslag',
+      
       ownerTitle: 'Projektägare & Lead Utvecklare',
       developedBy: 'Utvecklad av',
-      pic1Caption: 'Central Dashboard', pic2Caption: 'Smart Kalender', pic3Caption: 'Analys'
+      pic1Caption: 'Central Dashboard', 
+      pic2Caption: 'Smart Kalender', 
+      pic3Caption: 'Analys'
     }
   };
 
@@ -196,6 +255,59 @@ const About = ({ onNavigate, user }) => {
         <div style={styles.missionCard}>
           <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '22px' : isMobile ? '26px' : '32px' }}>{lang.missionTitle}</h2>
           <p style={{ ...styles.missionText, fontSize: isSmall ? '14px' : isMobile ? '15px' : '18px' }}>{lang.missionText}</p>
+        </div>
+      </div>
+
+      {/* How It Works - NEW SECTION */}
+      <div id="howItWorks" style={{ ...styles.section, ...fadeIn('howItWorks'), padding: isSmall ? '20px 16px' : isMobile ? '30px 20px' : '40px' }}>
+        <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '22px' : isMobile ? '26px' : '32px' }}>{lang.howItWorksTitle}</h2>
+        <div style={{ ...styles.howItWorksGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>🏢</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step1Title}</h3>
+            <p>{lang.step1Desc}</p>
+          </div>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>👥</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step2Title}</h3>
+            <p>{lang.step2Desc}</p>
+          </div>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>📋</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step3Title}</h3>
+            <p>{lang.step3Desc}</p>
+          </div>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>✍️</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step4Title}</h3>
+            <p>{lang.step4Desc}</p>
+          </div>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>✅</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step5Title}</h3>
+            <p>{lang.step5Desc}</p>
+          </div>
+          <div style={styles.howItWorksCard}>
+            <div style={styles.howItWorksIcon}>📊</div>
+            <h3 style={styles.howItWorksTitle}>{lang.step6Title}</h3>
+            <p>{lang.step6Desc}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Room Assignment System Section - NEW */}
+      <div id="roomSystem" style={{ ...styles.section, ...fadeIn('roomSystem'), padding: isSmall ? '20px 16px' : isMobile ? '30px 20px' : '40px' }}>
+        <div style={styles.roomSystemCard}>
+          <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '22px' : isMobile ? '26px' : '32px' }}>{lang.roomSystemTitle}</h2>
+          <p style={styles.roomSystemDesc}>{lang.roomSystemDesc}</p>
+          <div style={styles.roomSystemSteps}>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>📋</span> {lang.roomStep1}</div>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>🏠</span> {lang.roomStep2}</div>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>👥</span> {lang.roomStep3}</div>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>⚙️</span> {lang.roomStep4}</div>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>🗺️</span> {lang.roomStep5}</div>
+            <div style={styles.roomStep}><span style={styles.roomStepIcon}>🧠</span> {lang.roomStep6}</div>
+          </div>
         </div>
       </div>
 
@@ -557,6 +669,63 @@ const styles = {
     maxWidth: '800px',
     margin: '0 auto',
   },
+  // NEW: How It Works Styles
+  howItWorksGrid: {
+    display: 'grid',
+    gap: '24px',
+  },
+  howItWorksCard: {
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '20px',
+    padding: '32px',
+    textAlign: 'center',
+    transition: 'transform 0.3s ease',
+  },
+  howItWorksIcon: {
+    fontSize: '48px',
+    marginBottom: '16px',
+  },
+  howItWorksTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#00d1ff',
+    marginBottom: '12px',
+  },
+  // NEW: Room System Styles
+  roomSystemCard: {
+    background: 'linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(138, 43, 226, 0.1))',
+    borderRadius: '28px',
+    padding: '48px',
+    textAlign: 'center',
+    border: '1px solid rgba(0, 209, 255, 0.3)',
+  },
+  roomSystemDesc: {
+    fontSize: '18px',
+    lineHeight: '1.6',
+    color: 'rgba(255, 255, 255, 0.8)',
+    maxWidth: '800px',
+    margin: '0 auto 32px auto',
+  },
+  roomSystemSteps: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '16px',
+    textAlign: 'left',
+  },
+  roomStep: {
+    background: 'rgba(255, 255, 255, 0.05)',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  roomStepIcon: {
+    fontSize: '20px',
+  },
   servicesGrid: {
     display: 'grid',
     gap: '24px',
@@ -734,7 +903,7 @@ styleSheet.textContent = `
   .navLink:hover, .mobileNavLink:hover {
     color: #00d1ff !important;
   }
-  .serviceCard:hover, .featureImageCard:hover, .featureItem:hover {
+  .serviceCard:hover, .featureImageCard:hover, .featureItem:hover, .howItWorksCard:hover {
     transform: translateY(-4px);
   }
   .ownerLink:hover {
@@ -751,6 +920,9 @@ styleSheet.textContent = `
     nav { padding: 12px 14px !important; }
     .tb-logo-icon { width: 30px !important; height: 30px !important; font-size: 16px !important; border-radius: 8px !important; }
     .tb-logo-text { font-size: 17px !important; }
+    .roomSystemSteps {
+      grid-template-columns: 1fr !important;
+    }
   }
 `;
 document.head.appendChild(styleSheet);

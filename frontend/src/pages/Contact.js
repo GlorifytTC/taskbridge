@@ -7,14 +7,6 @@ const Contact = ({ onNavigate, onLoginClick }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
-  const [formStatus, setFormStatus] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -36,36 +28,12 @@ const Contact = ({ onNavigate, onLoginClick }) => {
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setFormStatus(null);
-
-    // Simulate form submission (replace with actual API call)
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      setFormStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-      setIsSubmitting(false);
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setFormStatus(null), 5000);
-    }, 1500);
-  };
-
   const t = {
     en: {
       nav: { home: 'Home', about: 'About', pricing: 'Pricing', contact: 'Contact' },
       signIn: 'Sign In',
       title: 'Get in Touch',
-      subtitle: 'Have questions? We\'d love to hear from you. Send us a message and we\'ll respond as soon as possible.',
+      subtitle: 'Have questions? We\'d love to hear from you. Reach out to us through any of the channels below.',
       contactInfo: 'Contact Information',
       address: 'Address',
       addressLine: 'Stockholm, Sweden',
@@ -73,30 +41,15 @@ const Contact = ({ onNavigate, onLoginClick }) => {
       phone: 'Phone',
       businessHours: 'Business Hours',
       hours: 'Monday - Friday: 9:00 AM - 6:00 PM',
-      sales: 'Sales',
-      support: 'Support',
-      sendMessage: 'Send Message',
-      yourName: 'Your Name',
-      yourEmail: 'Your Email',
-      subject: 'Subject',
-      yourMessage: 'Your Message',
-      messagePlaceholder: 'Tell us how we can help you...',
-      sending: 'Sending...',
-      send: 'Send Message',
-      successMessage: 'Thank you! Your message has been sent. We\'ll get back to you soon.',
-      errorMessage: 'Something went wrong. Please try again later.',
       followUs: 'Follow Us',
       office: 'Office',
-      generalInquiries: 'General Inquiries',
-      salesInquiries: 'Sales Inquiries',
-      supportInquiries: 'Support Inquiries',
       footer: 'All rights reserved. Developed by'
     },
     sv: {
       nav: { home: 'Hem', about: 'Om Oss', pricing: 'Priser', contact: 'Kontakt' },
       signIn: 'Logga in',
       title: 'Kontakta Oss',
-      subtitle: 'Har du frågor? Vi vill gärna höra från dig. Skicka ett meddelande så svarar vi så snart som möjligt.',
+      subtitle: 'Har du frågor? Vi vill gärna höra från dig. Kontakta oss via någon av kanalerna nedan.',
       contactInfo: 'Kontaktinformation',
       address: 'Adress',
       addressLine: 'Stockholm, Sverige',
@@ -104,23 +57,8 @@ const Contact = ({ onNavigate, onLoginClick }) => {
       phone: 'Telefon',
       businessHours: 'Öppettider',
       hours: 'Måndag - Fredag: 09:00 - 18:00',
-      sales: 'Försäljning',
-      support: 'Support',
-      sendMessage: 'Skicka Meddelande',
-      yourName: 'Ditt Namn',
-      yourEmail: 'Din E-post',
-      subject: 'Ämne',
-      yourMessage: 'Ditt Meddelande',
-      messagePlaceholder: 'Berätta hur vi kan hjälpa dig...',
-      sending: 'Skickar...',
-      send: 'Skicka Meddelande',
-      successMessage: 'Tack! Ditt meddelande har skickats. Vi återkommer snart.',
-      errorMessage: 'Något gick fel. Vänligen försök igen senare.',
       followUs: 'Följ Oss',
       office: 'Kontor',
-      generalInquiries: 'Allmänna Frågor',
-      salesInquiries: 'Försäljningsfrågor',
-      supportInquiries: 'Supportfrågor',
       footer: 'Alla rättigheter förbehållna. Utvecklad av'
     }
   };
@@ -204,122 +142,54 @@ const Contact = ({ onNavigate, onLoginClick }) => {
         </div>
       </div>
 
-      {/* Contact Content */}
-      <div style={{ ...styles.contactWrapper, flexDirection: isMobile ? 'column' : 'row' }}>
-        {/* Contact Info */}
-        <div style={styles.contactInfo}>
+      {/* Contact Content - No Form, Only Info */}
+      <div style={{ ...styles.contactWrapper, flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center' }}>
+        <div style={{ ...styles.contactInfo, maxWidth: isMobile ? '100%' : '600px' }}>
           <h2 style={styles.infoTitle}>{lang.contactInfo}</h2>
           
           <div style={styles.infoItem}>
             <div style={styles.infoIcon}><i className="fas fa-map-marker-alt"></i></div>
             <div>
-              <h4>{lang.address}</h4>
-              <p>{lang.addressLine}</p>
+              <h4 style={styles.whiteText}>{lang.address}</h4>
+              <p style={styles.whiteText}>{lang.addressLine}</p>
             </div>
           </div>
 
           <div style={styles.infoItem}>
             <div style={styles.infoIcon}><i className="fas fa-envelope"></i></div>
             <div>
-              <h4>{lang.email}</h4>
-              <p><a href="mailto:info@taskbridge.com" style={styles.infoLink}>info@taskbridge.com</a></p>
-              <p><a href="mailto:sales@taskbridge.com" style={styles.infoLink}>sales@taskbridge.com</a></p>
-              <p><a href="mailto:support@taskbridge.com" style={styles.infoLink}>support@taskbridge.com</a></p>
+              <h4 style={styles.whiteText}>{lang.email}</h4>
+              <p><a href="mailto:sales@glorifytk.se" style={styles.infoLink}>sales@glorifytk.se</a></p>
             </div>
           </div>
 
           <div style={styles.infoItem}>
             <div style={styles.infoIcon}><i className="fas fa-phone-alt"></i></div>
             <div>
-              <h4>{lang.phone}</h4>
-              <p><a href="tel:+46812345678" style={styles.infoLink}>+46 (0)8 123 456 78</a></p>
+              <h4 style={styles.whiteText}>{lang.phone}</h4>
+              <p><a href="tel:+46769385747" style={styles.infoLink}>0769 385 747</a></p>
             </div>
           </div>
 
           <div style={styles.infoItem}>
             <div style={styles.infoIcon}><i className="fas fa-clock"></i></div>
             <div>
-              <h4>{lang.businessHours}</h4>
-              <p>{lang.hours}</p>
+              <h4 style={styles.whiteText}>{lang.businessHours}</h4>
+              <p style={styles.whiteText}>{lang.hours}</p>
             </div>
           </div>
 
           <div style={styles.socialLinks}>
             <h4 style={styles.socialTitle}>{lang.followUs}</h4>
             <div style={styles.socialIcons}>
-              <a href="#" style={styles.socialIcon}><i className="fab fa-linkedin-in"></i></a>
-              <a href="#" style={styles.socialIcon}><i className="fab fa-twitter"></i></a>
-              <a href="#" style={styles.socialIcon}><i className="fab fa-facebook-f"></i></a>
-              <a href="#" style={styles.socialIcon}><i className="fab fa-instagram"></i></a>
+              <a href="https://www.linkedin.com/company/taskbridge" target="_blank" rel="noopener noreferrer" style={styles.socialIcon}>
+                <i className="fab fa-linkedin-in"></i>
+              </a>
+              <a href="https://www.instagram.com/taskbridge" target="_blank" rel="noopener noreferrer" style={styles.socialIcon}>
+                <i className="fab fa-instagram"></i>
+              </a>
             </div>
           </div>
-        </div>
-
-        {/* Contact Form */}
-        <div style={styles.contactForm}>
-          <h2 style={styles.formTitle}>{lang.sendMessage}</h2>
-          
-          {formStatus === 'success' && (
-            <div style={styles.successAlert}>
-              <i className="fas fa-check-circle"></i> {lang.successMessage}
-            </div>
-          )}
-          
-          {formStatus === 'error' && (
-            <div style={styles.errorAlert}>
-              <i className="fas fa-exclamation-circle"></i> {lang.errorMessage}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              name="name"
-              placeholder={lang.yourName}
-              value={formData.name}
-              onChange={handleInputChange}
-              style={styles.input}
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder={lang.yourEmail}
-              value={formData.email}
-              onChange={handleInputChange}
-              style={styles.input}
-              required
-            />
-            <input
-              type="text"
-              name="subject"
-              placeholder={lang.subject}
-              value={formData.subject}
-              onChange={handleInputChange}
-              style={styles.input}
-              required
-            />
-            <textarea
-              name="message"
-              placeholder={lang.messagePlaceholder}
-              value={formData.message}
-              onChange={handleInputChange}
-              style={styles.textarea}
-              rows="5"
-              required
-            ></textarea>
-            <button
-              type="submit"
-              style={styles.submitButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <><i className="fas fa-spinner fa-spin"></i> {lang.sending}</>
-              ) : (
-                <><i className="fas fa-paper-plane"></i> {lang.send}</>
-              )}
-            </button>
-          </form>
         </div>
       </div>
 
@@ -589,9 +459,12 @@ const styles = {
     fontSize: '18px',
   },
   infoLink: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'white',
     textDecoration: 'none',
     transition: 'color 0.3s ease',
+  },
+  whiteText: {
+    color: 'white',
   },
   socialLinks: {
     marginTop: '24px',
@@ -616,73 +489,6 @@ const styles = {
     color: 'white',
     textDecoration: 'none',
     transition: 'all 0.3s ease',
-  },
-  contactForm: {
-    flex: 1,
-    background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: '24px',
-    padding: '32px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-  formTitle: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '24px',
-  },
-  input: {
-    width: '100%',
-    padding: '14px 16px',
-    marginBottom: '16px',
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '14px',
-    boxSizing: 'border-box',
-  },
-  textarea: {
-    width: '100%',
-    padding: '14px 16px',
-    marginBottom: '16px',
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    resize: 'vertical',
-    boxSizing: 'border-box',
-  },
-  submitButton: {
-    width: '100%',
-    padding: '14px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'transform 0.2s ease',
-  },
-  successAlert: {
-    padding: '12px 16px',
-    background: 'rgba(16, 185, 129, 0.1)',
-    border: '1px solid #10b981',
-    borderRadius: '12px',
-    color: '#10b981',
-    marginBottom: '20px',
-    fontSize: '14px',
-  },
-  errorAlert: {
-    padding: '12px 16px',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid #ef4444',
-    borderRadius: '12px',
-    color: '#ef4444',
-    marginBottom: '20px',
-    fontSize: '14px',
   },
   mapSection: {
     position: 'relative',
@@ -728,7 +534,6 @@ styleSheet.textContent = `
   .mobileNavLink:hover { color: #00d1ff !important; }
   .infoLink:hover { color: #00d1ff !important; }
   .socialIcon:hover { background: #00d1ff !important; transform: translateY(-2px); }
-  .submitButton:hover { transform: translateY(-2px); }
   input:focus, textarea:focus { border-color: #00d1ff !important; outline: none; }
 
   @media (max-width: 768px) {
@@ -740,6 +545,9 @@ styleSheet.textContent = `
     nav { padding: 12px 14px !important; }
     .tb-logo-icon { width: 30px !important; height: 30px !important; font-size: 16px !important; border-radius: 8px !important; }
     .tb-logo-text { font-size: 17px !important; }
+    .contactInfo {
+      max-width: 100% !important;
+    }
   }
 `;
 document.head.appendChild(styleSheet);
