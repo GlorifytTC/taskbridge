@@ -51,25 +51,32 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
     employees: { current: 0, limit: 0, percentage: 0, warning: false }
   });
 
+  // Track which employee is being edited
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  const [editEmployeeData, setEditEmployeeData] = useState({});
 
-const quickQuestions = {
-  en: [
-    "📋 How do I create a new task?",
-    "👥 How to add a new employee?",
-    "🏢 How to manage branches?",
-    "📊 How to generate reports?",
-    "🔑 How to reset a user's password?",
-    "✅ How to approve applications?"
-  ],
-  sv: [
-    "📋 Hur skapar jag en ny uppgift?",
-    "👥 Hur lägger jag till en ny anställd?",
-    "🏢 Hur hanterar jag avdelningar?",
-    "📊 Hur genererar jag rapporter?",
-    "🔑 Hur återställer jag lösenord?",
-    "✅ Hur godkänner jag ansökningar?"
-  ]
-};
+  // Track which task is being edited
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTaskData, setEditTaskData] = useState({});
+
+  const quickQuestions = {
+    en: [
+      "📋 How do I create a new task?",
+      "👥 How to add a new employee?",
+      "🏢 How to manage branches?",
+      "📊 How to generate reports?",
+      "🔑 How to reset a user's password?",
+      "✅ How to approve applications?"
+    ],
+    sv: [
+      "📋 Hur skapar jag en ny uppgift?",
+      "👥 Hur lägger jag till en ny anställd?",
+      "🏢 Hur hanterar jag avdelningar?",
+      "📊 Hur genererar jag rapporter?",
+      "🔑 Hur återställer jag lösenord?",
+      "✅ Hur godkänner jag ansökningar?"
+    ]
+  };
 
   const t = {
     en: {
@@ -110,7 +117,10 @@ const quickQuestions = {
       limitWarning: 'You have reached the limit for employees. Please contact your super admin to upgrade.',
       currentPlan: 'Current Plan',
       daysRemaining: 'days remaining',
-      usage: 'Usage'
+      usage: 'Usage',
+      edit: 'Edit',
+      save: 'Save',
+      cancel: 'Cancel'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -150,7 +160,10 @@ const quickQuestions = {
       limitWarning: 'Du har nått gränsen för anställda. Kontakta din superadmin för att uppgradera.',
       currentPlan: 'Nuvarande plan',
       daysRemaining: 'dagar kvar',
-      usage: 'Användning'
+      usage: 'Användning',
+      edit: 'Redigera',
+      save: 'Spara',
+      cancel: 'Avbryt'
     }
   };
 
@@ -168,12 +181,101 @@ const quickQuestions = {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Check limit before creating employee
   const canAddEmployee = () => {
     const limit = usageData.employees?.limit;
     const current = usageData.employees?.current;
     if (limit === Infinity) return true;
     return current < limit;
+  };
+
+  // Employee edit handlers
+  const startEditEmployee = (emp) => {
+    setEditingEmployeeId(emp._id);
+    setEditEmployeeData({
+      name: emp.name,
+      email: emp.email,
+      isActive: emp.isActive
+    });
+  };
+
+  const cancelEditEmployee = () => {
+    setEditingEmployeeId(null);
+    setEditEmployeeData({});
+  };
+
+  const saveEditEmployee = async (empId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editEmployeeData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Employee updated!' : 'Anställd uppdaterad!', 'success');
+        setEditingEmployeeId(null);
+        setEditEmployeeData({});
+        fetchDashboardData();
+        fetchSubscriptionData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating employee', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      showToast('Error updating employee', 'error');
+    }
+  };
+
+  // Task edit handlers
+  const startEditTask = (task) => {
+    setEditingTaskId(task._id);
+    setEditTaskData({
+      title: task.title,
+      description: task.description || '',
+      date: task.date?.split('T')[0] || '',
+      startTime: task.startTime,
+      endTime: task.endTime,
+      maxEmployees: task.maxEmployees,
+      location: task.location || '',
+      status: task.status
+    });
+  };
+
+  const cancelEditTask = () => {
+    setEditingTaskId(null);
+    setEditTaskData({});
+  };
+
+  const saveEditTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editTaskData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Task updated!' : 'Uppgift uppdaterad!', 'success');
+        setEditingTaskId(null);
+        setEditTaskData({});
+        fetchDashboardData();
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating task', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      showToast('Error updating task', 'error');
+    }
   };
 
   useEffect(() => {
@@ -563,44 +665,44 @@ const quickQuestions = {
   };
 
   const sendChatMessage = async (message = null) => {
-  const userMessageText = message || chatInput;
-  if (!userMessageText.trim()) return;
-  
-  const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
-  setChatMessages([...chatMessages, userMessage]);
-  setChatInput('');
-  setIsAiTyping(true);
-  
-  setTimeout(() => {
-    const input = userMessageText.toLowerCase();
-    let response = "";
+    const userMessageText = message || chatInput;
+    if (!userMessageText.trim()) return;
     
-    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
-      response = language === 'en' 
-        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**"
-        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**";
-    } 
-    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd')) {
-      response = language === 'en'
-        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**"
-        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**";
-    }
-    else if (input.includes('approve application') || input.includes('godkänn ansökan')) {
-      response = language === 'en'
-        ? "✅ **To approve applications:**\n\n1. Go to the **Requests** tab\n2. Find pending applications\n3. Click the **✓ (green check)** to approve\n4. Click the **✗ (red X)** to reject\n\nYou can also add a rejection reason."
-        : "✅ **För att godkänna ansökningar:**\n\n1. Gå till fliken **Förfrågningar**\n2. Hitta väntande ansökningar\n3. Klicka på **✓ (grön bock)** för att godkänna\n4. Klicka på **✗ (rött X)** för att avslå\n\nDu kan också lägga till en anledning vid avslag.";
-    }
-    else {
-      response = language === 'en'
-        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n✅ Approving applications\n📊 Generating reports\n🔑 Resetting passwords\n\nWhat would you like to learn about?"
-        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n✅ Godkänna ansökningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n\nVad vill du lära dig om?";
-    }
+    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
+    setChatMessages([...chatMessages, userMessage]);
+    setChatInput('');
+    setIsAiTyping(true);
     
-    const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString() };
-    setChatMessages(prev => [...prev, aiMessage]);
-    setIsAiTyping(false);
-  }, 800);
-};
+    setTimeout(() => {
+      const input = userMessageText.toLowerCase();
+      let response = "";
+      
+      if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
+        response = language === 'en' 
+          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**"
+          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**";
+      } 
+      else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd')) {
+        response = language === 'en'
+          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**"
+          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**";
+      }
+      else if (input.includes('approve application') || input.includes('godkänn ansökan')) {
+        response = language === 'en'
+          ? "✅ **To approve applications:**\n\n1. Go to the **Requests** tab\n2. Find pending applications\n3. Click the **✓ (green check)** to approve\n4. Click the **✗ (red X)** to reject\n\nYou can also add a rejection reason."
+          : "✅ **För att godkänna ansökningar:**\n\n1. Gå till fliken **Förfrågningar**\n2. Hitta väntande ansökningar\n3. Klicka på **✓ (grön bock)** för att godkänna\n4. Klicka på **✗ (rött X)** för att avslå\n\nDu kan också lägga till en anledning vid avslag.";
+      }
+      else {
+        response = language === 'en'
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n✅ Approving applications\n📊 Generating reports\n🔑 Resetting passwords\n\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n✅ Godkänna ansökningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n\nVad vill du lära dig om?";
+      }
+      
+      const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString() };
+      setChatMessages(prev => [...prev, aiMessage]);
+      setIsAiTyping(false);
+    }, 800);
+  };
 
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
@@ -753,13 +855,61 @@ const quickQuestions = {
                 <tbody>
                   {filteredEmployees.map(emp => (
                     <tr key={emp._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <input
+                            type="text"
+                            value={editEmployeeData.name || emp.name}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          emp.name
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <input
+                            type="email"
+                            value={editEmployeeData.email || emp.email}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email
+                        )}
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                        <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                        {editingEmployeeId === emp._id ? (
+                          <select
+                            value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                          </select>
+                        ) : (
+                          <span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
+                            {emp.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾 {lang.save}</button>
+                            <button onClick={cancelEditEmployee} style={styles.cancelButton}>✕ {lang.cancel}</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditEmployee(emp)} style={styles.editButton}>✏️ {lang.edit}</button>
+                            <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                            <button onClick={() => handleDeleteEmployee(emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -789,11 +939,62 @@ const quickQuestions = {
                 <tbody>
                   {tasks.map(task => (
                     <tr key={task._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(task.date).toLocaleDateString()}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingTaskId === task._id ? (
+                          <input
+                            type="text"
+                            value={editTaskData.title || task.title}
+                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingTaskId === task._id ? (
+                          <input
+                            type="date"
+                            value={editTaskData.date || task.date?.split('T')[0]}
+                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          new Date(task.date).toLocaleDateString()
+                        )}
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>{task.status}</span></td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => handleDeleteTask(task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingTaskId === task._id ? (
+                          <select
+                            value={editTaskData.status || task.status}
+                            onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="open">Open</option>
+                            <option value="closed">Closed</option>
+                            <option value="in-progress">In Progress</option>
+                          </select>
+                        ) : (
+                          <span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>
+                            {task.status}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingTaskId === task._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditTask(task._id)} style={styles.saveButton}>💾 {lang.save}</button>
+                            <button onClick={cancelEditTask} style={styles.cancelButton}>✕ {lang.cancel}</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditTask(task)} style={styles.editButton}>✏️ {lang.edit}</button>
+                            <button onClick={() => handleDeleteTask(task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -813,7 +1014,7 @@ const quickQuestions = {
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>{lang.task}</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>{lang.date}</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>{lang.actions}</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
@@ -845,7 +1046,7 @@ const quickQuestions = {
         )}
       </div>
 
-      {/* All modals - keep as is */}
+      {/* All modals - keep as is with responsive widths */}
       {showCreateEmployeeModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
           <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '400px'}} onClick={(e) => e.stopPropagation()}>
@@ -983,69 +1184,13 @@ const quickQuestions = {
       )}
 
       {/* Chat Button */}
-<button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
-  <i className="fas fa-robot"></i>
-</button>
-
-{/* Chat Modal */}
-{showChat && (
-  <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
-    <div style={styles.chatHeader}>
-      <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-      <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
-    </div>
-    <div style={styles.chatMessages}>
-      {chatMessages.map((msg, i) => (
-        <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
-          <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
-            {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
-            <div style={{ whiteSpace: 'pre-line', fontSize: isSmall ? '11px' : '12px', lineHeight: '1.5' }}>{msg.text}</div>
-            <div style={styles.messageTime}>{msg.time}</div>
-          </div>
-        </div>
-      ))}
-      {isAiTyping && (
-        <div style={styles.typingIndicator}>
-          <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
-          {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
-        </div>
-      )}
-    </div>
-    
-    {/* Quick Questions */}
-    {chatMessages.length < 2 && (
-      <div style={styles.quickQuestionsContainer}>
-        <div style={styles.quickQuestionsHeader}>
-          <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
-        </div>
-        <div style={styles.quickQuestionsGrid}>
-          {quickQuestions[language].map((q, idx) => (
-            <button key={idx} onClick={() => sendChatMessage(q)} style={styles.quickQuestionButton}>
-              {q}
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
-    
-    <div style={styles.chatInputContainer}>
-      <input
-        type="text"
-        placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."}
-        value={chatInput}
-        onChange={(e) => setChatInput(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-        style={styles.chatInput}
-      />
-      <button onClick={() => sendChatMessage()} style={styles.chatSend}>
-        <i className="fas fa-paper-plane"></i>
+      <button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
+        <i className="fas fa-robot"></i>
       </button>
-    </div>
-  </div>
-)}
 
+      {/* Chat Modal */}
       {showChat && (
-        <div style={{...styles.chatModal, width: isSmall ? '320px' : '380px', height: isSmall ? '500px' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
+        <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
@@ -1069,18 +1214,14 @@ const quickQuestions = {
           </div>
           
           {/* Quick Questions */}
-          {chatMessages.length < 3 && (
+          {chatMessages.length < 2 && (
             <div style={styles.quickQuestionsContainer}>
               <div style={styles.quickQuestionsHeader}>
                 <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
               </div>
               <div style={styles.quickQuestionsGrid}>
                 {quickQuestions[language].map((q, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => sendChatMessage(q)}
-                    style={styles.quickQuestionButton}
-                  >
+                  <button key={idx} onClick={() => sendChatMessage(q)} style={styles.quickQuestionButton}>
                     {q}
                   </button>
                 ))}
@@ -1095,7 +1236,7 @@ const quickQuestions = {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              style={{...styles.chatInput, fontSize: isSmall ? '10px' : '12px', color: 'white'}}
+              style={styles.chatInput}
             />
             <button onClick={() => sendChatMessage()} style={styles.chatSend}>
               <i className="fas fa-paper-plane"></i>
@@ -1203,6 +1344,11 @@ const styles = {
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
   chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '12px' },
   chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  };
+  // Inline edit styles
+  inlineInput: { background: '#0f172a', border: '1px solid #00d1ff', borderRadius: '4px', padding: '4px 8px', color: 'white', fontSize: '12px', width: '100%', minWidth: '100px' },
+  inlineSelect: { background: '#0f172a', border: '1px solid #00d1ff', borderRadius: '4px', padding: '4px 8px', color: 'white', fontSize: '12px', cursor: 'pointer' },
+  editButton: { background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '4px 8px', color: '#3b82f6', cursor: 'pointer', fontSize: '12px' },
+  saveButton: { background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '6px', padding: '4px 8px', color: '#10b981', cursor: 'pointer', fontSize: '12px' },
+};
 
 export default AdminDashboard;

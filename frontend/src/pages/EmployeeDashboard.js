@@ -197,12 +197,10 @@ const EmployeeDashboard = ({ user, onLogout }) => {
       return app;
     }));
     
-    // Check for NEW approved shifts (not previously approved)
     const previousApprovedCount = lastApprovedCount;
     const currentApprovedApps = appsWithTasks.filter(app => app.status === 'approved');
     const currentApprovedCount = currentApprovedApps.length;
     
-    // Only create notifications for NEW approved shifts
     if (currentApprovedCount > previousApprovedCount && previousApprovedCount !== 0) {
       const newApprovedApps = currentApprovedApps.filter(app => {
         const wasNotApproved = !approvedShifts.some(prevApp => prevApp._id === app._id);
@@ -868,6 +866,6 @@ const styles = {
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '8px' },
   chatInput: { flex: 1, padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', color: 'white', outline: 'none', fontSize: '12px' },
   chatSend: { padding: '8px 12px', background: '#00d1ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer', fontSize: '12px' },
-  };
+};
 
 export default EmployeeDashboard;

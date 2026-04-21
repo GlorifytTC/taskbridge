@@ -115,6 +115,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     type: ''
   });
 
+  // Track which room is being edited
+  const [editingRoomId, setEditingRoomId] = useState(null);
+  const [editRoomData, setEditRoomData] = useState({});
+  
+  // Track which admin is being edited
+  const [editingAdminId, setEditingAdminId] = useState(null);
+  const [editAdminData, setEditAdminData] = useState({});
+  
+  // Track which employee is being edited
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  const [editEmployeeData, setEditEmployeeData] = useState({});
+  
+  // Track which branch is being edited
+  const [editingBranchId, setEditingBranchId] = useState(null);
+  const [editBranchData, setEditBranchData] = useState({});
+  
+  // Track which job is being edited
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [editJobData, setEditJobData] = useState({});
+  
+  // Track which task is being edited
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTaskData, setEditTaskData] = useState({});
+
   // Add this function to fetch employees for filter
   const fetchEmployeesForFilter = async () => {
     try {
@@ -845,6 +869,266 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     } catch (error) {
       console.error('Error changing email:', error);
       showToast(language === 'en' ? 'Error changing email' : 'Fel vid e-poständring', 'error');
+    }
+  };
+
+  // Room edit handlers
+  const startEditRoom = (room) => {
+    setEditingRoomId(room._id);
+    setEditRoomData({
+      roomNumber: room.roomNumber,
+      name: room.name || '',
+      capacity: room.capacity,
+      type: room.type,
+      isAvailable: room.isAvailable
+    });
+  };
+
+  const cancelEditRoom = () => {
+    setEditingRoomId(null);
+    setEditRoomData({});
+  };
+
+  const saveEditRoom = async (roomId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editRoomData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Room updated!' : 'Rum uppdaterat!', 'success');
+        setEditingRoomId(null);
+        setEditRoomData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating room', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating room:', error);
+      showToast('Error updating room', 'error');
+    }
+  };
+
+  // Admin edit handlers
+  const startEditAdmin = (admin) => {
+    setEditingAdminId(admin._id);
+    setEditAdminData({
+      name: admin.name,
+      email: admin.email,
+      isActive: admin.isActive
+    });
+  };
+
+  const cancelEditAdmin = () => {
+    setEditingAdminId(null);
+    setEditAdminData({});
+  };
+
+  const saveEditAdmin = async (adminId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editAdminData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Admin updated!' : 'Administratör uppdaterad!', 'success');
+        setEditingAdminId(null);
+        setEditAdminData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating admin', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating admin:', error);
+      showToast('Error updating admin', 'error');
+    }
+  };
+
+  // Employee edit handlers
+  const startEditEmployee = (employee) => {
+    setEditingEmployeeId(employee._id);
+    setEditEmployeeData({
+      name: employee.name,
+      email: employee.email,
+      isActive: employee.isActive
+    });
+  };
+
+  const cancelEditEmployee = () => {
+    setEditingEmployeeId(null);
+    setEditEmployeeData({});
+  };
+
+  const saveEditEmployee = async (employeeId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${employeeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editEmployeeData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Employee updated!' : 'Anställd uppdaterad!', 'success');
+        setEditingEmployeeId(null);
+        setEditEmployeeData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating employee', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      showToast('Error updating employee', 'error');
+    }
+  };
+
+  // Branch edit handlers
+  const startEditBranch = (branch) => {
+    setEditingBranchId(branch._id);
+    setEditBranchData({
+      name: branch.name,
+      'address.city': branch.address?.city || ''
+    });
+  };
+
+  const cancelEditBranch = () => {
+    setEditingBranchId(null);
+    setEditBranchData({});
+  };
+
+  const saveEditBranch = async (branchId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editBranchData.name,
+          address: { city: editBranchData['address.city'] }
+        })
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Branch updated!' : 'Avdelning uppdaterad!', 'success');
+        setEditingBranchId(null);
+        setEditBranchData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating branch', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating branch:', error);
+      showToast('Error updating branch', 'error');
+    }
+  };
+
+  // Job edit handlers
+  const startEditJob = (job) => {
+    setEditingJobId(job._id);
+    setEditJobData({
+      name: job.name,
+      description: job.description || ''
+    });
+  };
+
+  const cancelEditJob = () => {
+    setEditingJobId(null);
+    setEditJobData({});
+  };
+
+  const saveEditJob = async (jobId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editJobData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Job role updated!' : 'Jobbroll uppdaterad!', 'success');
+        setEditingJobId(null);
+        setEditJobData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating job role', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating job role:', error);
+      showToast('Error updating job role', 'error');
+    }
+  };
+
+  // Task edit handlers
+  const startEditTask = (task) => {
+    setEditingTaskId(task._id);
+    setEditTaskData({
+      title: task.title,
+      description: task.description || '',
+      date: task.date?.split('T')[0] || '',
+      startTime: task.startTime,
+      endTime: task.endTime,
+      maxEmployees: task.maxEmployees,
+      location: task.location || '',
+      status: task.status
+    });
+  };
+
+  const cancelEditTask = () => {
+    setEditingTaskId(null);
+    setEditTaskData({});
+  };
+
+  const saveEditTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editTaskData)
+      });
+      
+      if (response.ok) {
+        showToast(language === 'en' ? 'Task updated!' : 'Uppgift uppdaterad!', 'success');
+        setEditingTaskId(null);
+        setEditTaskData({});
+        fetchDashboardData(false);
+      } else {
+        const data = await response.json();
+        showToast(data.message || 'Error updating task', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      showToast('Error updating task', 'error');
     }
   };
 
@@ -1733,8 +2017,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {admins.map(admin => (
                     <tr key={admin._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admin.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingAdminId === admin._id ? (
+                          <input
+                            type="text"
+                            value={editAdminData.name || admin.name}
+                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          admin.name
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingAdminId === admin._id ? (
+                          <input
+                            type="email"
+                            value={editAdminData.email || admin.email}
+                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email
+                        )}
+                      </td>
                       {!isSmall && (
                         <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                           <div>
@@ -1747,13 +2054,34 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         </td>
                       )}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{admin.isActive ? 'Active' : 'Inactive'}</span>
+                        {editingAdminId === admin._id ? (
+                          <select
+                            value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
+                            onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                          </select>
+                        ) : (
+                          <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
+                            {admin.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <div style={styles.actionButtons}>
-                          <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                          <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
-                        </div>
+                        {editingAdminId === admin._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditAdmin(admin._id)} style={styles.saveButton}>💾</button>
+                            <button onClick={cancelEditAdmin} style={styles.cancelButton}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditAdmin(admin)} style={styles.editButton}>✏️</button>
+                            <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                            <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1796,14 +2124,62 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {filteredEmployees.map(emp => (
                     <tr key={emp._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <input
+                            type="text"
+                            value={editEmployeeData.name || emp.name}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          emp.name
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <input
+                            type="email"
+                            value={editEmployeeData.email || emp.email}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email
+                        )}
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>{emp.isActive ? 'Active' : 'Inactive'}</span></td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                        <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                        {editingEmployeeId === emp._id ? (
+                          <select
+                            value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                          </select>
+                        ) : (
+                          <span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
+                            {emp.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingEmployeeId === emp._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾</button>
+                            <button onClick={cancelEditEmployee} style={styles.cancelButton}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditEmployee(emp)} style={styles.editButton}>✏️</button>
+                            <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                            <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1844,12 +2220,47 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {branches.map(branch => (
                     <tr key={branch._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{branch.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{branch.address?.city || '-'}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingBranchId === branch._id ? (
+                          <input
+                            type="text"
+                            value={editBranchData.name || branch.name}
+                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          branch.name
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingBranchId === branch._id ? (
+                          <input
+                            type="text"
+                            value={editBranchData['address.city'] || branch.address?.city || ''}
+                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          branch.address?.city || '-'
+                        )}
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                     </tr>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingBranchId === branch._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditBranch(branch._id)} style={styles.saveButton}>💾</button>
+                            <button onClick={cancelEditBranch} style={styles.cancelButton}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditBranch(branch)} style={styles.editButton}>✏️</button>
+                            <button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1876,11 +2287,46 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {jobDescriptions.map(job => (
                     <tr key={job._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{job.name}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{job.description || '-'}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingJobId === job._id ? (
+                          <input
+                            type="text"
+                            value={editJobData.name || job.name}
+                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          job.name
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingJobId === job._id ? (
+                          <textarea
+                            value={editJobData.description || job.description || ''}
+                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
+                            style={styles.inlineTextarea}
+                            rows="1"
+                          />
+                        ) : (
+                          job.description || '-'
+                        )}
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
-                     </tr>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingJobId === job._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditJob(job._id)} style={styles.saveButton}>💾</button>
+                            <button onClick={cancelEditJob} style={styles.cancelButton}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditJob(job)} style={styles.editButton}>✏️</button>
+                            <button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1910,13 +2356,64 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {tasks.map(task => (
                     <tr key={task._id} style={styles.tableRow}>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title}</td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(task.date).toLocaleDateString()}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingTaskId === task._id ? (
+                          <input
+                            type="text"
+                            value={editTaskData.title || task.title}
+                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
+                            style={styles.inlineInput}
+                            autoFocus
+                          />
+                        ) : (
+                          isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
+                        {editingTaskId === task._id ? (
+                          <input
+                            type="date"
+                            value={editTaskData.date || task.date?.split('T')[0]}
+                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
+                            style={styles.inlineInput}
+                          />
+                        ) : (
+                          new Date(task.date).toLocaleDateString()
+                        )}
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>{task.status}</span></td>
-                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}><button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button></td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingTaskId === task._id ? (
+                          <select
+                            value={editTaskData.status || task.status}
+                            onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="open">Open</option>
+                            <option value="closed">Closed</option>
+                            <option value="in-progress">In Progress</option>
+                          </select>
+                        ) : (
+                          <span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>
+                            {task.status}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
+                        {editingTaskId === task._id ? (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => saveEditTask(task._id)} style={styles.saveButton}>💾</button>
+                            <button onClick={cancelEditTask} style={styles.cancelButton}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={styles.actionButtons}>
+                            <button onClick={() => startEditTask(task)} style={styles.editButton}>✏️</button>
+                            <button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2171,66 +2668,66 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       </div>
 
       {/* Enhanced Audit Log Modal */}
-      {showAuditModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
-          <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '800px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>
-              <i className="fas fa-history"></i> {lang.auditLogs}
-            </h2>
-            {loadingAudit ? (
-              <div style={styles.loadingSpinner}></div>
-            ) : auditLogs.length === 0 ? (
-              <div style={{textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)'}}>
-                <i className="fas fa-search" style={{fontSize: '48px', marginBottom: '16px', display: 'block'}}></i>
-                {language === 'en' ? 'No audit logs found' : 'Inga granskningsloggar hittades'}
-              </div>
-            ) : (
-              <div style={styles.tableContainer}>
-                <table style={{...styles.table, minWidth: isSmall ? '500px' : '700px'}}>
-                  <thead>
-                    <tr style={styles.tableHeaderRow}>
-                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th>
-                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.entityType}</th>
-                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.user}</th>
-                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.timestamp}</th>
-                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.changes}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditLogs.map(log => (
-                      <tr key={log._id} style={styles.tableRow}>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
-                          <span style={{
-                            ...styles.statusBadge,
-                            background: log.action === 'create' ? '#10b981' : 
-                                       log.action === 'update' ? '#3b82f6' :
-                                       log.action === 'delete' ? '#ef4444' : '#6b7280'
-                          }}>
-                            {log.action}
-                          </span>
-                        </td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
-                          {new Date(log.createdAt).toLocaleString()}
-                        </td>
-                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
-                          <pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>
-                            {JSON.stringify(log.changes, null, 2)}
-                          </pre>
-                        </td>
+        {showAuditModal && (
+          <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
+            <div style={{...styles.modalLarge, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '400px' : '800px'}} onClick={(e) => e.stopPropagation()}>
+              <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>
+                <i className="fas fa-history"></i> {lang.auditLogs}
+              </h2>
+              {loadingAudit ? (
+                <div style={styles.loadingSpinner}></div>
+              ) : auditLogs.length === 0 ? (
+                <div style={{textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)'}}>
+                  <i className="fas fa-search" style={{fontSize: '48px', marginBottom: '16px', display: 'block'}}></i>
+                  {language === 'en' ? 'No audit logs found' : 'Inga granskningsloggar hittades'}
+                </div>
+              ) : (
+                <div style={styles.tableContainer}>
+                  <table style={{...styles.table, minWidth: isSmall ? '500px' : '700px'}}>
+                    <thead>
+                      <tr style={styles.tableHeaderRow}>
+                        <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th>
+                        <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.entityType}</th>
+                        <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.user}</th>
+                        <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.timestamp}</th>
+                        <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.changes}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {auditLogs.map(log => (
+                        <tr key={log._id} style={styles.tableRow}>
+                          <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                            <span style={{
+                              ...styles.statusBadge,
+                              background: log.action === 'create' ? '#10b981' : 
+                                        log.action === 'update' ? '#3b82f6' :
+                                        log.action === 'delete' ? '#ef4444' : '#6b7280'
+                            }}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
+                          <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
+                          <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                          <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                            <pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>
+                              {JSON.stringify(log.changes, null, 2)}
+                            </pre>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={styles.modalButtons}>
+                <button onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.close}</button>
               </div>
-            )}
-            <div style={styles.modalButtons}>
-              <button onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.close}</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* All other modals remain the same */}
       {showCreateAdminModal && (
@@ -2687,6 +3184,12 @@ const styles = {
   chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)' },
   chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
   chatSend: { padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  // Inline edit styles
+  inlineInput: { background: '#0f172a', border: '1px solid #00d1ff', borderRadius: '4px', padding: '4px 8px', color: 'white', fontSize: '12px', width: '100%', minWidth: '100px' },
+  inlineSelect: { background: '#0f172a', border: '1px solid #00d1ff', borderRadius: '4px', padding: '4px 8px', color: 'white', fontSize: '12px', cursor: 'pointer' },
+  inlineTextarea: { background: '#0f172a', border: '1px solid #00d1ff', borderRadius: '4px', padding: '4px 8px', color: 'white', fontSize: '12px', width: '100%', resize: 'vertical' },
+  editButton: { background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '4px 8px', color: '#3b82f6', cursor: 'pointer', fontSize: '12px' },
+  saveButton: { background: 'rgba(16,185,129,0.2)', border: '1px solid #10b981', borderRadius: '6px', padding: '4px 8px', color: '#10b981', cursor: 'pointer', fontSize: '12px' }
 };
 
 export default SuperAdminDashboard;
