@@ -14,12 +14,8 @@ import About from './pages/About';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import ResetPassword from './pages/ResetPassword';
+import RoomAssignment from './components/RoomAssignment';
 
-// NEW IMPORTS FOR ROOM ASSIGNMENT SYSTEM
-import RoomManagement from './components/RoomManagement';
-import WorkerManagement from './components/WorkerManagement';
-import GroupManagement from './components/GroupManagement';
-import SortingEngine from './components/SortingEngine';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -154,23 +150,16 @@ function App() {
     return <Contact user={user} onNavigate={handleNavigate} />;
   }
 
-  // ============ NEW ROOM ASSIGNMENT SYSTEM ROUTES ============
-  // These routes are accessible to SuperAdmin, Master, and Admin roles
-  
-  if (currentPage === 'rooms' && user) {
-    return <RoomManagement user={user} onNavigate={handleNavigate} />;
-  }
-
-  if (currentPage === 'workers' && user) {
-    return <WorkerManagement user={user} onNavigate={handleNavigate} />;
-  }
-
-  if (currentPage === 'groups' && user) {
-    return <GroupManagement user={user} onNavigate={handleNavigate} />;
-  }
-
-  if (currentPage === 'sorting' && user) {
-    return <SortingEngine user={user} onNavigate={handleNavigate} />;
+  // ============ ROOM ASSIGNMENT ROUTE ============
+  if (currentPage === 'room-assignment' && user) {
+    return <RoomAssignment user={user} onClose={() => {
+      // Go back to appropriate dashboard based on user role
+      if (user?.role === 'master') setCurrentPage('master');
+      else if (user?.role === 'superadmin') setCurrentPage('superadmin');
+      else if (user?.role === 'admin') setCurrentPage('admin');
+      else if (user?.role === 'employee') setCurrentPage('employee');
+      else setCurrentPage('dashboard');
+    }} />;
   }
 
   // Protected routes with role-based dashboards

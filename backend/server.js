@@ -24,10 +24,10 @@ const subscriptionRoutes = require('./routes/subscriptions');
 const notificationRoutes = require('./routes/notifications');
 const reportRoutes = require('./routes/reports');
 const dashboardRoutes = require('./routes/dashboard');
-const roomRoutes = require('./routes/rooms');
-const workerRoutes = require('./routes/workers');
-const groupRoutes = require('./routes/groups');
-const sortingRoutes = require('./routes/sorting');
+
+// NEW: Room Assignment System Routes
+const roomAssignmentRoutes = require('./routes/roomAssignment');
+
 const app = express();
 
 // ============ CORS ============
@@ -54,16 +54,22 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/rooms', roomRoutes);
-app.use('/api/workers', workerRoutes);
-app.use('/api/groups', groupRoutes);
-app.use('/api/sorting', sortingRoutes);
+
+// NEW: Room Assignment System Routes
+app.use('/api/room-assignment', roomAssignmentRoutes);
+
 // ============ TEST ROUTES ============
 app.get('/', (req, res) => {
   res.json({ 
     name: 'TaskBridge API', 
     status: 'running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      roomAssignment: '/api/room-assignment',
+      auth: '/api/auth',
+      users: '/api/users',
+      tasks: '/api/tasks'
+    }
   });
 });
 
@@ -120,6 +126,7 @@ mongoose.connect(process.env.MONGODB_URI)
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 Health: http://localhost:${PORT}/health`);
+      console.log(`📍 Room Assignment API: http://localhost:${PORT}/api/room-assignment`);
     });
   })
   .catch(err => {

@@ -441,97 +441,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       limitWarning: 'You have reached the limit for this feature. Please upgrade your plan.',
       upgradeRequired: 'Upgrade Required',
       
-      // ============ ROOM ASSIGNMENT SYSTEM ============
-      rooms: 'Rooms',
-      workers: 'Workers',
-      groups: 'Groups',
-      sorting: 'Sorting',
-      roomManagement: 'Room Management',
-      workerManagement: 'Worker Management',
-      groupManagement: 'Group Management',
-      sortingEngine: 'Sorting Engine',
       
-      // Room Management
-      roomNumber: 'Room #',
-      roomName: 'Room Name',
-      capacity: 'Capacity',
-      roomType: 'Room Type',
-      status: 'Status',
-      available: 'Available',
-      unavailable: 'Unavailable',
-      bulkCreateRooms: 'Bulk Create Rooms',
-      setCapacityForSelected: 'Set Capacity for Selected',
-      startNumber: 'Start Number',
-      endNumber: 'End Number',
-      prefix: 'Prefix',
-      createRooms: 'Create Rooms',
-      classroom: 'Classroom',
-      laboratory: 'Laboratory',
-      medical: 'Medical',
-      office: 'Office',
-      factory: 'Factory',
-      conference: 'Conference',
-      
-      // Worker Management
-      workerName: 'Worker Name',
-      email: 'Email',
-      specializations: 'Specializations',
-      workerType: 'Worker Type',
-      regular: 'Regular',
-      substitute: 'Substitute',
-      addWorker: 'Add Worker',
-      bulkUpdateAvailability: 'Bulk Update Availability',
-      addSpecialization: 'Add Specialization',
-      
-      // Group Management
-      groupName: 'Group Name',
-      peopleCount: 'People',
-      requiredSkill: 'Required Skill',
-      priority: 'Priority',
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High',
-      urgent: 'Urgent',
-      time: 'Time',
-      startTime: 'Start Time',
-      endTime: 'End Time',
-      notes: 'Notes',
-      addGroup: 'Add Group',
-      bulkAddGroups: 'Bulk Add Groups',
-      preferredRoomType: 'Preferred Room Type',
-      
-      // Sorting Engine
-      autoSort: 'Sort Into Rooms',
-      viewMap: 'View Map',
-      pendingGroups: 'Pending Groups',
-      suggestedAssignments: 'Suggested Assignments',
-      matchScore: 'Match Score',
-      suggestedRoom: 'Suggested Room',
-      suggestedWorker: 'Suggested Worker',
-      confirmAssignment: 'Confirm',
-      overrideAssignment: 'Override',
-      noSuitableMatch: 'No suitable match found',
-      capacityWarning: 'Room capacity is less than group size',
-      skillWarning: 'Worker does not have required skill',
-      roomUnavailable: 'Room is not available at this time',
-      workerUnavailable: 'Worker is not available at this time',
-      
-      // Map View
-      roomAssignmentMap: 'Room Assignment Map',
-      print: 'Print',
-      legend: 'Legend',
-      good: 'Good',
-      warning: 'Warning',
-      critical: 'Critical',
-      assignedTo: 'Assigned To',
-      noAssignment: 'No assignment yet',
-      
-      // Learning System
-      learningSystem: 'Learning System',
-      systemLearnsFromOverrides: 'System learns from your overrides',
-      successfulAssignments: 'Successful assignments',
-      userOverrides: 'User overrides',
-      lastUsed: 'Last used'
     },
     sv: {
       dashboard: 'Instrumentpanel',
@@ -603,97 +513,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       limitWarning: 'Du har nått gränsen för denna funktion. Uppgradera din plan.',
       upgradeRequired: 'Uppgradering krävs',
       
-      // ============ ROOM ASSIGNMENT SYSTEM ============
-      rooms: 'Rum',
-      workers: 'Arbetare',
-      groups: 'Grupper',
-      sorting: 'Sortering',
-      roomManagement: 'Rumshantering',
-      workerManagement: 'Arbetarhantering',
-      groupManagement: 'Grupphantering',
-      sortingEngine: 'Sorteringsmotor',
       
-      // Room Management
-      roomNumber: 'Rum #',
-      roomName: 'Rumsnamn',
-      capacity: 'Kapacitet',
-      roomType: 'Rumstyp',
-      status: 'Status',
-      available: 'Tillgänglig',
-      unavailable: 'Inte tillgänglig',
-      bulkCreateRooms: 'Skapa rum i bulk',
-      setCapacityForSelected: 'Ange kapacitet för valda',
-      startNumber: 'Startnummer',
-      endNumber: 'Slutnummer',
-      prefix: 'Prefix',
-      createRooms: 'Skapa rum',
-      classroom: 'Klassrum',
-      laboratory: 'Laboratorium',
-      medical: 'Medicinskt',
-      office: 'Kontor',
-      factory: 'Fabrik',
-      conference: 'Konferens',
-      
-      // Worker Management
-      workerName: 'Arbetarnamn',
-      email: 'E-post',
-      specializations: 'Specialiseringar',
-      workerType: 'Arbetartyp',
-      regular: 'Ordinarie',
-      substitute: 'Vikarie',
-      addWorker: 'Lägg till arbetare',
-      bulkUpdateAvailability: 'Massuppdatera tillgänglighet',
-      addSpecialization: 'Lägg till specialisering',
-      
-      // Group Management
-      groupName: 'Gruppnamn',
-      peopleCount: 'Personer',
-      requiredSkill: 'Erforderlig kompetens',
-      priority: 'Prioritet',
-      low: 'Låg',
-      medium: 'Medel',
-      high: 'Hög',
-      urgent: 'Brådskande',
-      time: 'Tid',
-      startTime: 'Starttid',
-      endTime: 'Sluttid',
-      notes: 'Anteckningar',
-      addGroup: 'Lägg till grupp',
-      bulkAddGroups: 'Lägg till grupper i bulk',
-      preferredRoomType: 'Önskad rumstyp',
-      
-      // Sorting Engine
-      autoSort: 'Sortera in i rum',
-      viewMap: 'Visa karta',
-      pendingGroups: 'Väntande grupper',
-      suggestedAssignments: 'Föreslagna tilldelningar',
-      matchScore: 'Matchpoäng',
-      suggestedRoom: 'Föreslaget rum',
-      suggestedWorker: 'Föreslagen arbetare',
-      confirmAssignment: 'Bekräfta',
-      overrideAssignment: 'Åsidosätt',
-      noSuitableMatch: 'Ingen lämplig matchning hittades',
-      capacityWarning: 'Rummets kapacitet är mindre än gruppstorleken',
-      skillWarning: 'Arbetaren har inte erforderlig kompetens',
-      roomUnavailable: 'Rummet är inte tillgängligt vid denna tid',
-      workerUnavailable: 'Arbetaren är inte tillgänglig vid denna tid',
-      
-      // Map View
-      roomAssignmentMap: 'Rumstilldelningskarta',
-      print: 'Skriv ut',
-      legend: 'Teckenförklaring',
-      good: 'Bra',
-      warning: 'Varning',
-      critical: 'Kritisk',
-      assignedTo: 'Tilldelad till',
-      noAssignment: 'Ingen tilldelning ännu',
-      
-      // Learning System
-      learningSystem: 'Inlärningssystem',
-      systemLearnsFromOverrides: 'Systemet lär sig från dina åsidosättningar',
-      successfulAssignments: 'Lyckade tilldelningar',
-      userOverrides: 'Användaråsidosättningar',
-      lastUsed: 'Senast använd'
     }
   };
 
@@ -1881,6 +1701,24 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
           <button onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
           <button onClick={handleLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
+        <button 
+  onClick={() => window.open('/room-assignment', '_blank')} 
+  style={{
+    padding: isSmall ? '5px 12px' : '6px 16px',
+    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    border: 'none',
+    borderRadius: '20px',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: isSmall ? '10px' : '12px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }}
+>
+  <i className="fas fa-door-open"></i> {isSmall ? 'Rooms' : 'Room Assignment'}
+</button>
         </div>
       </div>
 
@@ -1953,19 +1791,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
   <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
   
-  {/* ============ NEW ROOM ASSIGNMENT SYSTEM TABS ============ */}
-  <button onClick={() => onNavigate('rooms')} style={{...styles.tab, background: activeTab === 'rooms' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-     Rooms
-  </button>
-  <button onClick={() => onNavigate('workers')} style={{...styles.tab, background: activeTab === 'workers' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-     Workers
-  </button>
-  <button onClick={() => onNavigate('groups')} style={{...styles.tab, background: activeTab === 'groups' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-     Groups
-  </button>
-  <button onClick={() => onNavigate('sorting')} style={{...styles.tab, background: activeTab === 'sorting' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>
-     Sorting
-  </button>
+  
 </div>
 
       <div style={{...styles.content, padding: isSmall ? '12px' : '16px'}}>
