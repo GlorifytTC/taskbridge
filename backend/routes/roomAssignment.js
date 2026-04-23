@@ -15,6 +15,7 @@ const {
   deleteWorkers,
   getGroups,
   createGroup,
+  bulkCreateGroups,
   updateGroups,
   deleteGroups,
   runSorting,
