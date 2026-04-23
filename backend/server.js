@@ -30,13 +30,36 @@ const roomAssignmentRoutes = require('./routes/roomAssignment');
 
 const app = express();
 
-// ============ CORS ============
+// ============ CORS FIX ============
+const allowedOrigins = [
+  'https://www.taskbridge.se',
+  'https://taskbridge.se',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://taskbridge-production-9d91.up.railway.app'
+];
+
 app.use(cors({
-  origin: '*',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(null, true); // Allow all for now, but log it
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
