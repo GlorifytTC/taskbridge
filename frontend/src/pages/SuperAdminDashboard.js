@@ -2423,13 +2423,13 @@ useEffect(() => {
                 
                 <div style={styles.premiumActions}>
                   {hasRoomAccess ? (
-                    <button 
-                      onClick={() => window.open('/room-assignment', '_blank')} 
-                      style={styles.premiumButton}
-                    >
-                      ⭐ {lang.accessRoomAssignment}
-                    </button>
-                  ) : (
+                <button 
+                  onClick={() => onNavigate('room-assignment')} 
+                  style={styles.premiumButton}
+                >
+                  ⭐ {lang.accessRoomAssignment}
+                </button>
+              ) : (
                     <>
                       <button 
                         onClick={() => showToast(lang.limitWarning, 'info')} 
