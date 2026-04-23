@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 
 const Landing = ({ onLoginClick, onNavigate }) => {
   console.log('Landing page rendered, onLoginClick:', onLoginClick);
@@ -224,6 +225,11 @@ useEffect(() => {
 
   return (
     <>
+    <SEO 
+      title="Home | Smart Workforce Management"
+      description="TaskBridge helps schools, hospitals, and organizations manage shifts, track attendance, and streamline communication with ease."
+      url="https://www.taskbridge.se/"
+    />
       {/* SEO Helmet - Critical for Google Search */}
       <Helmet>
         {/* Primary Meta Tags */}
