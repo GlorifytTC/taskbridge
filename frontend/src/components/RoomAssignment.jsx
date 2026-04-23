@@ -20,6 +20,12 @@ const RoomAssignment = ({ user, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [newShift, setNewShift] = useState({ name: '', startTime: '08:00', endTime: '17:00', color: '#00d1ff' });
   const [showShiftModal, setShowShiftModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [learningData, setLearningData] = useState({
+    roomGroupMatches: [],
+    workerSkillMatches: [],
+    userOverrides: []
+  });
 
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -29,6 +35,89 @@ const RoomAssignment = ({ user, onClose }) => {
     headers: { Authorization: `Bearer ${token}` }
   });
 
+  const showToast = (message, type = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Load learning data from localStorage
+  useEffect(() => {
+    const savedLearning = localStorage.getItem('roomAssignmentLearning');
+    if (savedLearning) {
+      try {
+        setLearningData(JSON.parse(savedLearning));
+      } catch (e) {
+        console.error('Error loading learning data:', e);
+      }
+    }
+  }, []);
+
+  // Save learning data
+  const saveLearningData = (newData) => {
+    localStorage.setItem('roomAssignmentLearning', JSON.stringify(newData));
+    setLearningData(newData);
+  };
+
+  // Record a room-group match for learning
+  const recordRoomGroupMatch = (roomId, groupId, wasSuccessful) => {
+    const updatedLearning = { ...learningData };
+    updatedLearning.roomGroupMatches.push({
+      roomId,
+      groupId,
+      wasSuccessful,
+      timestamp: Date.now()
+    });
+    // Keep only last 500 records
+    if (updatedLearning.roomGroupMatches.length > 500) {
+      updatedLearning.roomGroupMatches = updatedLearning.roomGroupMatches.slice(-500);
+    }
+    saveLearningData(updatedLearning);
+  };
+
+  // Record a worker-skill match for learning
+  const recordWorkerSkillMatch = (workerId, skill, wasSuccessful) => {
+    const updatedLearning = { ...learningData };
+    updatedLearning.workerSkillMatches.push({
+      workerId,
+      skill,
+      wasSuccessful,
+      timestamp: Date.now()
+    });
+    if (updatedLearning.workerSkillMatches.length > 500) {
+      updatedLearning.workerSkillMatches = updatedLearning.workerSkillMatches.slice(-500);
+    }
+    saveLearningData(updatedLearning);
+  };
+
+  // Get improved match score based on learning
+  const getImprovedMatchScore = (room, group, worker, baseScore) => {
+    let adjustedScore = baseScore;
+    
+    // Check learning data for room-group compatibility
+    const roomGroupHistory = learningData.roomGroupMatches.filter(
+      m => m.roomId === room._id && m.groupId === group._id
+    );
+    if (roomGroupHistory.length > 0) {
+      const successRate = roomGroupHistory.filter(m => m.wasSuccessful).length / roomGroupHistory.length;
+      if (successRate > 0.7) adjustedScore += 15;
+      else if (successRate < 0.3) adjustedScore -= 15;
+    }
+    
+    // Check learning data for worker-skill compatibility
+    if (worker && group.requiredSkill) {
+      const skillHistory = learningData.workerSkillMatches.filter(
+        m => m.workerId === worker._id && m.skill === group.requiredSkill
+      );
+      if (skillHistory.length > 0) {
+        const successRate = skillHistory.filter(m => m.wasSuccessful).length / skillHistory.length;
+        if (successRate > 0.7) adjustedScore += 10;
+        else if (successRate < 0.3) adjustedScore -= 10;
+      }
+    }
+    
+    return Math.min(100, Math.max(0, adjustedScore));
+  };
+
   // Fetch all data
   const fetchRooms = async () => {
     try {
@@ -36,6 +125,7 @@ const RoomAssignment = ({ user, onClose }) => {
       setRooms(res.data.data || []);
     } catch (error) {
       console.error('Error fetching rooms:', error);
+      showToast('Failed to load rooms', 'error');
     }
   };
 
@@ -45,6 +135,7 @@ const RoomAssignment = ({ user, onClose }) => {
       setWorkers(res.data.data || []);
     } catch (error) {
       console.error('Error fetching workers:', error);
+      showToast('Failed to load workers', 'error');
     }
   };
 
@@ -54,6 +145,7 @@ const RoomAssignment = ({ user, onClose }) => {
       setGroups(res.data.data || []);
     } catch (error) {
       console.error('Error fetching groups:', error);
+      showToast('Failed to load groups', 'error');
     }
   };
 
@@ -63,6 +155,7 @@ const RoomAssignment = ({ user, onClose }) => {
       setShifts(res.data.data || []);
     } catch (error) {
       console.error('Error fetching shifts:', error);
+      showToast('Failed to load shifts', 'error');
     }
   };
 
@@ -76,7 +169,7 @@ const RoomAssignment = ({ user, onClose }) => {
   // ============ SHIFT FUNCTIONS ============
   const handleSaveShift = async () => {
     if (!newShift.name) {
-      alert('Please enter shift name');
+      showToast('Please enter shift name', 'error');
       return;
     }
     setLoading(true);
@@ -85,10 +178,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await fetchShifts();
       setShowShiftModal(false);
       setNewShift({ name: '', startTime: '08:00', endTime: '17:00', color: '#00d1ff' });
-      alert('Shift saved successfully');
+      showToast('Shift saved successfully', 'success');
     } catch (error) {
       console.error('Error saving shift:', error);
-      alert('Failed to save shift');
+      showToast(error.response?.data?.message || 'Failed to save shift', 'error');
     }
     setLoading(false);
   };
@@ -99,10 +192,10 @@ const RoomAssignment = ({ user, onClose }) => {
     try {
       await api.delete(`/room-assignment/shifts/${shiftId}`);
       await fetchShifts();
-      alert('Shift deleted');
+      showToast('Shift deleted', 'success');
     } catch (error) {
       console.error('Error deleting shift:', error);
-      alert('Failed to delete shift');
+      showToast('Failed to delete shift', 'error');
     }
     setLoading(false);
   };
@@ -110,7 +203,7 @@ const RoomAssignment = ({ user, onClose }) => {
   // ============ ROOM FUNCTIONS ============
   const handleBulkCreateRooms = async () => {
     if (bulkRoomData.startNumber > bulkRoomData.endNumber) {
-      alert('Start number must be less than end number');
+      showToast('Start number must be less than end number', 'error');
       return;
     }
     setLoading(true);
@@ -119,10 +212,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await fetchRooms();
       setBulkMode(false);
       setBulkRoomData({ startNumber: 1, endNumber: 10, capacity: 30, roomType: 'Classroom', prefix: '' });
-      alert(`Created rooms ${bulkRoomData.startNumber} to ${bulkRoomData.endNumber}`);
+      showToast(`Created rooms ${bulkRoomData.startNumber} to ${bulkRoomData.endNumber}`, 'success');
     } catch (error) {
       console.error('Error creating rooms:', error);
-      alert('Failed to create rooms');
+      showToast(error.response?.data?.message || 'Failed to create rooms', 'error');
     }
     setLoading(false);
   };
@@ -135,15 +228,16 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.put('/room-assignment/rooms', { updates: [updatedRoom] });
       setRooms(rooms.map(r => r._id === roomId ? updatedRoom : r));
       setEditingCell(null);
+      showToast('Room updated', 'success');
     } catch (error) {
       console.error('Error updating room:', error);
-      alert('Failed to update room');
+      showToast('Failed to update room', 'error');
     }
   };
 
   const handleDeleteRooms = async () => {
     if (selectedRows.size === 0) {
-      alert('No rooms selected');
+      showToast('No rooms selected', 'error');
       return;
     }
     if (!window.confirm(`Delete ${selectedRows.size} room(s)? This cannot be undone.`)) return;
@@ -153,10 +247,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.delete('/room-assignment/rooms', { data: { ids: Array.from(selectedRows) } });
       await fetchRooms();
       setSelectedRows(new Set());
-      alert('Rooms deleted');
+      showToast(`${selectedRows.size} rooms deleted`, 'success');
     } catch (error) {
       console.error('Error deleting rooms:', error);
-      alert('Failed to delete rooms');
+      showToast('Failed to delete rooms', 'error');
     }
     setLoading(false);
   };
@@ -164,7 +258,7 @@ const RoomAssignment = ({ user, onClose }) => {
   // ============ WORKER FUNCTIONS ============
   const handleBulkCreateWorkers = async () => {
     if (!bulkWorkerData.names) {
-      alert('Enter worker names separated by commas');
+      showToast('Enter worker names separated by commas', 'error');
       return;
     }
     setLoading(true);
@@ -173,10 +267,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await fetchWorkers();
       setBulkMode(false);
       setBulkWorkerData({ names: '', defaultSpecialization: 'General' });
-      alert('Workers added successfully');
+      showToast('Workers added successfully', 'success');
     } catch (error) {
       console.error('Error creating workers:', error);
-      alert('Failed to create workers');
+      showToast(error.response?.data?.message || 'Failed to create workers', 'error');
     }
     setLoading(false);
   };
@@ -196,15 +290,16 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.put('/room-assignment/workers', { updates: [updatedWorker] });
       setWorkers(workers.map(w => w._id === workerId ? updatedWorker : w));
       setEditingCell(null);
+      showToast('Worker updated', 'success');
     } catch (error) {
       console.error('Error updating worker:', error);
-      alert('Failed to update worker');
+      showToast('Failed to update worker', 'error');
     }
   };
 
   const handleDeleteWorkers = async () => {
     if (selectedRows.size === 0) {
-      alert('No workers selected');
+      showToast('No workers selected', 'error');
       return;
     }
     if (!window.confirm(`Delete ${selectedRows.size} worker(s)? This cannot be undone.`)) return;
@@ -214,10 +309,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.delete('/room-assignment/workers', { data: { ids: Array.from(selectedRows) } });
       await fetchWorkers();
       setSelectedRows(new Set());
-      alert('Workers deleted');
+      showToast(`${selectedRows.size} workers deleted`, 'success');
     } catch (error) {
       console.error('Error deleting workers:', error);
-      alert('Failed to delete workers');
+      showToast('Failed to delete workers', 'error');
     }
     setLoading(false);
   };
@@ -240,10 +335,10 @@ const RoomAssignment = ({ user, onClose }) => {
         shiftId: selectedShift || null
       });
       await fetchGroups();
-      alert(`Group "${name}" added`);
+      showToast(`Group "${name}" added`, 'success');
     } catch (error) {
       console.error('Error adding group:', error);
-      alert('Failed to add group');
+      showToast('Failed to add group', 'error');
     }
     setLoading(false);
   };
@@ -256,15 +351,16 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.put('/room-assignment/groups', { updates: [updatedGroup] });
       setGroups(groups.map(g => g._id === groupId ? updatedGroup : g));
       setEditingCell(null);
+      showToast('Group updated', 'success');
     } catch (error) {
       console.error('Error updating group:', error);
-      alert('Failed to update group');
+      showToast('Failed to update group', 'error');
     }
   };
 
   const handleDeleteGroups = async () => {
     if (selectedRows.size === 0) {
-      alert('No groups selected');
+      showToast('No groups selected', 'error');
       return;
     }
     if (!window.confirm(`Delete ${selectedRows.size} group(s)? This cannot be undone.`)) return;
@@ -274,10 +370,10 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.delete('/room-assignment/groups', { data: { ids: Array.from(selectedRows) } });
       await fetchGroups();
       setSelectedRows(new Set());
-      alert('Groups deleted');
+      showToast(`${selectedRows.size} groups deleted`, 'success');
     } catch (error) {
       console.error('Error deleting groups:', error);
-      alert('Failed to delete groups');
+      showToast('Failed to delete groups', 'error');
     }
     setLoading(false);
   };
@@ -293,17 +389,17 @@ const RoomAssignment = ({ user, onClose }) => {
       setSortingResults(res.data);
       setAssignments(res.data.data || []);
       setShowMap(true);
-      alert(`Sorting complete! ${res.data.summary?.matchedGroups || 0} groups matched`);
+      showToast(`Sorting complete! ${res.data.summary?.matchedGroups || 0} groups matched`, 'success');
     } catch (error) {
       console.error('Error running sorting:', error);
-      alert('Failed to run sorting');
+      showToast(error.response?.data?.message || 'Failed to run sorting', 'error');
     }
     setLoading(false);
   };
 
   const handleConfirmAssignments = async () => {
     if (!assignments.length) {
-      alert('No assignments to confirm. Run sorting first.');
+      showToast('No assignments to confirm. Run sorting first.', 'error');
       return;
     }
     
@@ -314,10 +410,27 @@ const RoomAssignment = ({ user, onClose }) => {
         date: selectedDate,
         shiftId: selectedShift || null
       });
-      alert('Assignments confirmed and saved!');
+      
+      // Record successful matches for learning
+      assignments.forEach(assignment => {
+        if (assignment.matchScore >= 70) {
+          const room = rooms.find(r => r._id === assignment.roomId);
+          const group = groups.find(g => g._id === assignment.groupId);
+          const worker = workers.find(w => w._id === assignment.workerId);
+          
+          if (room && group) {
+            recordRoomGroupMatch(room._id, group._id, true);
+          }
+          if (worker && group?.requiredSkill) {
+            recordWorkerSkillMatch(worker._id, group.requiredSkill, true);
+          }
+        }
+      });
+      
+      showToast('Assignments confirmed and saved!', 'success');
     } catch (error) {
       console.error('Error confirming assignments:', error);
-      alert('Failed to confirm assignments');
+      showToast('Failed to confirm assignments', 'error');
     }
     setLoading(false);
   };
@@ -342,7 +455,6 @@ const RoomAssignment = ({ user, onClose }) => {
     setSelectedRows(new Set());
   };
 
-  // Get status color based on match score
   const getScoreColor = (score) => {
     if (score >= 70) return '#10b981';
     if (score >= 40) return '#f59e0b';
@@ -351,10 +463,27 @@ const RoomAssignment = ({ user, onClose }) => {
 
   return (
     <div style={styles.container}>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div style={{
+          ...styles.toast,
+          background: toastMessage.type === 'success' ? '#10b981' : toastMessage.type === 'info' ? '#3b82f6' : '#ef4444'
+        }}>
+          {toastMessage.message}
+        </div>
+      )}
+
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>🏢 Room Assignment System</h1>
         <button onClick={onClose} style={styles.closeButton}>✕</button>
+      </div>
+
+      {/* Learning Status */}
+      <div style={styles.learningStatus}>
+        <span style={styles.learningBadge}>
+          🧠 AI Learning Active ({learningData.roomGroupMatches.length + learningData.workerSkillMatches.length} patterns learned)
+        </span>
       </div>
 
       {/* Shift Selector */}
@@ -408,7 +537,6 @@ const RoomAssignment = ({ user, onClose }) => {
         {/* ROOMS TAB */}
         {activeTab === 'rooms' && !loading && (
           <div>
-            {/* Bulk Add Mode */}
             {bulkMode && (
               <div style={styles.bulkPanel}>
                 <h3>Bulk Create Rooms</h3>
@@ -425,7 +553,6 @@ const RoomAssignment = ({ user, onClose }) => {
               </div>
             )}
 
-            {/* Rooms Table */}
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
@@ -486,7 +613,6 @@ const RoomAssignment = ({ user, onClose }) => {
         {/* WORKERS TAB */}
         {activeTab === 'workers' && !loading && (
           <div>
-            {/* Bulk Add Mode */}
             {bulkMode && (
               <div style={styles.bulkPanel}>
                 <h3>Bulk Create Workers</h3>
@@ -499,7 +625,6 @@ const RoomAssignment = ({ user, onClose }) => {
               </div>
             )}
 
-            {/* Workers Table */}
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
@@ -510,7 +635,7 @@ const RoomAssignment = ({ user, onClose }) => {
                     <th style={styles.th}>Type</th>
                     <th style={styles.th}>Shift</th>
                     <th style={styles.th}>Available</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {workers.map(worker => (
@@ -549,7 +674,7 @@ const RoomAssignment = ({ user, onClose }) => {
                       <td style={styles.td}>
                         <input type="checkbox" checked={worker.isAvailable} onChange={(e) => handleUpdateWorker(worker._id, 'isAvailable', e.target.checked)} style={styles.checkbox} />
                       </td>
-                    </tr>
+                    </table>
                   ))}
                 </tbody>
               </table>
@@ -560,12 +685,10 @@ const RoomAssignment = ({ user, onClose }) => {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && !loading && (
           <div>
-            {/* Add Group Button */}
             <div style={styles.quickAddBar}>
               <button onClick={handleQuickAddGroup} style={styles.addButton}>+ Quick Add Group</button>
             </div>
 
-            {/* Groups Table */}
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
@@ -576,7 +699,7 @@ const RoomAssignment = ({ user, onClose }) => {
                     <th style={styles.th}>Required Skill</th>
                     <th style={styles.th}>Priority</th>
                     <th style={styles.th}>Status</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {groups.map(group => (
@@ -629,7 +752,6 @@ const RoomAssignment = ({ user, onClose }) => {
           <div>
             {showMap && assignments.length > 0 ? (
               <div>
-                {/* Summary Stats */}
                 <div style={styles.summaryStats}>
                   <div style={styles.statCard}>
                     <div style={styles.statValue}>{sortingResults?.summary?.totalGroups || 0}</div>
@@ -649,7 +771,6 @@ const RoomAssignment = ({ user, onClose }) => {
                   </div>
                 </div>
 
-                {/* Map View */}
                 <h3 style={styles.mapTitle}>🗺️ Room Assignment Map</h3>
                 <div style={styles.mapGrid}>
                   {assignments.map((assignment, idx) => {
@@ -739,6 +860,30 @@ const styles = {
     padding: '20px',
     fontFamily: 'Inter, sans-serif'
   },
+  toast: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    padding: '12px 20px',
+    borderRadius: '8px',
+    color: 'white',
+    zIndex: 2100,
+    fontSize: '14px',
+    animation: 'fadeInOut 3s ease',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+  },
+  learningStatus: {
+    marginBottom: '16px',
+    textAlign: 'right'
+  },
+  learningBadge: {
+    background: 'rgba(16,185,129,0.2)',
+    padding: '6px 12px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    color: '#10b981',
+    border: '1px solid rgba(16,185,129,0.3)'
+  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -815,7 +960,8 @@ const styles = {
     gap: '8px',
     marginBottom: '20px',
     borderBottom: '1px solid rgba(255,255,255,0.1)',
-    paddingBottom: '12px'
+    paddingBottom: '12px',
+    flexWrap: 'wrap'
   },
   tab: {
     padding: '10px 24px',
