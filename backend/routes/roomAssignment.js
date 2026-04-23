@@ -2,59 +2,54 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const {
-  // Shifts
   getShifts,
   saveShift,
   deleteShift,
-  // Rooms
   getRooms,
   bulkCreateRooms,
   updateRooms,
   deleteRooms,
-  // Workers
   getWorkers,
   bulkCreateWorkers,
   updateWorkers,
   deleteWorkers,
-  // Groups
   getGroups,
   createGroup,
-  bulkCreateGroups,
   updateGroups,
   deleteGroups,
-  // Sorting
   runSorting,
   confirmAssignments,
   getMapView
 } = require('../controllers/roomAssignmentController');
 
-// ============ SHIFTS ============
-router.get('/shifts', protect, authorize('superadmin', 'master'), getShifts);
-router.post('/shifts', protect, authorize('superadmin', 'master'), saveShift);
-router.delete('/shifts/:id', protect, authorize('superadmin', 'master'), deleteShift);
+// Shifts
+router.get('/shifts', protect, authorize('superadmin', 'master', 'admin'), getShifts);
+router.post('/shifts', protect, authorize('superadmin', 'master', 'admin'), saveShift);
+router.delete('/shifts/:id', protect, authorize('superadmin', 'master', 'admin'), deleteShift);
 
-// ============ ROOMS ============
-router.get('/rooms', protect, authorize('superadmin', 'master'), getRooms);
-router.post('/rooms/bulk', protect, authorize('superadmin', 'master'), bulkCreateRooms);
-router.put('/rooms', protect, authorize('superadmin', 'master'), updateRooms);
-router.delete('/rooms', protect, authorize('superadmin', 'master'), deleteRooms);
+// Rooms
+router.get('/rooms', protect, authorize('superadmin', 'master', 'admin'), getRooms);
+router.post('/rooms/bulk', protect, authorize('superadmin', 'master', 'admin'), bulkCreateRooms);
+router.put('/rooms', protect, authorize('superadmin', 'master', 'admin'), updateRooms);
+router.delete('/rooms', protect, authorize('superadmin', 'master', 'admin'), deleteRooms);
 
-// ============ WORKERS ============
-router.get('/workers', protect, authorize('superadmin', 'master'), getWorkers);
-router.post('/workers/bulk', protect, authorize('superadmin', 'master'), bulkCreateWorkers);
-router.put('/workers', protect, authorize('superadmin', 'master'), updateWorkers);
-router.delete('/workers', protect, authorize('superadmin', 'master'), deleteWorkers);
+// Workers
+router.get('/workers', protect, authorize('superadmin', 'master', 'admin'), getWorkers);
+router.post('/workers/bulk', protect, authorize('superadmin', 'master', 'admin'), bulkCreateWorkers);
+router.put('/workers', protect, authorize('superadmin', 'master', 'admin'), updateWorkers);
+router.delete('/workers', protect, authorize('superadmin', 'master', 'admin'), deleteWorkers);
 
-// ============ GROUPS ============
-router.get('/groups', protect, authorize('superadmin', 'master'), getGroups);
-router.post('/groups', protect, authorize('superadmin', 'master'), createGroup);
-router.post('/groups/bulk', protect, authorize('superadmin', 'master'), bulkCreateGroups);
-router.put('/groups', protect, authorize('superadmin', 'master'), updateGroups);
-router.delete('/groups', protect, authorize('superadmin', 'master'), deleteGroups);
+// Groups
+router.get('/groups', protect, authorize('superadmin', 'master', 'admin'), getGroups);
+router.post('/groups', protect, authorize('superadmin', 'master', 'admin'), createGroup);
+router.post('/groups/bulk', protect, authorize('superadmin', 'master', 'admin'), bulkCreateGroups); 
+router.put('/groups', protect, authorize('superadmin', 'master', 'admin'), updateGroups);
+router.delete('/groups', protect, authorize('superadmin', 'master', 'admin'), deleteGroups);
 
-// ============ SORTING & ASSIGNMENTS ============
-router.post('/sort', protect, authorize('superadmin', 'master'), runSorting);
-router.post('/confirm', protect, authorize('superadmin', 'master'), confirmAssignments);
-router.get('/map', protect, authorize('superadmin', 'master'), getMapView);
+
+// Sorting
+router.post('/sort', protect, authorize('superadmin', 'master', 'admin'), runSorting);
+router.post('/confirm', protect, authorize('superadmin', 'master', 'admin'), confirmAssignments);
+router.get('/map', protect, authorize('superadmin', 'master', 'admin'), getMapView);
 
 module.exports = router;

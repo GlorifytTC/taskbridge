@@ -103,6 +103,15 @@ exports.bulkCreateRooms = async (req, res) => {
   try {
     const { startNumber, endNumber, prefix, capacity, roomType } = req.body;
     
+    // ✅ ADD THIS VALIDATION
+    if (!startNumber || !endNumber) {
+      return res.status(400).json({ success: false, message: 'Start and end numbers are required' });
+    }
+    
+    if (startNumber > endNumber) {
+      return res.status(400).json({ success: false, message: 'Start number must be less than end number' });
+    }
+    
     const rooms = [];
     for (let i = startNumber; i <= endNumber; i++) {
       rooms.push({
@@ -201,6 +210,11 @@ exports.getWorkers = async (req, res) => {
 exports.bulkCreateWorkers = async (req, res) => {
   try {
     const { names, defaultSpecialization, defaultType } = req.body;
+    
+    // ✅ ADD THIS VALIDATION
+    if (!names) {
+      return res.status(400).json({ success: false, message: 'Names are required' });
+    }
     
     const workers = names.split(',').map(name => ({
       name: name.trim(),
@@ -312,6 +326,10 @@ exports.bulkCreateGroups = async (req, res) => {
   try {
     const { groups } = req.body;
     
+    if (!groups || !Array.isArray(groups) || groups.length === 0) {
+      return res.status(400).json({ success: false, message: 'Groups array is required' });
+    }
+    
     const createdGroups = await Group.insertMany(
       groups.map(g => ({
         ...g,
@@ -319,6 +337,16 @@ exports.bulkCreateGroups = async (req, res) => {
         createdBy: req.user.id
       }))
     );
+    
+    await AuditLog.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      action: 'bulk_create',
+      entityType: 'group',
+      changes: { count: createdGroups.length },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     
     res.json({ success: true, data: createdGroups, count: createdGroups.length });
   } catch (error) {
