@@ -674,7 +674,7 @@ const RoomAssignment = ({ user, onClose }) => {
                       <td style={styles.td}>
                         <input type="checkbox" checked={worker.isAvailable} onChange={(e) => handleUpdateWorker(worker._id, 'isAvailable', e.target.checked)} style={styles.checkbox} />
                       </td>
-                    </table>
+                    </tr>
                   ))}
                 </tbody>
               </table>
