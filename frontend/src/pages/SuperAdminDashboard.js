@@ -258,12 +258,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const checkRoomAccess = () => {
-    const plan = subscriptionData?.plan?.toLowerCase();
-    const allowedPlans = ['business', 'enterprise', 'corporate'];
-    const hasAccess = allowedPlans.includes(plan);
-    setHasRoomAccess(hasAccess);
-    return hasAccess;
-  };
+  console.log('=== CHECKING ROOM ACCESS ===');
+  console.log('Subscription plan:', subscriptionData?.plan);
+  const plan = subscriptionData?.plan?.toLowerCase();
+  console.log('Plan lowercase:', plan);
+  const allowedPlans = ['business', 'enterprise', 'corporate'];
+  const hasAccess = allowedPlans.includes(plan);
+  console.log('Has access:', hasAccess);
+  console.log('Allowed plans:', allowedPlans);
+  setHasRoomAccess(hasAccess);
+  return hasAccess;
+};
 
   const fetchAuditLogsEnhanced = async () => {
     setLoadingAudit(true);
@@ -528,24 +533,32 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   }, []);
 
   const fetchSubscriptionData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSubscriptionData(data.data);
-        if (data.data.usage) {
-          setUsageData(data.data.usage);
-        }
-        checkRoomAccess();
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    console.log('Subscription data received:', data);
+    if (data.success) {
+      setSubscriptionData(data.data);
+      if (data.data.usage) {
+        setUsageData(data.data.usage);
       }
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
+      // ✅ Check room access after subscription data loads
+      checkRoomAccess();
     }
-  };
-
+  } catch (error) {
+    console.error('Error fetching subscription:', error);
+  }
+};
+// Watch for subscription data changes
+useEffect(() => {
+  if (subscriptionData) {
+    console.log('Subscription data changed:', subscriptionData.plan);
+    checkRoomAccess();
+  }
+}, [subscriptionData]);
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -2383,6 +2396,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         {/* PREMIUM FEATURES TAB - Room Assignment System */}
         {activeTab === 'premium' && (
           <div>
+                {console.log('Premium tab - hasRoomAccess:', hasRoomAccess)}
+
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
               ⭐ {lang.premiumFeatures}
             </h2>
