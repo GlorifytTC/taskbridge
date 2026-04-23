@@ -1701,24 +1701,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
           <button onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
           <button onClick={handleLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
-        <button 
-  onClick={() => window.open('/room-assignment', '_blank')} 
-  style={{
-    padding: isSmall ? '5px 12px' : '6px 16px',
-    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    border: 'none',
-    borderRadius: '20px',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: isSmall ? '10px' : '12px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  }}
->
-  <i className="fas fa-door-open"></i> {isSmall ? 'Rooms' : 'Room Assignment'}
-</button>
         </div>
       </div>
 
@@ -1790,7 +1772,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
   <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
   <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
-  
+  <button onClick={() => handleTabChange('premium')} style={{...styles.tab, background: activeTab === 'premium' ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px', border: activeTab !== 'premium' ? '1px solid rgba(245,158,11,0.3)' : 'none'}}>
+  ⭐ Premium Features
+</button>
   
 </div>
 
@@ -1811,7 +1795,56 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             </div>
           </div>
         )}
-
+{activeTab === 'premium' && (
+  <div>
+    <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
+      ⭐ Premium Features - Room Assignment System
+    </h2>
+    <p style={{...styles.sectionDesc, fontSize: isSmall ? '11px' : '12px', marginBottom: '20px'}}>
+      Advanced room and shift assignment system for organizations with complex scheduling needs.
+    </p>
+    
+    <div style={styles.premiumCard}>
+      <div style={styles.premiumIcon}>
+        <i className="fas fa-door-open"></i>
+      </div>
+      <div style={styles.premiumContent}>
+        <h3 style={styles.premiumTitle}>Room Assignment System</h3>
+        <p style={styles.premiumDesc}>
+          Automatically match groups to available rooms and workers based on skills, capacity, and availability.
+          Perfect for schools, hospitals, factories, and event management.
+        </p>
+        <div style={styles.premiumFeatures}>
+          <span style={styles.premiumFeatureBadge}>📋 Bulk Room Creation</span>
+          <span style={styles.premiumFeatureBadge}>👥 Worker Management</span>
+          <span style={styles.premiumFeatureBadge}>🎯 Smart Matching Algorithm</span>
+          <span style={styles.premiumFeatureBadge}>🗺️ Visual Map View</span>
+          <span style={styles.premiumFeatureBadge}>📊 Printable Reports</span>
+          <span style={styles.premiumFeatureBadge}>🔄 Shift Management</span>
+        </div>
+        
+        {/* This button will be visible only to paid users */}
+        <div style={styles.premiumActions}>
+          <button 
+            onClick={() => window.open('/room-assignment', '_blank')} 
+            style={styles.premiumButton}
+          >
+            ⭐ Access Room Assignment
+          </button>
+          <button 
+            onClick={() => window.open('mailto:sales@taskbridge.com')} 
+            style={styles.upgradeButton}
+          >
+            💎 Upgrade to Premium
+          </button>
+        </div>
+        <p style={styles.premiumNote}>
+          ⚡ This feature is available for Premium plan users. Contact sales for pricing.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
         {activeTab === 'admins' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
