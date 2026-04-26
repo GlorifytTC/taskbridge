@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
+  // Persist activeTab in localStorage to survive F5 refresh
   const [activeTab, setActiveTab] = useState(() => {
-  return localStorage.getItem('taskbridge_activeTab') || 'dashboard';
-});
+    return localStorage.getItem('taskbridge_activeTab') || 'dashboard';
+  });
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -65,7 +66,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [toastMessage, setToastMessage] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
-  
   const [reportFilters, setReportFilters] = useState({
     branch: 'all',
     jobRole: 'all',
@@ -77,11 +77,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [showReportFilters, setShowReportFilters] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
-  
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
-  
+
+  // Ref to track if user is currently editing (prevents data refresh during edit)
+  const isEditingRef = useRef(false);
+  // Ref to preserve scroll position across re-renders
+  const scrollPositionRef = useRef(0);
+
   const quickQuestions = {
     en: [
       "📋 How do I create a new task?",
@@ -121,9 +125,28 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editJobData, setEditJobData] = useState({});
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
-  const isEditingRef = React.useRef(false);
 
-  const fetchEmployeesForFilter = async () => {
+  // Save scroll position before unmounting or major updates
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollPositionRef.current = window.scrollY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Restore scroll position after content loads
+  useEffect(() => {
+    if (!loading) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: scrollPositionRef.current, behavior: 'auto' });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, activeTab]);
+
+  const fetchEmployeesForFilter = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
@@ -134,15 +157,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
-  };
+  }, []);
 
   const generateAttendanceReport = async () => {
     setGeneratingReport(true);
     try {
       const token = localStorage.getItem('token');
-      
       let url = 'https://taskbridge-production-9d91.up.railway.app/api/reports/attendance?';
-      
       if (reportFilters.branch !== 'all') {
         url += `branch=${reportFilters.branch}&`;
       }
@@ -157,7 +178,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       } else {
         url += `range=${reportFilters.dateRange}&`;
       }
-      
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -177,59 +197,57 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
-    
     const printWindow = window.open('', '_blank');
     const reportDate = new Date().toLocaleString();
     const filters = `
-      Branch: ${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}
-      Job Role: ${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}
-      Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
-      Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
-    `;
-    
+Branch: ${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}
+Job Role: ${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}
+Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
+Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
+`;
     printWindow.document.write(`
-      <html>
-        <head>
-          <title>TaskBridge Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
-            h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
-            .filters p { margin: 5px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-            th { background-color: #00d1ff; color: white; }
-            .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
-            .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
-            @media print {
-              body { padding: 0; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>TaskBridge Report</h1>
-            <p>Generated: ${reportDate}</p>
-          </div>
-          <div class="filters">
-            <h3>Report Filters:</h3>
-            <p>${filters.replace(/\n/g, '<br>')}</p>
-          </div>
-          <div class="report-content">
-            <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
-          </div>
-          <div class="footer">
-            <p>TaskBridge - Workforce Management System</p>
-            <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
-          </div>
-          <div class="no-print" style="text-align: center; margin-top: 20px;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
-          </div>
-        </body>
-      </html>
-    `);
+<html>
+<head>
+<title>TaskBridge Report</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
+.header { text-align: center; margin-bottom: 30px; }
+.filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
+.filters p { margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background-color: #00d1ff; color: white; }
+.summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
+.footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+@media print {
+body { padding: 0; }
+.no-print { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>TaskBridge Report</h1>
+<p>Generated: ${reportDate}</p>
+</div>
+<div class="filters">
+<h3>Report Filters:</h3>
+<p>${filters.replace(/\n/g, '<br>')}</p>
+</div>
+<div class="report-content">
+<pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
+</div>
+<div class="footer">
+<p>TaskBridge - Workforce Management System</p>
+<p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+</div>
+<div class="no-print" style="text-align: center; margin-top: 20px;">
+<button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
+</div>
+</body>
+</html>
+`);
     printWindow.document.close();
     printWindow.print();
   };
@@ -239,17 +257,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
-    
-    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n\n";
+    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n";
     csvContent += "Filters:\n";
     csvContent += `Branch,${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}\n`;
     csvContent += `Job Role,${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}\n`;
     csvContent += `Employee,${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}\n`;
-    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n\n`;
-    
+    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n`;
     csvContent += "Report Data:\n";
     csvContent += JSON.stringify(reportData, null, 2);
-    
     const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -260,18 +275,18 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     showToast(lang.exportExcel + ' ' + (language === 'en' ? 'exported!' : 'exporterad!'), 'success');
   };
 
-  const checkRoomAccess = () => {
-  console.log('=== CHECKING ROOM ACCESS ===');
-  console.log('Subscription plan:', subscriptionData?.plan);
-  const plan = subscriptionData?.plan?.toLowerCase();
-  console.log('Plan lowercase:', plan);
-  const allowedPlans = ['business', 'enterprise', 'corporate'];
-  const hasAccess = allowedPlans.includes(plan);
-  console.log('Has access:', hasAccess);
-  console.log('Allowed plans:', allowedPlans);
-  setHasRoomAccess(hasAccess);
-  return hasAccess;
-};
+  const checkRoomAccess = useCallback(() => {
+    console.log('=== CHECKING ROOM ACCESS ===');
+    console.log('Subscription plan:', subscriptionData?.plan);
+    const plan = subscriptionData?.plan?.toLowerCase();
+    console.log('Plan lowercase:', plan);
+    const allowedPlans = ['business', 'enterprise', 'corporate'];
+    const hasAccess = allowedPlans.includes(plan);
+    console.log('Has access:', hasAccess);
+    console.log('Allowed plans:', allowedPlans);
+    setHasRoomAccess(hasAccess);
+    return hasAccess;
+  }, [subscriptionData]);
 
   const fetchAuditLogsEnhanced = async () => {
     setLoadingAudit(true);
@@ -313,33 +328,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     window.addEventListener('resize', checkMobile);
     fetchEmployeesForFilter();
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [fetchEmployeesForFilter]);
 
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3000);
-  };
+  }, []);
 
-  const canAddEmployee = () => {
+  const canAddEmployee = useCallback(() => {
     const limit = usageData.employees?.limit;
     const current = usageData.employees?.current;
     if (limit === Infinity) return true;
     return current < limit;
-  };
+  }, [usageData.employees]);
 
-  const canAddBranch = () => {
+  const canAddBranch = useCallback(() => {
     const limit = usageData.branches?.limit;
     const current = usageData.branches?.current;
     if (limit === Infinity) return true;
     return current < limit;
-  };
+  }, [usageData.branches]);
 
-  const canAddAdmin = () => {
+  const canAddAdmin = useCallback(() => {
     const limit = usageData.admins?.limit;
     const current = usageData.admins?.current;
     if (limit === Infinity) return true;
     return current < limit;
-  };
+  }, [usageData.admins]);
 
   const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
     setConfirmationModal({
@@ -508,12 +523,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const lang = t[language];
   const isSmall = screenWidth <= 480;
 
-  const changeLanguage = (langCode) => {
+  const changeLanguage = useCallback((langCode) => {
     setLanguage(langCode);
     localStorage.setItem('taskbridge_language', langCode);
     setShowLanguageDropdown(false);
     showToast(langCode === 'en' ? 'Language changed to English' : 'Språk ändrat till Svenska', 'success');
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchDashboardData(true);
@@ -521,9 +536,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
     setChatMessages([{
-      text: language === 'en' 
-        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
-        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
+      text: language === 'en'
+        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\nTry clicking one of the quick questions below!"
+        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\nProva att klicka på en av snabbfrågorna nedan!",
       sender: 'ai',
       time: new Date().toLocaleTimeString(),
       showQuickQuestions: true
@@ -533,35 +548,36 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       fetchSubscriptionData();
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchSubscriptionData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-    console.log('Subscription data received:', data);
-    if (data.success) {
-      setSubscriptionData(data.data);
-      if (data.data.usage) {
-        setUsageData(data.data.usage);
+  const fetchSubscriptionData = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      console.log('Subscription data received:', data);
+      if (data.success) {
+        setSubscriptionData(data.data);
+        if (data.data.usage) {
+          setUsageData(data.data.usage);
+        }
+        checkRoomAccess();
       }
-      // ✅ Check room access after subscription data loads
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+    }
+  }, [checkRoomAccess]);
+
+  // Watch for subscription data changes
+  useEffect(() => {
+    if (subscriptionData) {
+      console.log('Subscription data changed:', subscriptionData.plan);
       checkRoomAccess();
     }
-  } catch (error) {
-    console.error('Error fetching subscription:', error);
-  }
-};
-// Watch for subscription data changes
-useEffect(() => {
-  if (subscriptionData) {
-    console.log('Subscription data changed:', subscriptionData.plan);
-    checkRoomAccess();
-  }
-}, [subscriptionData]);
+  }, [subscriptionData, checkRoomAccess]);
+
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -575,12 +591,13 @@ useEffect(() => {
     }
   };
 
-  const fetchDashboardData = async (showLoading = true) => {
-  if (isEditingRef.current) return; 
-  if (showLoading) setLoading(true);
+  const fetchDashboardData = useCallback(async (showLoading = true) => {
+    // Skip fetch if user is editing to prevent data loss/focus loss
+    if (isEditingRef.current) return;
+    
+    if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      
       const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
         fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -588,17 +605,14 @@ useEffect(() => {
         fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      
       const usersData = await usersRes.json();
       const branchesData = await branchesRes.json();
       const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
       const jobsData = await jobsRes.json();
-      
       const allUsers = usersData.data || [];
       const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
       const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      
       setAdmins(filteredAdmins);
       setEmployees(filteredEmployees);
       setBranches(branchesData.data || []);
@@ -618,7 +632,7 @@ useEffect(() => {
     } finally {
       if (showLoading) setLoading(false);
     }
-  };
+  }, [user?.email]);
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
@@ -639,7 +653,6 @@ useEffect(() => {
             newPassword: profileData.newPassword
           })
         });
-        
         if (response.ok) {
           showToast(language === 'en' ? 'Password changed successfully!' : 'Lösenordet ändrades!', 'success');
           setShowProfileModal(false);
@@ -668,12 +681,11 @@ useEffect(() => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email: changeEmailData.newEmail,
-          password: changeEmailData.password 
+          password: changeEmailData.password
         })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Email changed! Please login again.' : 'E-post ändrad! Logga in igen.', 'success');
         setTimeout(() => {
@@ -690,10 +702,11 @@ useEffect(() => {
     }
   };
 
+  // === INLINE EDIT FUNCTIONS WITH PROPER FOCUS MANAGEMENT ===
   const startEditAdmin = (admin) => {
-  isEditingRef.current = true;
-  setEditingAdminId(admin._id);
-  setEditAdminData({
+    isEditingRef.current = true;
+    setEditingAdminId(admin._id);
+    setEditAdminData({
       name: admin.name,
       email: admin.email,
       isActive: admin.isActive
@@ -707,8 +720,7 @@ useEffect(() => {
   };
 
   const saveEditAdmin = async (adminId) => {
-      isEditingRef.current = false;
-
+    isEditingRef.current = false;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
@@ -719,7 +731,6 @@ useEffect(() => {
         },
         body: JSON.stringify(editAdminData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin updated!' : 'Administratör uppdaterad!', 'success');
         setEditingAdminId(null);
@@ -736,8 +747,8 @@ useEffect(() => {
   };
 
   const startEditEmployee = (employee) => {
-      isEditingRef.current = true;
-  setEditingEmployeeId(employee._id);
+    isEditingRef.current = true;
+    setEditingEmployeeId(employee._id);
     setEditEmployeeData({
       name: employee.name,
       email: employee.email,
@@ -746,13 +757,14 @@ useEffect(() => {
   };
 
   const cancelEditEmployee = () => {
-  isEditingRef.current = false;
-  setEditingEmployeeId(null);
-  setEditEmployeeData({});
-};
-const saveEditEmployee = async (employeeId) => {
-  isEditingRef.current = false;
-  try {
+    isEditingRef.current = false;
+    setEditingEmployeeId(null);
+    setEditEmployeeData({});
+  };
+
+  const saveEditEmployee = async (employeeId) => {
+    isEditingRef.current = false;
+    try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${employeeId}`, {
         method: 'PUT',
@@ -762,7 +774,6 @@ const saveEditEmployee = async (employeeId) => {
         },
         body: JSON.stringify(editEmployeeData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee updated!' : 'Anställd uppdaterad!', 'success');
         setEditingEmployeeId(null);
@@ -779,8 +790,8 @@ const saveEditEmployee = async (employeeId) => {
   };
 
   const startEditBranch = (branch) => {
-  isEditingRef.current = true;
-  setEditingBranchId(branch._id);
+    isEditingRef.current = true;
+    setEditingBranchId(branch._id);
     setEditBranchData({
       name: branch.name,
       'address.city': branch.address?.city || ''
@@ -788,13 +799,14 @@ const saveEditEmployee = async (employeeId) => {
   };
 
   const cancelEditBranch = () => {
-  isEditingRef.current = false;
-  setEditingBranchId(null);
-  setEditBranchData({});
-    };
-    const saveEditBranch = async (branchId) => {
-      isEditingRef.current = false;
-      try {
+    isEditingRef.current = false;
+    setEditingBranchId(null);
+    setEditBranchData({});
+  };
+
+  const saveEditBranch = async (branchId) => {
+    isEditingRef.current = false;
+    try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
         method: 'PUT',
@@ -807,7 +819,6 @@ const saveEditEmployee = async (employeeId) => {
           address: { city: editBranchData['address.city'] }
         })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch updated!' : 'Avdelning uppdaterad!', 'success');
         setEditingBranchId(null);
@@ -824,8 +835,8 @@ const saveEditEmployee = async (employeeId) => {
   };
 
   const startEditJob = (job) => {
-  isEditingRef.current = true;
-  setEditingJobId(job._id);
+    isEditingRef.current = true;
+    setEditingJobId(job._id);
     setEditJobData({
       name: job.name,
       description: job.description || ''
@@ -833,13 +844,14 @@ const saveEditEmployee = async (employeeId) => {
   };
 
   const cancelEditJob = () => {
-  isEditingRef.current = false;
-  setEditingJobId(null);
-  setEditJobData({});
-};
-const saveEditJob = async (jobId) => {
-  isEditingRef.current = false;
-  try {
+    isEditingRef.current = false;
+    setEditingJobId(null);
+    setEditJobData({});
+  };
+
+  const saveEditJob = async (jobId) => {
+    isEditingRef.current = false;
+    try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'PUT',
@@ -849,7 +861,6 @@ const saveEditJob = async (jobId) => {
         },
         body: JSON.stringify(editJobData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role updated!' : 'Jobbroll uppdaterad!', 'success');
         setEditingJobId(null);
@@ -866,8 +877,8 @@ const saveEditJob = async (jobId) => {
   };
 
   const startEditTask = (task) => {
-  isEditingRef.current = true;
-  setEditingTaskId(task._id);
+    isEditingRef.current = true;
+    setEditingTaskId(task._id);
     setEditTaskData({
       title: task.title,
       description: task.description || '',
@@ -881,13 +892,14 @@ const saveEditJob = async (jobId) => {
   };
 
   const cancelEditTask = () => {
-  isEditingRef.current = false;
-  setEditingTaskId(null);
-  setEditTaskData({});
-};
-const saveEditTask = async (taskId) => {
-  isEditingRef.current = false;
-  try {
+    isEditingRef.current = false;
+    setEditingTaskId(null);
+    setEditTaskData({});
+  };
+
+  const saveEditTask = async (taskId) => {
+    isEditingRef.current = false;
+    try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
         method: 'PUT',
@@ -897,7 +909,6 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(editTaskData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task updated!' : 'Uppgift uppdaterad!', 'success');
         setEditingTaskId(null);
@@ -915,12 +926,10 @@ const saveEditTask = async (taskId) => {
 
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
-    
     if (!canAddAdmin()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const adminData = {
@@ -931,7 +940,6 @@ const saveEditTask = async (taskId) => {
         branch: formData.branch || null,
         assignedBranches: formData.branch ? [formData.branch] : []
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -940,9 +948,7 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(adminData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
         setShowCreateAdminModal(false);
@@ -969,18 +975,16 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify({ branchId })
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         const assignedBranch = branches.find(b => b._id === branchId);
         setSelectedAdminForBranch(prev => ({
           ...prev,
           assignedBranches: [...(prev.assignedBranches || []), assignedBranch]
         }));
-        setAdmins(prevAdmins => 
-          prevAdmins.map(admin => 
-            admin._id === selectedAdminForBranch._id 
+        setAdmins(prevAdmins =>
+          prevAdmins.map(admin =>
+            admin._id === selectedAdminForBranch._id
               ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
               : admin
           )
@@ -1008,17 +1012,15 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify({ branchId })
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         setSelectedAdminForBranch(prev => ({
           ...prev,
           assignedBranches: (prev.assignedBranches || []).filter(b => b._id !== branchId)
         }));
-        setAdmins(prevAdmins => 
-          prevAdmins.map(admin => 
-            admin._id === selectedAdminForBranch._id 
+        setAdmins(prevAdmins =>
+          prevAdmins.map(admin =>
+            admin._id === selectedAdminForBranch._id
               ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
               : admin
           )
@@ -1036,12 +1038,10 @@ const saveEditTask = async (taskId) => {
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
-    
     if (!canAddEmployee()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const employeeData = {
@@ -1052,7 +1052,6 @@ const saveEditTask = async (taskId) => {
         jobDescription: formData.jobDescription,
         branch: formData.branch || null
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -1061,9 +1060,7 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(employeeData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
         setShowCreateEmployeeModal(false);
@@ -1080,12 +1077,10 @@ const saveEditTask = async (taskId) => {
 
   const handleCreateBranch = async (e) => {
     e.preventDefault();
-    
     if (!canAddBranch()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const branchData = {
@@ -1097,7 +1092,6 @@ const saveEditTask = async (taskId) => {
           country: formData.country || 'Sweden'
         }
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
         method: 'POST',
         headers: {
@@ -1106,7 +1100,6 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(branchData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
         setShowCreateBranchModal(false);
@@ -1130,7 +1123,6 @@ const saveEditTask = async (taskId) => {
         name: formData.name,
         description: formData.description || ''
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
         method: 'POST',
         headers: {
@@ -1139,7 +1131,6 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(jobData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
         setShowCreateJobModal(false);
@@ -1171,7 +1162,6 @@ const saveEditTask = async (taskId) => {
         location: formData.location || '',
         notes: formData.notes || ''
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
         method: 'POST',
         headers: {
@@ -1180,9 +1170,7 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify(taskData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
         setShowCreateTaskModal(false);
@@ -1212,7 +1200,6 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify({ password: resetPasswordData.newPassword })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? `Password for ${selectedUser.name} reset!` : `Lösenord för ${selectedUser.name} återställt!`, 'success');
         setShowResetPasswordModal(false);
@@ -1236,9 +1223,7 @@ const saveEditTask = async (taskId) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
         fetchDashboardData(true);
@@ -1256,14 +1241,12 @@ const saveEditTask = async (taskId) => {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${empId}`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
         fetchDashboardData(true);
@@ -1281,14 +1264,12 @@ const saveEditTask = async (taskId) => {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}?force=true`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
         fetchDashboardData(true);
@@ -1303,7 +1284,6 @@ const saveEditTask = async (taskId) => {
 
   const handleDeleteJob = async (jobId, jobName) => {
     const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
-    
     if (employeesWithJob > 0) {
       const errorMsg = language === 'en'
         ? `Cannot delete "${jobName}" because ${employeesWithJob} employee(s) have this job role. Please reassign them first.`
@@ -1311,16 +1291,13 @@ const saveEditTask = async (taskId) => {
       showToast(errorMsg, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
         fetchDashboardData(true);
@@ -1340,9 +1317,7 @@ const saveEditTask = async (taskId) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
         fetchDashboardData(true);
@@ -1362,7 +1337,6 @@ const saveEditTask = async (taskId) => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
         fetchDashboardData(true);
@@ -1390,7 +1364,6 @@ const saveEditTask = async (taskId) => {
         },
         body: JSON.stringify({ reason })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
         fetchDashboardData(true);
@@ -1411,7 +1384,6 @@ const saveEditTask = async (taskId) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         localStorage.removeItem('token');
         onLogout();
@@ -1430,69 +1402,67 @@ const saveEditTask = async (taskId) => {
     if (onLogout) onLogout();
   };
 
-  const handleTabChange = (tab) => {
-  if (activeTab !== tab) {
-    setPreviousTab(activeTab);
-    setActiveTab(tab);
-    localStorage.setItem('taskbridge_activeTab', tab);
-  }
-};
+  const handleTabChange = useCallback((tab) => {
+    if (activeTab !== tab) {
+      // Save scroll position before changing tab
+      scrollPositionRef.current = window.scrollY;
+      setPreviousTab(activeTab);
+      setActiveTab(tab);
+      localStorage.setItem('taskbridge_activeTab', tab);
+    }
+  }, [activeTab]);
 
   const sendChatMessage = async (message = null) => {
     const userMessageText = message || chatInput;
     if (!userMessageText.trim()) return;
-    
     const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
     setChatMessages([...chatMessages, userMessage]);
     setChatInput('');
     setIsAiTyping(true);
-    
     setTimeout(() => {
       const input = userMessageText.toLowerCase();
       let response = "";
-      
       if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
-        response = language === 'en' 
-          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
-          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
-      } 
+        response = language === 'en'
+          ? "📋 **To create a new task:**\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n• Title\n• Date & Time\n• Job Role\n• Branch\n• Max Employees\n4. Click **Create**\nThe task will be visible to employees with matching job roles."
+          : "📋 **För att skapa en ny uppgift:**\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n• Titel\n• Datum & Tid\n• Jobbroll\n• Avdelning\n• Max antal anställda\n4. Klicka på **Skapa**\nUppgiften syns för anställda med matchande jobbroll.";
+      }
       else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
         response = language === 'en'
-          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
-          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
+          ? "👥 **To add a new employee:**\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n• Full Name\n• Email Address\n• Temporary Password\n• Job Role\n• Branch\n4. Click **Create**\nThe employee will receive a welcome email with login instructions."
+          : "👥 **För att lägga till en ny anställd:**\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n• Fullständigt namn\n• E-postadress\n• Tillfälligt lösenord\n• Jobbroll\n• Avdelning\n4. Klicka på **Skapa**\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
       }
       else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
         response = language === 'en'
-          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
-          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+          ? "🏢 **To create a new branch:**\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n• Branch Name\n• City (optional)\n4. Click **Create**\nAfter creation, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en ny avdelning:**\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n• Avdelningsnamn\n• Stad (valfritt)\n4. Klicka på **Skapa**\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
       }
       else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
         response = language === 'en'
-          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
-          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+          ? "📊 **To generate reports:**\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n• Attendance Report\n• Hours Worked Report\n3. Export options:\n• Export PDF\n• Export Excel\nReports help track productivity and attendance patterns."
+          : "📊 **För att generera rapporter:**\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n• Närvarorapport\n• Rapport för arbetade timmar\n3. Exportalternativ:\n• Exportera PDF\n• Exportera Excel\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
       }
       else if (input.includes('reset password') || input.includes('återställ lösenord')) {
         response = language === 'en'
-          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
-          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
+          ? "🔑 **To reset a user's password:**\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\nThe user can now log in with the new password."
+          : "🔑 **För att återställa en användares lösenord:**\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\nAnvändaren kan nu logga in med det nya lösenordet.";
       }
       else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
         response = language === 'en'
-          ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
-          : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
+          ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\nContact sales@taskbridge.com for custom plans.`
+          : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\nKontakta sales@taskbridge.com för anpassade planer.`;
       }
       else {
         response = language === 'en'
-          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\nI can help you with:\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n**Try clicking one of the quick questions below!**\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\nJag kan hjälpa dig med:\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n**Prova att klicka på en av snabbfrågorna nedan!**\nVad vill du lära dig om?";
       }
-      
       const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
       setChatMessages(prev => [...prev, aiMessage]);
       setIsAiTyping(false);
     }, 800);
   };
-  
+
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
       setter(false);
@@ -1502,7 +1472,6 @@ const saveEditTask = async (taskId) => {
   const confirmDelete = (type, id, name) => {
     let title = '';
     let message = '';
-    
     switch(type) {
       case 'admin':
         title = lang.confirmDelete;
@@ -1515,7 +1484,7 @@ const saveEditTask = async (taskId) => {
       case 'branch':
         const employeeCount = employees.filter(e => e.branch?._id === id).length;
         title = lang.confirmDelete;
-        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}\n\n${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}\n\n${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}\n${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}\n${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
         break;
       case 'job':
         title = lang.confirmDelete;
@@ -1528,7 +1497,6 @@ const saveEditTask = async (taskId) => {
       default:
         return;
     }
-    
     setConfirmationModal({
       isOpen: true,
       title,
@@ -1547,6 +1515,7 @@ const saveEditTask = async (taskId) => {
     });
   };
 
+  // Early returns for subscription states and loading
   if (subscriptionData?.status === 'expired' || subscriptionData?.status === 'paused') {
     return (
       <div style={styles.subscriptionBlockedContainer}>
@@ -1569,7 +1538,7 @@ const saveEditTask = async (taskId) => {
     );
   }
 
-  const filteredEmployees = employees.filter(e => 
+  const filteredEmployees = employees.filter(e =>
     e.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -1590,14 +1559,14 @@ const saveEditTask = async (taskId) => {
           <div style={styles.confirmationModal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.confirmationHeader}>
               <h3 style={styles.confirmationTitle}>{confirmationModal.title}</h3>
-              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.confirmationClose}>×</button>
+              <button type="button" onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.confirmationClose}>×</button>
             </div>
             <div style={styles.confirmationBody}>
               <p style={styles.confirmationMessage}>{confirmationModal.message}</p>
             </div>
             <div style={styles.confirmationFooter}>
-              <button onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={confirmationModal.onConfirm} style={styles.confirmDeleteButton}>{lang.delete}</button>
+              <button type="button" onClick={() => setConfirmationModal({ ...confirmationModal, isOpen: false })} style={styles.cancelButton}>{lang.cancel}</button>
+              <button type="button" onClick={confirmationModal.onConfirm} style={styles.confirmDeleteButton}>{lang.delete}</button>
             </div>
           </div>
         </div>
@@ -1624,18 +1593,18 @@ const saveEditTask = async (taskId) => {
         </div>
         <div style={{...styles.headerButtons, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end'}}>
           <div style={styles.languageContainer}>
-            <button onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={{...styles.languageButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 12px'}}>
+            <button type="button" onClick={() => setShowLanguageDropdown(!showLanguageDropdown)} style={{...styles.languageButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 12px'}}>
               <i className="fas fa-globe"></i> {language === 'en' ? 'EN' : 'SV'}
             </button>
             {showLanguageDropdown && (
               <div style={styles.languageDropdown}>
-                <button onClick={() => changeLanguage('en')} style={styles.languageOption}>🇬🇧 English</button>
-                <button onClick={() => changeLanguage('sv')} style={styles.languageOption}>🇸🇪 Svenska</button>
+                <button type="button" onClick={() => changeLanguage('en')} style={styles.languageOption}>🇬🇧 English</button>
+                <button type="button" onClick={() => changeLanguage('sv')} style={styles.languageOption}>🇸🇪 Svenska</button>
               </div>
             )}
           </div>
-          <button onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
-          <button onClick={handleLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
+          <button type="button" onClick={() => setShowProfileModal(true)} style={{...styles.profileButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.profile}</button>
+          <button type="button" onClick={handleLogout} style={{...styles.logoutButton, fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 12px' : '6px 14px'}}>{lang.logout}</button>
         </div>
       </div>
 
@@ -1696,17 +1665,17 @@ const saveEditTask = async (taskId) => {
       )}
 
       <div style={{...styles.tabs, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap', paddingBottom: isMobile ? '8px' : '10px'}}>
-        <button onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.dashboard}</button>
-        <button onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.admins}</button>
-        <button onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.staff}</button>
-        <button onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.branches}</button>
-        <button onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.calendar}</button>
-        <button onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.roles}</button>
-        <button onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.tasks}</button>
-        <button onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
-        <button onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
-        <button onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
-        <button onClick={() => handleTabChange('premium')} style={{...styles.tab, background: activeTab === 'premium' ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px', border: activeTab !== 'premium' ? '1px solid rgba(245,158,11,0.3)' : 'none'}}>
+        <button type="button" onClick={() => handleTabChange('dashboard')} style={{...styles.tab, background: activeTab === 'dashboard' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.dashboard}</button>
+        <button type="button" onClick={() => handleTabChange('admins')} style={{...styles.tab, background: activeTab === 'admins' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.admins}</button>
+        <button type="button" onClick={() => handleTabChange('employees')} style={{...styles.tab, background: activeTab === 'employees' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.staff}</button>
+        <button type="button" onClick={() => handleTabChange('branches')} style={{...styles.tab, background: activeTab === 'branches' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.branches}</button>
+        <button type="button" onClick={() => onNavigate('calendar')} style={{...styles.tab, background: activeTab === 'calendar' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.calendar}</button>
+        <button type="button" onClick={() => handleTabChange('jobs')} style={{...styles.tab, background: activeTab === 'jobs' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.roles}</button>
+        <button type="button" onClick={() => handleTabChange('tasks')} style={{...styles.tab, background: activeTab === 'tasks' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.tasks}</button>
+        <button type="button" onClick={() => handleTabChange('applications')} style={{...styles.tab, background: activeTab === 'applications' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.requests}</button>
+        <button type="button" onClick={() => handleTabChange('reports')} style={{...styles.tab, background: activeTab === 'reports' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.reports}</button>
+        <button type="button" onClick={() => handleTabChange('settings')} style={{...styles.tab, background: activeTab === 'settings' ? '#00d1ff' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px'}}>{lang.settings}</button>
+        <button type="button" onClick={() => handleTabChange('premium')} style={{...styles.tab, background: activeTab === 'premium' ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'transparent', fontSize: isSmall ? '10px' : '11px', padding: isSmall ? '5px 10px' : '6px 14px', border: activeTab !== 'premium' ? '1px solid rgba(245,158,11,0.3)' : 'none'}}>
           ⭐ Premium Features
         </button>
       </div>
@@ -1721,9 +1690,9 @@ const saveEditTask = async (taskId) => {
               <h3 style={{...styles.welcomeTitle, fontSize: isSmall ? '13px' : '14px'}}>{lang.subscriptionOverview}</h3>
               <p style={{...styles.welcomeText, fontSize: isSmall ? '11px' : '12px'}}><strong>{stats.pendingApplications}</strong> {lang.pendingRequests} | <strong>{stats.totalTasks}</strong> {lang.activeTasks}</p>
               <div style={{...styles.quickActions, flexDirection: isSmall ? 'column' : 'row'}}>
-                <button onClick={() => handleTabChange('tasks')} style={styles.quickActionBtn}>+ {lang.createTask}</button>
-                <button onClick={() => setShowCreateEmployeeModal(true)} style={styles.quickActionBtn}>+ {lang.addStaff}</button>
-                <button onClick={() => handleTabChange('applications')} style={styles.quickActionBtn}>{lang.manage}</button>
+                <button type="button" onClick={() => handleTabChange('tasks')} style={styles.quickActionBtn}>+ {lang.createTask}</button>
+                <button type="button" onClick={() => setShowCreateEmployeeModal(true)} style={styles.quickActionBtn}>+ {lang.addStaff}</button>
+                <button type="button" onClick={() => handleTabChange('applications')} style={styles.quickActionBtn}>{lang.manage}</button>
               </div>
             </div>
           </div>
@@ -1733,14 +1702,15 @@ const saveEditTask = async (taskId) => {
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.adminManagement}</h2>
-              <button 
+              <button
+                type="button"
                 onClick={() => {
                   if (!canAddAdmin()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
                     setShowCreateAdminModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1}}
               >
                 + {lang.addAdmin}
@@ -1763,6 +1733,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
                           <input
+                            key={`admin-${admin._id}-name`}
                             type="text"
                             value={editAdminData.name || admin.name}
                             onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
@@ -1776,6 +1747,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
                           <input
+                            key={`admin-${admin._id}-email`}
                             type="email"
                             value={editAdminData.email || admin.email}
                             onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
@@ -1792,9 +1764,9 @@ const saveEditTask = async (taskId) => {
                               <span key={b._id} style={styles.branchTag}>{b.name}</span>
                             ))}
                             {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
-                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
+                            <button type="button" onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
                           </div>
-                         </td>
+                        </td>
                       )}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingAdminId === admin._id ? (
@@ -1820,13 +1792,13 @@ const saveEditTask = async (taskId) => {
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => startEditAdmin(admin)} style={styles.editButton}>✏️</button>
-                            <button onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                            <button onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                            <button type="button" onClick={() => startEditAdmin(admin)} style={styles.editButton}>✏️</button>
+                            <button type="button" onClick={() => { setSelectedUser(admin); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                            <button type="button" onClick={() => confirmDelete('admin', admin._id, admin.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                           </div>
                         )}
                       </td>
-                     </tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1838,14 +1810,15 @@ const saveEditTask = async (taskId) => {
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.staffManagement}</h2>
-              <button 
+              <button
+                type="button"
                 onClick={() => {
                   if (!canAddEmployee()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
                     setShowCreateEmployeeModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1}}
               >
                 + {lang.addStaff}
@@ -1862,7 +1835,7 @@ const saveEditTask = async (taskId) => {
                     {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {filteredEmployees.map(emp => (
@@ -1870,6 +1843,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
                           <input
+                            key={`employee-${emp._id}-name`}
                             type="text"
                             value={editEmployeeData.name || emp.name}
                             onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
@@ -1879,10 +1853,11 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           emp.name
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
                           <input
+                            key={`employee-${emp._id}-email`}
                             type="email"
                             value={editEmployeeData.email || emp.email}
                             onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
@@ -1891,7 +1866,7 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email
                         )}
-                       </td>
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
@@ -1909,22 +1884,22 @@ const saveEditTask = async (taskId) => {
                             {emp.isActive ? 'Active' : 'Inactive'}
                           </span>
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
                             <button type="button" onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾</button>
                             <button type="button" onClick={cancelEditEmployee} style={styles.cancelButton}>✕</button>
-                            </div>
+                          </div>
                         ) : (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => startEditEmployee(emp)} style={styles.editButton}>✏️</button>
-                            <button onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
-                            <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                            <button type="button" onClick={() => startEditEmployee(emp)} style={styles.editButton}>✏️</button>
+                            <button type="button" onClick={() => { setSelectedUser(emp); setShowResetPasswordModal(true); }} style={{...styles.resetButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🔑</button>
+                            <button type="button" onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1936,14 +1911,15 @@ const saveEditTask = async (taskId) => {
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.branchManagement}</h2>
-              <button 
+              <button
+                type="button"
                 onClick={() => {
                   if (!canAddBranch()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
                     setShowCreateBranchModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddBranch() ? 0.5 : 1}}
               >
                 + {lang.addBranch}
@@ -1958,7 +1934,7 @@ const saveEditTask = async (taskId) => {
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Staff</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Admins</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                   </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {branches.map(branch => (
@@ -1966,6 +1942,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
                           <input
+                            key={`branch-${branch._id}-name`}
                             type="text"
                             value={editBranchData.name || branch.name}
                             onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
@@ -1975,10 +1952,11 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           branch.name
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
                           <input
+                            key={`branch-${branch._id}-city`}
                             type="text"
                             value={editBranchData['address.city'] || branch.address?.city || ''}
                             onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
@@ -1987,7 +1965,7 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           branch.address?.city || '-'
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
@@ -1995,15 +1973,15 @@ const saveEditTask = async (taskId) => {
                           <div style={styles.actionButtons}>
                             <button type="button" onClick={() => saveEditBranch(branch._id)} style={styles.saveButton}>💾</button>
                             <button type="button" onClick={cancelEditBranch} style={styles.cancelButton}>✕</button>
-                            </div>
+                          </div>
                         ) : (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => startEditBranch(branch)} style={styles.editButton}>✏️</button>
-                            <button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                            <button type="button" onClick={() => startEditBranch(branch)} style={styles.editButton}>✏️</button>
+                            <button type="button" onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -2015,7 +1993,7 @@ const saveEditTask = async (taskId) => {
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.roleManagement}</h2>
-              <button onClick={() => setShowCreateJobModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addRole}</button>
+              <button type="button" onClick={() => setShowCreateJobModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.addRole}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
@@ -2033,6 +2011,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
                           <input
+                            key={`job-${job._id}-name`}
                             type="text"
                             value={editJobData.name || job.name}
                             onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
@@ -2042,10 +2021,11 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           job.name
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
                           <textarea
+                            key={`job-${job._id}-desc`}
                             value={editJobData.description || job.description || ''}
                             onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
                             style={styles.inlineTextarea}
@@ -2054,7 +2034,7 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           job.description || '-'
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingJobId === job._id ? (
@@ -2064,12 +2044,12 @@ const saveEditTask = async (taskId) => {
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => startEditJob(job)} style={styles.editButton}>✏️</button>
-                            <button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                            <button type="button" onClick={() => startEditJob(job)} style={styles.editButton}>✏️</button>
+                            <button type="button" onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -2081,7 +2061,7 @@ const saveEditTask = async (taskId) => {
           <div>
             <div style={{...styles.taskHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.taskManagement}</h2>
-              <button onClick={() => setShowCreateTaskModal(true)} style={{...styles.createTaskButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.createTask}</button>
+              <button type="button" onClick={() => setShowCreateTaskModal(true)} style={{...styles.createTaskButton, width: isSmall ? '100%' : 'auto'}}>+ {lang.createTask}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
@@ -2102,6 +2082,7 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
                           <input
+                            key={`task-${task._id}-title`}
                             type="text"
                             value={editTaskData.title || task.title}
                             onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
@@ -2111,10 +2092,11 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
                           <input
+                            key={`task-${task._id}-date`}
                             type="date"
                             value={editTaskData.date || task.date?.split('T')[0]}
                             onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
@@ -2123,7 +2105,7 @@ const saveEditTask = async (taskId) => {
                         ) : (
                           new Date(task.date).toLocaleDateString()
                         )}
-                       </td>
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
@@ -2143,7 +2125,7 @@ const saveEditTask = async (taskId) => {
                             {task.status}
                           </span>
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
@@ -2152,12 +2134,12 @@ const saveEditTask = async (taskId) => {
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => startEditTask(task)} style={styles.editButton}>✏️</button>
-                            <button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
+                            <button type="button" onClick={() => startEditTask(task)} style={styles.editButton}>✏️</button>
+                            <button type="button" onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -2189,23 +2171,23 @@ const saveEditTask = async (taskId) => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
-                        <span style={{...styles.statusBadge, background: 
-                          app.status === 'approved' ? '#10b981' : 
+                        <span style={{...styles.statusBadge, background:
+                          app.status === 'approved' ? '#10b981' :
                           app.status === 'rejected' ? '#ef4444' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'
                         }}>
                           {app.status}
                         </span>
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => handleApproveApplication(app._id)} style={{...styles.approveButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✓</button>
-                            <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
+                            <button type="button" onClick={() => handleApproveApplication(app._id)} style={{...styles.approveButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✓</button>
+                            <button type="button" onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px'}}>✗</button>
                           </div>
                         )}
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -2217,25 +2199,23 @@ const saveEditTask = async (taskId) => {
         {activeTab === 'reports' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
-            
             {/* Report Filters */}
             <div style={styles.reportFiltersCard}>
               <div style={styles.reportFiltersHeader}>
                 <h3 style={{color: 'white', fontSize: '14px', margin: 0}}>
                   <i className="fas fa-filter"></i> {language === 'en' ? 'Report Filters' : 'Rapportfilter'}
                 </h3>
-                <button onClick={() => setShowReportFilters(!showReportFilters)} style={styles.filterToggleButton}>
+                <button type="button" onClick={() => setShowReportFilters(!showReportFilters)} style={styles.filterToggleButton}>
                   {showReportFilters ? '▲' : '▼'}
                 </button>
               </div>
-              
               {showReportFilters && (
                 <div style={styles.reportFiltersBody}>
                   <div style={styles.filterRow}>
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.branch}:</label>
-                      <select 
-                        value={reportFilters.branch} 
+                      <select
+                        value={reportFilters.branch}
                         onChange={(e) => setReportFilters({...reportFilters, branch: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2245,11 +2225,10 @@ const saveEditTask = async (taskId) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.roles}:</label>
-                      <select 
-                        value={reportFilters.jobRole} 
+                      <select
+                        value={reportFilters.jobRole}
                         onChange={(e) => setReportFilters({...reportFilters, jobRole: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2259,11 +2238,10 @@ const saveEditTask = async (taskId) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.employees}:</label>
-                      <select 
-                        value={reportFilters.employee} 
+                      <select
+                        value={reportFilters.employee}
                         onChange={(e) => setReportFilters({...reportFilters, employee: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2273,11 +2251,10 @@ const saveEditTask = async (taskId) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{language === 'en' ? 'Date Range' : 'Datumintervall'}:</label>
-                      <select 
-                        value={reportFilters.dateRange} 
+                      <select
+                        value={reportFilters.dateRange}
                         onChange={(e) => setReportFilters({...reportFilters, dateRange: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2290,23 +2267,22 @@ const saveEditTask = async (taskId) => {
                       </select>
                     </div>
                   </div>
-                  
                   {reportFilters.dateRange === 'custom' && (
                     <div style={styles.customDateRange}>
                       <div style={styles.filterGroup}>
                         <label style={styles.filterLabel}>{lang.startDate}:</label>
-                        <input 
-                          type="date" 
-                          value={reportFilters.startDate} 
+                        <input
+                          type="date"
+                          value={reportFilters.startDate}
                           onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
                           style={styles.filterInput}
                         />
                       </div>
                       <div style={styles.filterGroup}>
                         <label style={styles.filterLabel}>{lang.endDate}:</label>
-                        <input 
-                          type="date" 
-                          value={reportFilters.endDate} 
+                        <input
+                          type="date"
+                          value={reportFilters.endDate}
                           onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
                           style={styles.filterInput}
                         />
@@ -2316,7 +2292,6 @@ const saveEditTask = async (taskId) => {
                 </div>
               )}
             </div>
-            
             {/* Report Cards */}
             <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))'}}>
               <div style={styles.reportCard}>
@@ -2325,8 +2300,9 @@ const saveEditTask = async (taskId) => {
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Employee attendance summary' : 'Sammanfattning av anställdas närvaro'}
                 </p>
-                <button 
-                  onClick={generateAttendanceReport} 
+                <button
+                  type="button"
+                  onClick={generateAttendanceReport}
                   disabled={generatingReport}
                   style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1}}
                 >
@@ -2337,35 +2313,31 @@ const saveEditTask = async (taskId) => {
                   )}
                 </button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Total hours worked summary' : 'Sammanfattning av arbetade timmar'}
                 </p>
-                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+                <button type="button" onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Export report as PDF' : 'Exportera rapport som PDF'}
                 </p>
-                <button onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
+                <button type="button" onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Export report as CSV' : 'Exportera rapport som CSV'}
                 </p>
-                <button onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
+                <button type="button" onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
               </div>
             </div>
-            
             {/* Report Data Preview */}
             {reportData && (
               <div style={styles.reportPreview}>
@@ -2373,7 +2345,7 @@ const saveEditTask = async (taskId) => {
                   <h3 style={{color: 'white', margin: 0}}>
                     <i className="fas fa-chart-line"></i> {language === 'en' ? 'Report Preview' : 'Förhandsgranskning'}
                   </h3>
-                  <button onClick={() => setReportData(null)} style={styles.clearReportButton}>✕</button>
+                  <button type="button" onClick={() => setReportData(null)} style={styles.clearReportButton}>✕</button>
                 </div>
                 <div style={styles.reportPreviewContent}>
                   <pre style={{margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.8)', whiteSpace: 'pre-wrap'}}>
@@ -2392,17 +2364,17 @@ const saveEditTask = async (taskId) => {
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Organization Logo</h3>
               {logoPreview && <img src={logoPreview} alt="Logo" style={{...styles.logoPreview, width: isSmall ? '50px' : '60px', height: isSmall ? '50px' : '60px'}} />}
               <input type="file" accept="image/*" onChange={handleLogoUpload} style={{...styles.fileInput, fontSize: isSmall ? '10px' : '11px'}} />
-              <button style={{...styles.uploadButton, fontSize: isSmall ? '11px' : '12px'}}>Upload Logo</button>
+              <button type="button" style={{...styles.uploadButton, fontSize: isSmall ? '11px' : '12px'}}>Upload Logo</button>
             </div>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Subscription</h3>
               <p style={{color: 'white', fontSize: isSmall ? '13px' : '14px'}}>{lang.currentPlan}: {subscriptionData?.plan || 'Trial'}</p>
               <a href="mailto:georgeglor@hotmail.com" style={{...styles.contactLink, fontSize: isSmall ? '11px' : '12px'}}>{lang.contactSales}</a>
-              <button style={{...styles.invoiceButton, fontSize: isSmall ? '11px' : '12px'}}>Invoices</button>
+              <button type="button" style={{...styles.invoiceButton, fontSize: isSmall ? '11px' : '12px'}}>Invoices</button>
             </div>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>{lang.auditLogs}</h3>
-              <button onClick={() => { fetchAuditLogsEnhanced(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px'}}>
+              <button type="button" onClick={() => { fetchAuditLogsEnhanced(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px'}}>
                 <i className="fas fa-history"></i> {lang.viewAudit}
               </button>
             </div>
@@ -2412,15 +2384,13 @@ const saveEditTask = async (taskId) => {
         {/* PREMIUM FEATURES TAB - Room Assignment System */}
         {activeTab === 'premium' && (
           <div>
-                {console.log('Premium tab - hasRoomAccess:', hasRoomAccess)}
-
+            {console.log('Premium tab - hasRoomAccess:', hasRoomAccess)}
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
               ⭐ {lang.premiumFeatures}
             </h2>
             <p style={{...styles.sectionDesc, fontSize: isSmall ? '11px' : '12px', marginBottom: '20px'}}>
               {lang.roomAssignmentDesc}
             </p>
-            
             <div style={styles.premiumCard}>
               <div style={styles.premiumIcon}>
                 <i className="fas fa-door-open"></i>
@@ -2436,26 +2406,28 @@ const saveEditTask = async (taskId) => {
                   <span style={styles.premiumFeatureBadge}>📊 Printable Reports</span>
                   <span style={styles.premiumFeatureBadge}>🔄 Shift Management</span>
                 </div>
-                
                 <div style={styles.premiumActions}>
                   {hasRoomAccess ? (
-                <button 
-                  onClick={() => onNavigate('room-assignment')} 
-                  style={styles.premiumButton}
-                >
-                  ⭐ {lang.accessRoomAssignment}
-                </button>
-              ) : (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('room-assignment')}
+                      style={styles.premiumButton}
+                    >
+                      ⭐ {lang.accessRoomAssignment}
+                    </button>
+                  ) : (
                     <>
-                      <button 
-                        onClick={() => showToast(lang.limitWarning, 'info')} 
+                      <button
+                        type="button"
+                        onClick={() => showToast(lang.limitWarning, 'info')}
                         style={{...styles.upgradeButton, opacity: 0.6, cursor: 'not-allowed'}}
                         disabled
                       >
                         🔒 {lang.accessRoomAssignment} - {lang.upgradeRequired}
                       </button>
-                      <button 
-                        onClick={() => window.open('mailto:sales@taskbridge.com')} 
+                      <button
+                        type="button"
+                        onClick={() => window.open('mailto:sales@taskbridge.com')}
                         style={styles.upgradeButton}
                       >
                         💎 Upgrade to Premium
@@ -2504,56 +2476,57 @@ const saveEditTask = async (taskId) => {
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
                           <span style={{
                             ...styles.statusBadge,
-                            background: log.action === 'create' ? '#10b981' : 
-                                      log.action === 'update' ? '#3b82f6' :
-                                      log.action === 'delete' ? '#ef4444' : '#6b7280'
+                            background: log.action === 'create' ? '#10b981' :
+                            log.action === 'update' ? '#3b82f6' :
+                            log.action === 'delete' ? '#ef4444' : '#6b7280'
                           }}>
                             {log.action}
                           </span>
-                         </td>
+                        </td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
                           {new Date(log.createdAt).toLocaleString()}
-                         </td>
+                        </td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
                           <pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>
                             {JSON.stringify(log.changes, null, 2)}
                           </pre>
-                         </td>
-                       </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div style={styles.modalButtons}>
-                <button onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.close}</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            )}
+            <div style={styles.modalButtons}>
+              <button type="button" onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>{lang.close}</button>
             </div>
           </div>
-        )}
+        </div>
+      )}
+
       {/* All other modals remain the same... */}
       {showCreateAdminModal && (
-          <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
-            <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
-              <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addAdmin}</h2>
-              <form onSubmit={handleCreateAdmin}>
-                <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
-                <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
-                <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
-                <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}}>
-                  <option value="">Select Branch (Optional)</option>
-                  {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-                </select>
-                <div style={styles.modalButtons}>
-                  <button type="button" onClick={() => setShowCreateAdminModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
-                  <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
-                </div>
-              </form>
-            </div>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
+          <div style={{...styles.modal, width: isSmall ? '95%' : '90%', maxWidth: isSmall ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addAdmin}</h2>
+            <form onSubmit={handleCreateAdmin}>
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} required />
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white'}}>
+                <option value="">Select Branch (Optional)</option>
+                {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+              <div style={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Create</button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
       {showCreateEmployeeModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
@@ -2681,7 +2654,7 @@ const saveEditTask = async (taskId) => {
             <input type="password" placeholder="Confirm Password" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <div style={styles.modalButtons}>
               <button type="button" onClick={() => setShowResetPasswordModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
-              <button onClick={handleResetUserPassword} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Reset Password</button>
+              <button type="button" onClick={handleResetUserPassword} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Reset Password</button>
             </div>
           </div>
         </div>
@@ -2714,7 +2687,7 @@ const saveEditTask = async (taskId) => {
               ))}
             </div>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowBranchAssignmentModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Close</button>
+              <button type="button" onClick={() => setShowBranchAssignmentModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Close</button>
             </div>
           </div>
         </div>
@@ -2730,7 +2703,7 @@ const saveEditTask = async (taskId) => {
             <input type="password" placeholder="Current Password" value={changeEmailData.password} onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <div style={styles.modalButtons}>
               <button type="button" onClick={() => setShowChangeEmailModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
-              <button onClick={handleChangeEmail} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
+              <button type="button" onClick={handleChangeEmail} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
             </div>
           </div>
         </div>
@@ -2746,15 +2719,15 @@ const saveEditTask = async (taskId) => {
               <p><strong style={{color: '#00d1ff'}}>Role:</strong> <span style={{color: 'white'}}>Super Admin</span></p>
               <p><strong style={{color: '#00d1ff'}}>Organization:</strong> <span style={{color: 'white'}}>{user?.organization?.name}</span></p>
             </div>
-            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={{...styles.changeEmailButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
+            <button type="button" onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={{...styles.changeEmailButton, fontSize: isSmall ? '11px' : '13px'}}>Change Email</button>
             <h3 style={{...styles.subTitle, fontSize: isSmall ? '13px' : '16px'}}>Change Password</h3>
             <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
             <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white'}} />
-            <button onClick={handleUpdateProfile} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Update Password</button>
+            <button type="button" onClick={handleUpdateProfile} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px'}}>Update Password</button>
             <div style={styles.dangerZone}>
               <h3 style={{ color: '#ef4444', fontSize: isSmall ? '13px' : '16px' }}>Danger Zone</h3>
-              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{...styles.deleteAccountButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
+              <button type="button" onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{...styles.deleteAccountButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
               <p style={{...styles.warningText, fontSize: isSmall ? '10px' : '11px'}}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
             </div>
           </div>
@@ -2769,14 +2742,14 @@ const saveEditTask = async (taskId) => {
             <p style={{ color: '#ef4444', fontSize: isSmall ? '11px' : '13px' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
             <p style={{color: 'white', fontSize: isSmall ? '11px' : '13px'}}>Other admins can continue managing the organization.</p>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowDeleteAccountModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
-              <button onClick={handleDeleteAccount} style={{...styles.confirmDeleteButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
+              <button type="button" onClick={() => setShowDeleteAccountModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px'}}>Cancel</button>
+              <button type="button" onClick={handleDeleteAccount} style={{...styles.confirmDeleteButton, fontSize: isSmall ? '11px' : '13px'}}>Delete My Account</button>
             </div>
           </div>
         </div>
       )}
 
-      <button style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
+      <button type="button" style={{...styles.chatButton, width: isSmall ? '40px' : '45px', height: isSmall ? '40px' : '45px', fontSize: isSmall ? '16px' : '18px'}} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
 
@@ -2784,9 +2757,8 @@ const saveEditTask = async (taskId) => {
         <div style={{...styles.chatModal, width: isSmall ? '90vw' : '380px', maxWidth: '90vw', height: isSmall ? '70vh' : '550px', bottom: isSmall ? '70px' : '80px', right: isSmall ? '10px' : '20px'}}>
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-            <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
+            <button type="button" onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
           </div>
-          
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
@@ -2804,7 +2776,6 @@ const saveEditTask = async (taskId) => {
               </div>
             )}
           </div>
-          
           {/* Quick Questions */}
           <div style={styles.quickQuestionsContainer}>
             <div style={styles.quickQuestionsHeader}>
@@ -2814,6 +2785,7 @@ const saveEditTask = async (taskId) => {
               {quickQuestions[language].map((q, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={() => sendChatMessage(q)}
                   style={styles.quickQuestionButton}
                 >
@@ -2822,7 +2794,6 @@ const saveEditTask = async (taskId) => {
               ))}
             </div>
           </div>
-          
           {/* Text input field */}
           <div style={styles.chatInputContainer}>
             <input
@@ -2833,17 +2804,15 @@ const saveEditTask = async (taskId) => {
               onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
               style={styles.chatInput}
             />
-            <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+            <button type="button" onClick={() => sendChatMessage()} style={styles.chatSend}>
               <i className="fas fa-paper-plane"></i>
             </button>
           </div>
         </div>
       )}
     </div>
-
   );
 }
-
 
 // Styles object - keeping all original styles plus premium styles
 const styles = {
