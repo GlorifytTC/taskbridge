@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const RoomAssignment = ({ user, onClose }) => {
-  const [activeTab, setActiveTab] = useState('rooms');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('roomAssignmentTab') || 'rooms';
+  });
   const [rooms, setRooms] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -21,11 +23,14 @@ const RoomAssignment = ({ user, onClose }) => {
   const [newShift, setNewShift] = useState({ name: '', startTime: '08:00', endTime: '17:00', color: '#00d1ff' });
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-  const [learningData, setLearningData] = useState({
-    roomGroupMatches: [],
-    workerSkillMatches: [],
-    userOverrides: []
-  });
+  
+  // Sorting states
+  const [roomSortField, setRoomSortField] = useState('roomNumber');
+  const [roomSortDirection, setRoomSortDirection] = useState('asc');
+  const [workerSortField, setWorkerSortField] = useState('name');
+  const [workerSortDirection, setWorkerSortDirection] = useState('asc');
+  const [groupSortField, setGroupSortField] = useState('name');
+  const [groupSortDirection, setGroupSortDirection] = useState('asc');
 
   const token = localStorage.getItem('token');
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -35,87 +40,14 @@ const RoomAssignment = ({ user, onClose }) => {
     headers: { Authorization: `Bearer ${token}` }
   });
 
+  // Save active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('roomAssignmentTab', activeTab);
+  }, [activeTab]);
+
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // Load learning data from localStorage
-  useEffect(() => {
-    const savedLearning = localStorage.getItem('roomAssignmentLearning');
-    if (savedLearning) {
-      try {
-        setLearningData(JSON.parse(savedLearning));
-      } catch (e) {
-        console.error('Error loading learning data:', e);
-      }
-    }
-  }, []);
-
-  // Save learning data
-  const saveLearningData = (newData) => {
-    localStorage.setItem('roomAssignmentLearning', JSON.stringify(newData));
-    setLearningData(newData);
-  };
-
-  // Record a room-group match for learning
-  const recordRoomGroupMatch = (roomId, groupId, wasSuccessful) => {
-    const updatedLearning = { ...learningData };
-    updatedLearning.roomGroupMatches.push({
-      roomId,
-      groupId,
-      wasSuccessful,
-      timestamp: Date.now()
-    });
-    // Keep only last 500 records
-    if (updatedLearning.roomGroupMatches.length > 500) {
-      updatedLearning.roomGroupMatches = updatedLearning.roomGroupMatches.slice(-500);
-    }
-    saveLearningData(updatedLearning);
-  };
-
-  // Record a worker-skill match for learning
-  const recordWorkerSkillMatch = (workerId, skill, wasSuccessful) => {
-    const updatedLearning = { ...learningData };
-    updatedLearning.workerSkillMatches.push({
-      workerId,
-      skill,
-      wasSuccessful,
-      timestamp: Date.now()
-    });
-    if (updatedLearning.workerSkillMatches.length > 500) {
-      updatedLearning.workerSkillMatches = updatedLearning.workerSkillMatches.slice(-500);
-    }
-    saveLearningData(updatedLearning);
-  };
-
-  // Get improved match score based on learning
-  const getImprovedMatchScore = (room, group, worker, baseScore) => {
-    let adjustedScore = baseScore;
-    
-    // Check learning data for room-group compatibility
-    const roomGroupHistory = learningData.roomGroupMatches.filter(
-      m => m.roomId === room._id && m.groupId === group._id
-    );
-    if (roomGroupHistory.length > 0) {
-      const successRate = roomGroupHistory.filter(m => m.wasSuccessful).length / roomGroupHistory.length;
-      if (successRate > 0.7) adjustedScore += 15;
-      else if (successRate < 0.3) adjustedScore -= 15;
-    }
-    
-    // Check learning data for worker-skill compatibility
-    if (worker && group.requiredSkill) {
-      const skillHistory = learningData.workerSkillMatches.filter(
-        m => m.workerId === worker._id && m.skill === group.requiredSkill
-      );
-      if (skillHistory.length > 0) {
-        const successRate = skillHistory.filter(m => m.wasSuccessful).length / skillHistory.length;
-        if (successRate > 0.7) adjustedScore += 10;
-        else if (successRate < 0.3) adjustedScore -= 10;
-      }
-    }
-    
-    return Math.min(100, Math.max(0, adjustedScore));
   };
 
   // Fetch all data
@@ -165,6 +97,119 @@ const RoomAssignment = ({ user, onClose }) => {
     fetchGroups();
     fetchShifts();
   }, []);
+
+  // Toggle room availability
+  const toggleRoomAvailability = async (roomId, currentStatus) => {
+    setLoading(true);
+    try {
+      const room = rooms.find(r => r._id === roomId);
+      const updatedRoom = { ...room, isActive: !currentStatus };
+      await api.put('/room-assignment/rooms', { updates: [updatedRoom] });
+      await fetchRooms();
+      showToast(`Room ${room.roomNumber} is now ${!currentStatus ? 'Available' : 'Unavailable'}`, 'success');
+    } catch (error) {
+      console.error('Error toggling room availability:', error);
+      showToast('Failed to update room status', 'error');
+    }
+    setLoading(false);
+  };
+
+  // Bulk toggle room availability
+  const bulkToggleRoomAvailability = async () => {
+    if (selectedRows.size === 0) {
+      showToast('No rooms selected', 'error');
+      return;
+    }
+    
+    const selectedRooms = rooms.filter(r => selectedRows.has(r._id));
+    const makeAvailable = selectedRooms.some(r => !r.isActive);
+    
+    setLoading(true);
+    try {
+      const updates = selectedRooms.map(room => ({
+        id: room._id,
+        ...room,
+        isActive: makeAvailable
+      }));
+      await api.put('/room-assignment/rooms', { updates });
+      await fetchRooms();
+      setSelectedRows(new Set());
+      showToast(`${selectedRows.size} rooms marked as ${makeAvailable ? 'Available' : 'Unavailable'}`, 'success');
+    } catch (error) {
+      console.error('Error bulk updating rooms:', error);
+      showToast('Failed to update rooms', 'error');
+    }
+    setLoading(false);
+  };
+
+  // Sorting functions
+  const sortRooms = (field) => {
+    const direction = roomSortField === field && roomSortDirection === 'asc' ? 'desc' : 'asc';
+    setRoomSortField(field);
+    setRoomSortDirection(direction);
+    
+    const sorted = [...rooms].sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+      if (field === 'capacity') {
+        aVal = parseInt(aVal) || 0;
+        bVal = parseInt(bVal) || 0;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    setRooms(sorted);
+  };
+
+  const sortWorkers = (field) => {
+    const direction = workerSortField === field && workerSortDirection === 'asc' ? 'desc' : 'asc';
+    setWorkerSortField(field);
+    setWorkerSortDirection(direction);
+    
+    const sorted = [...workers].sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+      if (field === 'specializations') {
+        aVal = a.specializations?.join(',') || '';
+        bVal = b.specializations?.join(',') || '';
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    setWorkers(sorted);
+  };
+
+  const sortGroups = (field) => {
+    const direction = groupSortField === field && groupSortDirection === 'asc' ? 'desc' : 'asc';
+    setGroupSortField(field);
+    setGroupSortDirection(direction);
+    
+    const sorted = [...groups].sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+      if (field === 'peopleCount') {
+        aVal = parseInt(aVal) || 0;
+        bVal = parseInt(bVal) || 0;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    setGroups(sorted);
+  };
+
+  const getSortIcon = (field, currentField, currentDirection) => {
+    if (field !== currentField) return '↕️';
+    return currentDirection === 'asc' ? '↑' : '↓';
+  };
 
   // ============ SHIFT FUNCTIONS ============
   const handleSaveShift = async () => {
@@ -378,18 +423,159 @@ const RoomAssignment = ({ user, onClose }) => {
     setLoading(false);
   };
 
-  // ============ SORTING FUNCTIONS ============
+  // ============ IMPROVED SORTING ALGORITHM ============
   const handleRunSorting = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/room-assignment/sort', {
-        shiftId: selectedShift || null,
-        date: selectedDate
-      });
-      setSortingResults(res.data);
-      setAssignments(res.data.data || []);
+      // Get all data
+      let availableRooms = rooms.filter(room => room.isActive === true);
+      let availableWorkers = workers.filter(worker => worker.isAvailable === true);
+      let pendingGroups = groups.filter(group => group.status !== 'assigned');
+      
+      // Filter by selected shift
+      if (selectedShift) {
+        availableWorkers = availableWorkers.filter(w => w.shiftIds?.includes(selectedShift));
+        // Rooms don't have shifts, so they're always available
+      }
+      
+      const newAssignments = [];
+      const usedRooms = new Set();
+      const usedWorkers = new Set();
+      
+      // Sort groups by priority (Urgent > High > Normal > Low)
+      const priorityOrder = { Urgent: 0, High: 1, Normal: 2, Low: 3 };
+      const sortedGroups = [...pendingGroups].sort((a, b) => 
+        (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
+      );
+      
+      for (const group of sortedGroups) {
+        let bestRoom = null;
+        let bestWorker = null;
+        let bestRoomScore = 0;
+        let bestWorkerScore = 0;
+        
+        // Find best matching room
+        for (const room of availableRooms) {
+          if (usedRooms.has(room._id)) continue;
+          
+          let roomScore = 0;
+          
+          // Capacity check (50% of score)
+          if (room.capacity >= group.peopleCount) {
+            roomScore += 50;
+            // Bonus for exact capacity (10%)
+            if (room.capacity === group.peopleCount) {
+              roomScore += 10;
+            }
+          } else {
+            // Penalty for insufficient capacity (scaled)
+            roomScore += Math.max(0, (room.capacity / group.peopleCount) * 30);
+          }
+          
+          // Room type match (20% of score)
+          if (group.preferredRoomType && group.preferredRoomType === room.roomType) {
+            roomScore += 20;
+          }
+          
+          // Check if this room has been successful with similar groups (10%)
+          // This is where learning data could be added
+          
+          if (roomScore > bestRoomScore) {
+            bestRoomScore = roomScore;
+            bestRoom = room;
+          }
+        }
+        
+        // Find best matching worker
+        for (const worker of availableWorkers) {
+          if (usedWorkers.has(worker._id)) continue;
+          
+          let workerScore = 0;
+          
+          // Skill match (60% of score)
+          if (group.requiredSkill) {
+            if (worker.specializations && worker.specializations.includes(group.requiredSkill)) {
+              workerScore += 60;
+            } else if (worker.specializations && worker.specializations.includes('General')) {
+              workerScore += 30;
+            }
+          } else {
+            workerScore += 60; // No skill required
+          }
+          
+          // Worker type bonus (20% of score)
+          if (worker.workerType === 'Regular') {
+            workerScore += 20;
+          } else if (worker.workerType === 'Substitute') {
+            workerScore += 10;
+          }
+          
+          // Shift match (10% of score)
+          if (selectedShift && worker.shiftIds && worker.shiftIds.includes(selectedShift)) {
+            workerScore += 10;
+          }
+          
+          if (workerScore > bestWorkerScore) {
+            bestWorkerScore = workerScore;
+            bestWorker = worker;
+          }
+        }
+        
+        const totalScore = (bestRoomScore + bestWorkerScore) / 2;
+        
+        // Calculate match percentage out of 100
+        const matchPercentage = Math.round(totalScore);
+        
+        // Build warnings
+        const warnings = [];
+        if (bestRoom && bestRoom.capacity < group.peopleCount) {
+          warnings.push(`⚠️ Capacity mismatch: Room ${bestRoom.roomNumber} has ${bestRoom.capacity} capacity, needs ${group.peopleCount}`);
+        }
+        if (bestWorker && group.requiredSkill && !bestWorker.specializations?.includes(group.requiredSkill)) {
+          warnings.push(`⚠️ Skill mismatch: Needs ${group.requiredSkill}, worker has ${bestWorker.specializations?.join(', ') || 'none'}`);
+        }
+        if (!bestRoom) {
+          warnings.push(`⚠️ No available room found for this group`);
+        }
+        if (!bestWorker) {
+          warnings.push(`⚠️ No available worker found for this group`);
+        }
+        
+        newAssignments.push({
+          groupId: group._id,
+          groupName: group.name,
+          peopleCount: group.peopleCount,
+          requiredSkill: group.requiredSkill,
+          priority: group.priority,
+          roomId: bestRoom?._id,
+          roomName: bestRoom?.name,
+          roomNumber: bestRoom?.roomNumber,
+          roomCapacity: bestRoom?.capacity,
+          workerId: bestWorker?._id,
+          workerName: bestWorker?.name,
+          workerSpecializations: bestWorker?.specializations,
+          matchScore: matchPercentage,
+          warnings: warnings
+        });
+        
+        if (bestRoom) usedRooms.add(bestRoom._id);
+        if (bestWorker) usedWorkers.add(bestWorker._id);
+      }
+      
+      setAssignments(newAssignments);
       setShowMap(true);
-      showToast(`Sorting complete! ${res.data.summary?.matchedGroups || 0} groups matched`, 'success');
+      
+      const stats = {
+        totalGroups: pendingGroups.length,
+        matchedGroups: newAssignments.filter(a => a.matchScore >= 60 && a.roomId && a.workerId).length,
+        partialMatches: newAssignments.filter(a => a.matchScore >= 40 && a.matchScore < 60).length,
+        unmatched: newAssignments.filter(a => a.matchScore < 40 || !a.roomId || !a.workerId).length,
+        averageScore: Math.round(newAssignments.reduce((sum, a) => sum + a.matchScore, 0) / newAssignments.length) || 0
+      };
+      
+      setSortingResults({ summary: stats, data: newAssignments });
+      showToast(`Sorting complete! ${stats.matchedGroups} matches, ${stats.unmatched} unmatched`, 'success');
+      
     } catch (error) {
       console.error('Error running sorting:', error);
       showToast(error.response?.data?.message || 'Failed to run sorting', 'error');
@@ -406,28 +592,13 @@ const RoomAssignment = ({ user, onClose }) => {
     setLoading(true);
     try {
       await api.post('/room-assignment/confirm', {
-        assignments,
+        assignments: assignments.filter(a => a.roomId && a.workerId),
         date: selectedDate,
         shiftId: selectedShift || null
       });
       
-      // Record successful matches for learning
-      assignments.forEach(assignment => {
-        if (assignment.matchScore >= 70) {
-          const room = rooms.find(r => r._id === assignment.roomId);
-          const group = groups.find(g => g._id === assignment.groupId);
-          const worker = workers.find(w => w._id === assignment.workerId);
-          
-          if (room && group) {
-            recordRoomGroupMatch(room._id, group._id, true);
-          }
-          if (worker && group?.requiredSkill) {
-            recordWorkerSkillMatch(worker._id, group.requiredSkill, true);
-          }
-        }
-      });
-      
       showToast('Assignments confirmed and saved!', 'success');
+      await fetchGroups(); // Refresh groups to update statuses
     } catch (error) {
       console.error('Error confirming assignments:', error);
       showToast('Failed to confirm assignments', 'error');
@@ -457,8 +628,38 @@ const RoomAssignment = ({ user, onClose }) => {
 
   const getScoreColor = (score) => {
     if (score >= 70) return '#10b981';
-    if (score >= 40) return '#f59e0b';
+    if (score >= 50) return '#f59e0b';
     return '#ef4444';
+  };
+useEffect(() => {
+  // Update page title for SEO
+  document.title = 'TaskBridge Room Assignment - Smart Staff & Room Management for Schools, Hospitals, Factories';
+  
+  // Update meta description
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (!metaDesc) {
+    metaDesc = document.createElement('meta');
+    metaDesc.name = 'description';
+    document.head.appendChild(metaDesc);
+  }
+  metaDesc.content = 'TaskBridge Room Assignment: Automatically assign rooms, workers, and shifts for schools (skola), hospitals (sjukhus), and factories (fabrik). Supports English, Swedish, Finnish, Norwegian, Danish, German.';
+  
+  // Update keywords
+  let metaKeywords = document.querySelector('meta[name="keywords"]');
+  if (!metaKeywords) {
+    metaKeywords = document.createElement('meta');
+    metaKeywords.name = 'keywords';
+    document.head.appendChild(metaKeywords);
+  }
+  metaKeywords.content = 'taskbridge, room assignment, shift management, school staffing, hospital rostering, factory scheduling, personalhantering, skiftplanering, rumsplacering, skola, sjukhus, fabrik, workforce management';
+  
+  return () => { document.title = 'TaskBridge'; };
+}, []);
+  const getScoreEmoji = (score) => {
+    if (score >= 80) return '🎉 Perfect Match!';
+    if (score >= 60) return '👍 Good Match';
+    if (score >= 40) return '⚠️ Partial Match';
+    return '❌ Poor Match';
   };
 
   return (
@@ -479,13 +680,6 @@ const RoomAssignment = ({ user, onClose }) => {
         <button onClick={onClose} style={styles.closeButton}>✕</button>
       </div>
 
-      {/* Learning Status */}
-      <div style={styles.learningStatus}>
-        <span style={styles.learningBadge}>
-          🧠 AI Learning Active ({learningData.roomGroupMatches.length + learningData.workerSkillMatches.length} patterns learned)
-        </span>
-      </div>
-
       {/* Shift Selector */}
       <div style={styles.shiftBar}>
         <div style={styles.shiftSelector}>
@@ -497,6 +691,14 @@ const RoomAssignment = ({ user, onClose }) => {
             ))}
           </select>
           <button onClick={() => setShowShiftModal(true)} style={styles.addShiftButton}>+ Add Shift</button>
+          {shifts.length > 0 && (
+            <button onClick={() => {
+              const shiftToDelete = prompt('Enter shift name to delete:', shifts[0]?.name);
+              const shift = shifts.find(s => s.name === shiftToDelete);
+              if (shift) handleDeleteShift(shift._id);
+              else if (shiftToDelete) showToast('Shift not found', 'error');
+            }} style={styles.deleteShiftButton}>🗑️ Remove Shift</button>
+          )}
         </div>
         <div style={styles.dateSelector}>
           <label style={styles.label}>Date:</label>
@@ -519,6 +721,9 @@ const RoomAssignment = ({ user, onClose }) => {
             <button onClick={selectAll} style={styles.actionButton}>✓ Select All</button>
             <button onClick={deselectAll} style={styles.actionButton}>✗ Deselect All</button>
             <button onClick={() => setBulkMode(!bulkMode)} style={styles.actionButton}>📦 Bulk Add</button>
+            {activeTab === 'rooms' && (
+              <button onClick={bulkToggleRoomAvailability} style={{...styles.actionButton, background: '#8b5cf6'}}>🔄 Mark Selected Available/Unavailable</button>
+            )}
             <button onClick={activeTab === 'rooms' ? handleDeleteRooms : activeTab === 'workers' ? handleDeleteWorkers : handleDeleteGroups} style={{...styles.actionButton, background: '#ef4444'}}>🗑️ Delete Selected ({selectedRows.size})</button>
           </>
         )}
@@ -558,11 +763,12 @@ const RoomAssignment = ({ user, onClose }) => {
                 <thead>
                   <tr style={styles.tableHeader}>
                     <th style={styles.th}><input type="checkbox" onChange={(e) => e.target.checked ? selectAll() : deselectAll()} /></th>
-                    <th style={styles.th}>Room #</th>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>Capacity</th>
-                    <th style={styles.th}>Type</th>
+                    <th style={styles.th} onClick={() => sortRooms('roomNumber')} style={{cursor: 'pointer'}}>Room # {getSortIcon('roomNumber', roomSortField, roomSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortRooms('name')} style={{cursor: 'pointer'}}>Name {getSortIcon('name', roomSortField, roomSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortRooms('capacity')} style={{cursor: 'pointer'}}>Capacity {getSortIcon('capacity', roomSortField, roomSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortRooms('roomType')} style={{cursor: 'pointer'}}>Type {getSortIcon('roomType', roomSortField, roomSortDirection)}</th>
                     <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -599,8 +805,13 @@ const RoomAssignment = ({ user, onClose }) => {
                       </td>
                       <td style={styles.td}>
                         <span style={{...styles.statusBadge, background: room.isActive ? '#10b981' : '#ef4444'}}>
-                          {room.isActive ? 'Active' : 'Inactive'}
+                          {room.isActive ? '🟢 Available' : '🔴 Unavailable'}
                         </span>
+                      </td>
+                      <td style={styles.td}>
+                        <button onClick={() => toggleRoomAvailability(room._id, room.isActive)} style={{...styles.actionButton, padding: '4px 8px', fontSize: '11px'}}>
+                          {room.isActive ? '🔴 Make Unavailable' : '🟢 Make Available'}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -630,9 +841,9 @@ const RoomAssignment = ({ user, onClose }) => {
                 <thead>
                   <tr style={styles.tableHeader}>
                     <th style={styles.th}><input type="checkbox" onChange={(e) => e.target.checked ? selectAll() : deselectAll()} /></th>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>Specializations</th>
-                    <th style={styles.th}>Type</th>
+                    <th style={styles.th} onClick={() => sortWorkers('name')} style={{cursor: 'pointer'}}>Name {getSortIcon('name', workerSortField, workerSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortWorkers('specializations')} style={{cursor: 'pointer'}}>Specializations {getSortIcon('specializations', workerSortField, workerSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortWorkers('workerType')} style={{cursor: 'pointer'}}>Type {getSortIcon('workerType', workerSortField, workerSortDirection)}</th>
                     <th style={styles.th}>Shift</th>
                     <th style={styles.th}>Available</th>
                   </tr>
@@ -694,10 +905,10 @@ const RoomAssignment = ({ user, onClose }) => {
                 <thead>
                   <tr style={styles.tableHeader}>
                     <th style={styles.th}><input type="checkbox" onChange={(e) => e.target.checked ? selectAll() : deselectAll()} /></th>
-                    <th style={styles.th}>Group Name</th>
-                    <th style={styles.th}>People</th>
-                    <th style={styles.th}>Required Skill</th>
-                    <th style={styles.th}>Priority</th>
+                    <th style={styles.th} onClick={() => sortGroups('name')} style={{cursor: 'pointer'}}>Group Name {getSortIcon('name', groupSortField, groupSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortGroups('peopleCount')} style={{cursor: 'pointer'}}>People {getSortIcon('peopleCount', groupSortField, groupSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortGroups('requiredSkill')} style={{cursor: 'pointer'}}>Required Skill {getSortIcon('requiredSkill', groupSortField, groupSortDirection)}</th>
+                    <th style={styles.th} onClick={() => sortGroups('priority')} style={{cursor: 'pointer'}}>Priority {getSortIcon('priority', groupSortField, groupSortDirection)}</th>
                     <th style={styles.th}>Status</th>
                   </tr>
                 </thead>
@@ -759,15 +970,19 @@ const RoomAssignment = ({ user, onClose }) => {
                   </div>
                   <div style={{...styles.statCard, background: 'rgba(16,185,129,0.1)'}}>
                     <div style={{...styles.statValue, color: '#10b981'}}>{sortingResults?.summary?.matchedGroups || 0}</div>
-                    <div style={styles.statLabel}>Perfect Matches</div>
+                    <div style={styles.statLabel}>Perfect Matches (60%+)</div>
                   </div>
                   <div style={{...styles.statCard, background: 'rgba(245,158,11,0.1)'}}>
                     <div style={{...styles.statValue, color: '#f59e0b'}}>{sortingResults?.summary?.partialMatches || 0}</div>
-                    <div style={styles.statLabel}>Partial Matches</div>
+                    <div style={styles.statLabel}>Partial Matches (40-60%)</div>
                   </div>
                   <div style={{...styles.statCard, background: 'rgba(239,68,68,0.1)'}}>
                     <div style={{...styles.statValue, color: '#ef4444'}}>{sortingResults?.summary?.unmatched || 0}</div>
-                    <div style={styles.statLabel}>Unmatched</div>
+                    <div style={styles.statLabel}>Unmatched (&lt;40%)</div>
+                  </div>
+                  <div style={styles.statCard}>
+                    <div style={styles.statValue}>{sortingResults?.summary?.averageScore || 0}%</div>
+                    <div style={styles.statLabel}>Average Match Score</div>
                   </div>
                 </div>
 
@@ -776,23 +991,30 @@ const RoomAssignment = ({ user, onClose }) => {
                   {assignments.map((assignment, idx) => {
                     const scoreColor = getScoreColor(assignment.matchScore);
                     const hasWarning = assignment.warnings?.length > 0;
+                    const isPerfectMatch = assignment.matchScore >= 80;
+                    const isGoodMatch = assignment.matchScore >= 60 && assignment.matchScore < 80;
                     
                     return (
-                      <div key={idx} style={{...styles.mapCard, borderLeftColor: scoreColor}}>
+                      <div key={idx} style={{...styles.mapCard, borderLeftColor: scoreColor, background: isPerfectMatch ? 'rgba(16,185,129,0.05)' : isGoodMatch ? 'rgba(0,209,255,0.05)' : 'rgba(239,68,68,0.05)'}}>
                         <div style={styles.mapCardHeader}>
-                          <span style={styles.roomNumber}>🏠 {assignment.roomNumber || assignment.roomName || 'Room'}</span>
-                          <span style={{...styles.matchScore, background: scoreColor}}>{assignment.matchScore}%</span>
+                          <span style={styles.roomNumber}>🏠 {assignment.roomNumber || assignment.roomName || 'No Room Assigned'}</span>
+                          <span style={{...styles.matchScore, background: scoreColor}}>
+                            {assignment.matchScore}% - {getScoreEmoji(assignment.matchScore)}
+                          </span>
                         </div>
                         <div style={styles.mapCardBody}>
                           <div style={styles.mapRow}>
                             <span style={styles.mapLabel}>👥 Group:</span>
-                            <span>{assignment.groupName}</span>
+                            <span><strong>{assignment.groupName}</strong></span>
                             <span style={styles.badge}>{assignment.peopleCount} people</span>
+                            <span style={{...styles.priorityBadge, background: assignment.priority === 'Urgent' ? '#ef4444' : assignment.priority === 'High' ? '#f59e0b' : '#10b981'}}>
+                              {assignment.priority}
+                            </span>
                           </div>
                           <div style={styles.mapRow}>
                             <span style={styles.mapLabel}>👨‍🏫 Worker:</span>
                             <span><strong>{assignment.workerName || 'Not Assigned'}</strong></span>
-                            {assignment.workerSpecializations && (
+                            {assignment.workerSpecializations && assignment.workerSpecializations.length > 0 && (
                               <span style={styles.skillBadge}>{assignment.workerSpecializations?.join(', ')}</span>
                             )}
                           </div>
@@ -800,11 +1022,32 @@ const RoomAssignment = ({ user, onClose }) => {
                             <span style={styles.mapLabel}>📋 Needs:</span>
                             <span>{assignment.requiredSkill || 'General'}</span>
                           </div>
+                          {assignment.roomCapacity && (
+                            <div style={styles.mapRow}>
+                              <span style={styles.mapLabel}>🏠 Room Info:</span>
+                              <span>Capacity: {assignment.roomCapacity}</span>
+                              {assignment.roomCapacity >= assignment.peopleCount ? (
+                                <span style={styles.goodBadge}>✅ Fits {assignment.peopleCount} people</span>
+                              ) : (
+                                <span style={styles.warningBadge}>⚠️ Only fits {assignment.roomCapacity} of {assignment.peopleCount} people</span>
+                              )}
+                            </div>
+                          )}
                           {hasWarning && (
                             <div style={styles.warningBox}>
                               {assignment.warnings.map((w, i) => (
-                                <div key={i} style={styles.warningText}>⚠️ {w}</div>
+                                <div key={i} style={styles.warningText}>{w}</div>
                               ))}
+                            </div>
+                          )}
+                          {!assignment.roomId && (
+                            <div style={styles.errorBox}>
+                              <div style={styles.warningText}>⚠️ No available room found for this group</div>
+                            </div>
+                          )}
+                          {!assignment.workerId && (
+                            <div style={styles.errorBox}>
+                              <div style={styles.warningText}>⚠️ No available worker found for this group</div>
                             </div>
                           )}
                         </div>
@@ -817,7 +1060,15 @@ const RoomAssignment = ({ user, onClose }) => {
               <div style={styles.emptyState}>
                 <i className="fas fa-magic" style={{ fontSize: '48px', color: '#00d1ff', marginBottom: '16px' }}></i>
                 <h3>Click "Run Sorting Algorithm" to automatically match groups to rooms and workers</h3>
-                <p>The system will find the best available room and worker for each group based on skills, capacity, and availability.</p>
+                <p>The system will find the best available room and worker for each group based on:</p>
+                <ul style={{textAlign: 'left', marginTop: '16px', color: 'rgba(255,255,255,0.7)'}}>
+                  <li>✓ Room capacity vs group size</li>
+                  <li>✓ Worker skills vs group requirements</li>
+                  <li>✓ Shift availability matching</li>
+                  <li>✓ Priority (Urgent &gt High &gt Normal &gt Low)</li>
+                  <li>✓ Room type preferences</li>
+                  <li>✓ Worker type (Regular vs Substitute)</li>
+                </ul>
               </div>
             )}
           </div>
@@ -872,18 +1123,6 @@ const styles = {
     animation: 'fadeInOut 3s ease',
     boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
   },
-  learningStatus: {
-    marginBottom: '16px',
-    textAlign: 'right'
-  },
-  learningBadge: {
-    background: 'rgba(16,185,129,0.2)',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    color: '#10b981',
-    border: '1px solid rgba(16,185,129,0.3)'
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -906,6 +1145,15 @@ const styles = {
     fontSize: '20px',
     cursor: 'pointer',
     padding: '8px 16px'
+  },
+  deleteShiftButton: {
+    padding: '6px 12px',
+    background: 'rgba(239,68,68,0.2)',
+    border: '1px solid #ef4444',
+    borderRadius: '8px',
+    color: '#ef4444',
+    cursor: 'pointer',
+    fontSize: '12px'
   },
   shiftBar: {
     display: 'flex',
@@ -1093,7 +1341,8 @@ const styles = {
     padding: '12px',
     textAlign: 'left',
     color: 'rgba(255,255,255,0.7)',
-    fontSize: '12px'
+    fontSize: '12px',
+    cursor: 'pointer'
   },
   tableRow: {
     borderBottom: '1px solid rgba(255,255,255,0.05)'
@@ -1179,7 +1428,7 @@ const styles = {
   },
   mapGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
     gap: '16px'
   },
   mapCard: {
@@ -1229,6 +1478,27 @@ const styles = {
     fontSize: '11px',
     color: '#10b981'
   },
+  goodBadge: {
+    background: 'rgba(16,185,129,0.2)',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    color: '#10b981'
+  },
+  warningBadge: {
+    background: 'rgba(245,158,11,0.2)',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '11px',
+    color: '#f59e0b'
+  },
+  priorityBadge: {
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '10px',
+    fontWeight: '600',
+    color: 'white'
+  },
   skillBadge: {
     background: 'rgba(0,209,255,0.2)',
     padding: '2px 8px',
@@ -1240,6 +1510,13 @@ const styles = {
     marginTop: '12px',
     padding: '10px',
     background: 'rgba(239,68,68,0.1)',
+    borderRadius: '8px',
+    borderLeft: '3px solid #ef4444'
+  },
+  errorBox: {
+    marginTop: '12px',
+    padding: '10px',
+    background: 'rgba(239,68,68,0.15)',
     borderRadius: '8px',
     borderLeft: '3px solid #ef4444'
   },

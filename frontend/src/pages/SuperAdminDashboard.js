@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
 const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+  return localStorage.getItem('taskbridge_activeTab') || 'dashboard';
+});
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -119,6 +121,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editJobData, setEditJobData] = useState({});
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
+  const isEditingRef = React.useRef(false);
 
   const fetchEmployeesForFilter = async () => {
     try {
@@ -573,7 +576,8 @@ useEffect(() => {
   };
 
   const fetchDashboardData = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  if (isEditingRef.current) return; 
+  if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
@@ -687,8 +691,9 @@ useEffect(() => {
   };
 
   const startEditAdmin = (admin) => {
-    setEditingAdminId(admin._id);
-    setEditAdminData({
+  isEditingRef.current = true;
+  setEditingAdminId(admin._id);
+  setEditAdminData({
       name: admin.name,
       email: admin.email,
       isActive: admin.isActive
@@ -696,11 +701,14 @@ useEffect(() => {
   };
 
   const cancelEditAdmin = () => {
+    isEditingRef.current = false;
     setEditingAdminId(null);
     setEditAdminData({});
   };
 
   const saveEditAdmin = async (adminId) => {
+      isEditingRef.current = false;
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${adminId}`, {
@@ -728,7 +736,8 @@ useEffect(() => {
   };
 
   const startEditEmployee = (employee) => {
-    setEditingEmployeeId(employee._id);
+      isEditingRef.current = true;
+  setEditingEmployeeId(employee._id);
     setEditEmployeeData({
       name: employee.name,
       email: employee.email,
@@ -737,12 +746,13 @@ useEffect(() => {
   };
 
   const cancelEditEmployee = () => {
-    setEditingEmployeeId(null);
-    setEditEmployeeData({});
-  };
-
-  const saveEditEmployee = async (employeeId) => {
-    try {
+  isEditingRef.current = false;
+  setEditingEmployeeId(null);
+  setEditEmployeeData({});
+};
+const saveEditEmployee = async (employeeId) => {
+  isEditingRef.current = false;
+  try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/users/${employeeId}`, {
         method: 'PUT',
@@ -769,7 +779,8 @@ useEffect(() => {
   };
 
   const startEditBranch = (branch) => {
-    setEditingBranchId(branch._id);
+  isEditingRef.current = true;
+  setEditingBranchId(branch._id);
     setEditBranchData({
       name: branch.name,
       'address.city': branch.address?.city || ''
@@ -777,12 +788,13 @@ useEffect(() => {
   };
 
   const cancelEditBranch = () => {
-    setEditingBranchId(null);
-    setEditBranchData({});
-  };
-
-  const saveEditBranch = async (branchId) => {
-    try {
+  isEditingRef.current = false;
+  setEditingBranchId(null);
+  setEditBranchData({});
+    };
+    const saveEditBranch = async (branchId) => {
+      isEditingRef.current = false;
+      try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/branches/${branchId}`, {
         method: 'PUT',
@@ -812,7 +824,8 @@ useEffect(() => {
   };
 
   const startEditJob = (job) => {
-    setEditingJobId(job._id);
+  isEditingRef.current = true;
+  setEditingJobId(job._id);
     setEditJobData({
       name: job.name,
       description: job.description || ''
@@ -820,12 +833,13 @@ useEffect(() => {
   };
 
   const cancelEditJob = () => {
-    setEditingJobId(null);
-    setEditJobData({});
-  };
-
-  const saveEditJob = async (jobId) => {
-    try {
+  isEditingRef.current = false;
+  setEditingJobId(null);
+  setEditJobData({});
+};
+const saveEditJob = async (jobId) => {
+  isEditingRef.current = false;
+  try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'PUT',
@@ -852,7 +866,8 @@ useEffect(() => {
   };
 
   const startEditTask = (task) => {
-    setEditingTaskId(task._id);
+  isEditingRef.current = true;
+  setEditingTaskId(task._id);
     setEditTaskData({
       title: task.title,
       description: task.description || '',
@@ -866,12 +881,13 @@ useEffect(() => {
   };
 
   const cancelEditTask = () => {
-    setEditingTaskId(null);
-    setEditTaskData({});
-  };
-
-  const saveEditTask = async (taskId) => {
-    try {
+  isEditingRef.current = false;
+  setEditingTaskId(null);
+  setEditTaskData({});
+};
+const saveEditTask = async (taskId) => {
+  isEditingRef.current = false;
+  try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/tasks/${taskId}`, {
         method: 'PUT',
@@ -1415,12 +1431,12 @@ useEffect(() => {
   };
 
   const handleTabChange = (tab) => {
-    if (activeTab !== tab) {
-      setPreviousTab(activeTab);
-      setActiveTab(tab);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  if (activeTab !== tab) {
+    setPreviousTab(activeTab);
+    setActiveTab(tab);
+    localStorage.setItem('taskbridge_activeTab', tab);
+  }
+};
 
   const sendChatMessage = async (message = null) => {
     const userMessageText = message || chatInput;
@@ -1799,8 +1815,8 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingAdminId === admin._id ? (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => saveEditAdmin(admin._id)} style={styles.saveButton}>💾</button>
-                            <button onClick={cancelEditAdmin} style={styles.cancelButton}>✕</button>
+                            <button type="button" onClick={() => saveEditAdmin(admin._id)} style={styles.saveButton}>💾</button>
+                            <button type="button" onClick={cancelEditAdmin} style={styles.cancelButton}>✕</button>
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
@@ -1897,9 +1913,9 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾</button>
-                            <button onClick={cancelEditEmployee} style={styles.cancelButton}>✕</button>
-                          </div>
+                            <button type="button" onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾</button>
+                            <button type="button" onClick={cancelEditEmployee} style={styles.cancelButton}>✕</button>
+                            </div>
                         ) : (
                           <div style={styles.actionButtons}>
                             <button onClick={() => startEditEmployee(emp)} style={styles.editButton}>✏️</button>
@@ -1977,9 +1993,9 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingBranchId === branch._id ? (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => saveEditBranch(branch._id)} style={styles.saveButton}>💾</button>
-                            <button onClick={cancelEditBranch} style={styles.cancelButton}>✕</button>
-                          </div>
+                            <button type="button" onClick={() => saveEditBranch(branch._id)} style={styles.saveButton}>💾</button>
+                            <button type="button" onClick={cancelEditBranch} style={styles.cancelButton}>✕</button>
+                            </div>
                         ) : (
                           <div style={styles.actionButtons}>
                             <button onClick={() => startEditBranch(branch)} style={styles.editButton}>✏️</button>
@@ -2043,8 +2059,8 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingJobId === job._id ? (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => saveEditJob(job._id)} style={styles.saveButton}>💾</button>
-                            <button onClick={cancelEditJob} style={styles.cancelButton}>✕</button>
+                            <button type="button" onClick={() => saveEditJob(job._id)} style={styles.saveButton}>💾</button>
+                            <button type="button" onClick={cancelEditJob} style={styles.cancelButton}>✕</button>
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
@@ -2131,8 +2147,8 @@ useEffect(() => {
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
-                            <button onClick={() => saveEditTask(task._id)} style={styles.saveButton}>💾</button>
-                            <button onClick={cancelEditTask} style={styles.cancelButton}>✕</button>
+                            <button type="button" onClick={() => saveEditTask(task._id)} style={styles.saveButton}>💾</button>
+                            <button type="button" onClick={cancelEditTask} style={styles.cancelButton}>✕</button>
                           </div>
                         ) : (
                           <div style={styles.actionButtons}>
