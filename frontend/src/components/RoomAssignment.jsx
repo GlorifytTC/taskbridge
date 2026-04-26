@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const RoomAssignment = ({ user, onClose }) => {
@@ -8,13 +8,14 @@ const RoomAssignment = ({ user, onClose }) => {
   const [rooms, setRooms] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [shifts, setShifts] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [editingCell, setEditingCell] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
-  const [newGroupData, setNewGroupData] = useState({ name: '', peopleCount: 25, requiredSkill: 'General', priority: 'Normal' });
+  const [showBulkGroupModal, setShowBulkGroupModal] = useState(false);
+  const [bulkGroupsData, setBulkGroupsData] = useState('');
+  const [newGroupData, setNewGroupData] = useState({ name: '', peopleCount: 25, requiredSkill: 'General', priority: 'Normal', preferredRoomType: '' });
   const [bulkRoomData, setBulkRoomData] = useState({ startNumber: 1, endNumber: 10, capacity: 30, roomType: 'Classroom', prefix: '' });
   const [bulkWorkerData, setBulkWorkerData] = useState({ names: '', defaultSpecialization: 'General' });
   const [sortingResults, setSortingResults] = useState(null);
@@ -23,6 +24,7 @@ const RoomAssignment = ({ user, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [selectedGroupForSorting, setSelectedGroupForSorting] = useState('');
+  const [roomTypes, setRoomTypes] = useState(['Classroom', 'Laboratory', 'Office', 'Conference Room', 'Gym', 'Library', 'Cafeteria']);
   
   // Sorting states
   const [roomSortField, setRoomSortField] = useState('roomNumber');
@@ -45,76 +47,82 @@ const RoomAssignment = ({ user, onClose }) => {
     localStorage.setItem('roomAssignmentTab', activeTab);
   }, [activeTab]);
 
+  // Prevent page refresh on F5 - keep modal open
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      localStorage.setItem('roomAssignmentOpen', 'true');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Check if we should reopen the modal
+    const shouldReopen = localStorage.getItem('roomAssignmentOpen');
+    if (shouldReopen === 'true') {
+      localStorage.removeItem('roomAssignmentOpen');
+    }
+    
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type });
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Fetch all data
-  const fetchRooms = async () => {
+  // Fetch all data with error handling
+  const fetchRooms = useCallback(async () => {
     try {
       const res = await api.get('/room-assignment/rooms');
       setRooms(res.data.data || []);
     } catch (error) {
       console.error('Error fetching rooms:', error);
-      showToast('Failed to load rooms', 'error');
     }
-  };
+  }, []);
 
-  const fetchWorkers = async () => {
+  const fetchWorkers = useCallback(async () => {
     try {
       const res = await api.get('/room-assignment/workers');
       setWorkers(res.data.data || []);
     } catch (error) {
       console.error('Error fetching workers:', error);
-      showToast('Failed to load workers', 'error');
     }
-  };
+  }, []);
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     try {
       const res = await api.get('/room-assignment/groups');
       setGroups(res.data.data || []);
     } catch (error) {
       console.error('Error fetching groups:', error);
-      showToast('Failed to load groups', 'error');
     }
-  };
-
-  const fetchShifts = async () => {
-    try {
-      const res = await api.get('/room-assignment/shifts');
-      setShifts(res.data.data || []);
-    } catch (error) {
-      console.error('Error fetching shifts:', error);
-      showToast('Failed to load shifts', 'error');
-    }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRooms();
     fetchWorkers();
     fetchGroups();
-    fetchShifts();
-  }, []);
+  }, [fetchRooms, fetchWorkers, fetchGroups]);
 
-  // Toggle room availability
+  // Toggle room availability - immediate UI update
   const toggleRoomAvailability = async (roomId, currentStatus) => {
-    setLoading(true);
+    // Optimistic update
+    setRooms(prev => prev.map(room => 
+      room._id === roomId ? { ...room, isActive: !currentStatus } : room
+    ));
+    
     try {
       const room = rooms.find(r => r._id === roomId);
       const updatedRoom = { ...room, isActive: !currentStatus };
       await api.put('/room-assignment/rooms', { updates: [updatedRoom] });
-      await fetchRooms();
-      showToast(`Room ${room.roomNumber} is now ${!currentStatus ? 'Available' : 'Unavailable'}`, 'success');
     } catch (error) {
+      // Revert on error
+      setRooms(prev => prev.map(room => 
+        room._id === roomId ? { ...room, isActive: currentStatus } : room
+      ));
       console.error('Error toggling room availability:', error);
-      showToast('Failed to update room status', 'error');
     }
-    setLoading(false);
   };
 
-  // Bulk toggle room availability
+  // Bulk toggle room availability - immediate UI update
   const bulkToggleRoomAvailability = async () => {
     if (selectedRows.size === 0) {
       showToast('No rooms selected', 'error');
@@ -124,7 +132,11 @@ const RoomAssignment = ({ user, onClose }) => {
     const selectedRooms = rooms.filter(r => selectedRows.has(r._id));
     const makeAvailable = selectedRooms.some(r => !r.isActive);
     
-    setLoading(true);
+    // Optimistic update
+    setRooms(prev => prev.map(room => 
+      selectedRows.has(room._id) ? { ...room, isActive: makeAvailable } : room
+    ));
+    
     try {
       const updates = selectedRooms.map(room => ({
         id: room._id,
@@ -132,30 +144,33 @@ const RoomAssignment = ({ user, onClose }) => {
         isActive: makeAvailable
       }));
       await api.put('/room-assignment/rooms', { updates });
-      await fetchRooms();
       setSelectedRows(new Set());
-      showToast(`${selectedRows.size} rooms marked as ${makeAvailable ? 'Available' : 'Unavailable'}`, 'success');
+      showToast(`${selectedRows.size} rooms updated`, 'success');
     } catch (error) {
+      // Revert on error
+      await fetchRooms();
       console.error('Error bulk updating rooms:', error);
-      showToast('Failed to update rooms', 'error');
     }
-    setLoading(false);
   };
 
-  // Toggle worker availability
+  // Toggle worker availability - immediate UI update
   const toggleWorkerAvailability = async (workerId, currentStatus) => {
-    setLoading(true);
+    // Optimistic update
+    setWorkers(prev => prev.map(worker => 
+      worker._id === workerId ? { ...worker, isAvailable: !currentStatus } : worker
+    ));
+    
     try {
       const worker = workers.find(w => w._id === workerId);
       const updatedWorker = { ...worker, isAvailable: !currentStatus };
       await api.put('/room-assignment/workers', { updates: [updatedWorker] });
-      await fetchWorkers();
-      showToast(`${worker.name} is now ${!currentStatus ? 'Available' : 'Unavailable'}`, 'success');
     } catch (error) {
+      // Revert on error
+      setWorkers(prev => prev.map(worker => 
+        worker._id === workerId ? { ...worker, isAvailable: currentStatus } : worker
+      ));
       console.error('Error toggling worker availability:', error);
-      showToast('Failed to update worker status', 'error');
     }
-    setLoading(false);
   };
 
   // Sorting functions
@@ -227,47 +242,25 @@ const RoomAssignment = ({ user, onClose }) => {
     return currentDirection === 'asc' ? '↑' : '↓';
   };
 
-  // ============ SHIFT FUNCTIONS ============
-  const handleAddShift = () => {
-    const shiftName = prompt('Enter shift name:', 'Morning Shift');
-    if (!shiftName) return;
-    const startTime = prompt('Start time (e.g., 08:00):', '08:00');
-    const endTime = prompt('End time (e.g., 17:00):', '17:00');
-    
-    setLoading(true);
-    const newShiftData = { name: shiftName, startTime: startTime || '08:00', endTime: endTime || '17:00', color: '#00d1ff' };
-    api.post('/room-assignment/shifts', newShiftData)
-      .then(() => {
-        fetchShifts();
-        showToast(`Shift "${shiftName}" added`, 'success');
-      })
-      .catch(error => {
-        console.error('Error adding shift:', error);
-        showToast('Failed to add shift', 'error');
-      })
-      .finally(() => setLoading(false));
-  };
-
-  const handleRemoveShift = (shiftId, shiftName) => {
-    setLoading(true);
-    api.delete(`/room-assignment/shifts/${shiftId}`)
-      .then(() => {
-        fetchShifts();
-        showToast(`Shift "${shiftName}" removed`, 'success');
-      })
-      .catch(error => {
-        console.error('Error removing shift:', error);
-        showToast('Failed to remove shift', 'error');
-      })
-      .finally(() => setLoading(false));
-  };
-
-  // ============ ROOM FUNCTIONS ============
+  // Remove duplicate room numbers before creating
   const handleBulkCreateRooms = async () => {
     if (bulkRoomData.startNumber > bulkRoomData.endNumber) {
       showToast('Start number must be less than end number', 'error');
       return;
     }
+    
+    // Check for existing room numbers
+    const existingRoomNumbers = new Set(rooms.map(r => r.roomNumber));
+    const newRoomNumbers = [];
+    for (let i = bulkRoomData.startNumber; i <= bulkRoomData.endNumber; i++) {
+      const roomNumber = `${bulkRoomData.prefix || ''}${i}`;
+      if (existingRoomNumbers.has(roomNumber)) {
+        showToast(`Room ${roomNumber} already exists!`, 'error');
+        return;
+      }
+      newRoomNumbers.push(roomNumber);
+    }
+    
     setLoading(true);
     try {
       await api.post('/room-assignment/rooms/bulk', bulkRoomData);
@@ -286,12 +279,15 @@ const RoomAssignment = ({ user, onClose }) => {
     const room = rooms.find(r => r._id === roomId);
     const updatedRoom = { ...room, [field]: value };
     
+    // Optimistic update
+    setRooms(prev => prev.map(r => r._id === roomId ? updatedRoom : r));
+    setEditingCell(null);
+    
     try {
       await api.put('/room-assignment/rooms', { updates: [updatedRoom] });
-      setRooms(rooms.map(r => r._id === roomId ? updatedRoom : r));
-      setEditingCell(null);
       showToast('Room updated', 'success');
     } catch (error) {
+      await fetchRooms();
       console.error('Error updating room:', error);
       showToast('Failed to update room', 'error');
     }
@@ -303,20 +299,22 @@ const RoomAssignment = ({ user, onClose }) => {
       return;
     }
     
-    setLoading(true);
+    // Optimistic update
+    const deletedIds = Array.from(selectedRows);
+    setRooms(prev => prev.filter(room => !deletedIds.includes(room._id)));
+    setSelectedRows(new Set());
+    
     try {
-      await api.delete('/room-assignment/rooms', { data: { ids: Array.from(selectedRows) } });
-      await fetchRooms();
-      setSelectedRows(new Set());
-      showToast(`${selectedRows.size} rooms deleted`, 'success');
+      await api.delete('/room-assignment/rooms', { data: { ids: deletedIds } });
+      showToast(`${deletedIds.length} rooms deleted`, 'success');
     } catch (error) {
+      await fetchRooms();
       console.error('Error deleting rooms:', error);
       showToast('Failed to delete rooms', 'error');
     }
-    setLoading(false);
   };
 
-  // ============ WORKER FUNCTIONS ============
+  // Worker functions
   const handleBulkCreateWorkers = async () => {
     if (!bulkWorkerData.names) {
       showToast('Enter worker names separated by commas', 'error');
@@ -344,12 +342,15 @@ const RoomAssignment = ({ user, onClose }) => {
       updatedWorker.specializations = value.split(',').map(s => s.trim());
     }
     
+    // Optimistic update
+    setWorkers(prev => prev.map(w => w._id === workerId ? updatedWorker : w));
+    setEditingCell(null);
+    
     try {
       await api.put('/room-assignment/workers', { updates: [updatedWorker] });
-      setWorkers(workers.map(w => w._id === workerId ? updatedWorker : w));
-      setEditingCell(null);
       showToast('Worker updated', 'success');
     } catch (error) {
+      await fetchWorkers();
       console.error('Error updating worker:', error);
       showToast('Failed to update worker', 'error');
     }
@@ -361,20 +362,21 @@ const RoomAssignment = ({ user, onClose }) => {
       return;
     }
     
-    setLoading(true);
+    const deletedIds = Array.from(selectedRows);
+    setWorkers(prev => prev.filter(worker => !deletedIds.includes(worker._id)));
+    setSelectedRows(new Set());
+    
     try {
-      await api.delete('/room-assignment/workers', { data: { ids: Array.from(selectedRows) } });
-      await fetchWorkers();
-      setSelectedRows(new Set());
-      showToast(`${selectedRows.size} workers deleted`, 'success');
+      await api.delete('/room-assignment/workers', { data: { ids: deletedIds } });
+      showToast(`${deletedIds.length} workers deleted`, 'success');
     } catch (error) {
+      await fetchWorkers();
       console.error('Error deleting workers:', error);
       showToast('Failed to delete workers', 'error');
     }
-    setLoading(false);
   };
 
-  // ============ GROUP FUNCTIONS ============
+  // Group functions
   const handleAddGroup = async () => {
     if (!newGroupData.name) {
       showToast('Please enter group name', 'error');
@@ -385,7 +387,7 @@ const RoomAssignment = ({ user, onClose }) => {
       await api.post('/room-assignment/groups', newGroupData);
       await fetchGroups();
       setShowAddGroupModal(false);
-      setNewGroupData({ name: '', peopleCount: 25, requiredSkill: 'General', priority: 'Normal' });
+      setNewGroupData({ name: '', peopleCount: 25, requiredSkill: 'General', priority: 'Normal', preferredRoomType: '' });
       showToast(`Group "${newGroupData.name}" added`, 'success');
     } catch (error) {
       console.error('Error adding group:', error);
@@ -394,16 +396,65 @@ const RoomAssignment = ({ user, onClose }) => {
     setLoading(false);
   };
 
+  const handleBulkAddGroups = async () => {
+    if (!bulkGroupsData.trim()) {
+      showToast('Enter group data', 'error');
+      return;
+    }
+    
+    const lines = bulkGroupsData.split('\n');
+    const groupsToAdd = [];
+    
+    for (const line of lines) {
+      if (line.trim()) {
+        const parts = line.split(',').map(p => p.trim());
+        groupsToAdd.push({
+          name: parts[0],
+          peopleCount: parseInt(parts[1]) || 25,
+          requiredSkill: parts[2] || 'General',
+          priority: parts[3] || 'Normal',
+          preferredRoomType: parts[4] || ''
+        });
+      }
+    }
+    
+    if (groupsToAdd.length === 0) {
+      showToast('No valid groups to add', 'error');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      for (const group of groupsToAdd) {
+        await api.post('/room-assignment/groups', {
+          ...group,
+          organization: user?.organization,
+          createdBy: user?.id
+        });
+      }
+      await fetchGroups();
+      setShowBulkGroupModal(false);
+      setBulkGroupsData('');
+      showToast(`${groupsToAdd.length} groups added successfully`, 'success');
+    } catch (error) {
+      console.error('Error bulk adding groups:', error);
+      showToast('Failed to add groups', 'error');
+    }
+    setLoading(false);
+  };
+
   const handleUpdateGroup = async (groupId, field, value) => {
     const group = groups.find(g => g._id === groupId);
     const updatedGroup = { ...group, [field]: value };
     
+    setGroups(prev => prev.map(g => g._id === groupId ? updatedGroup : g));
+    setEditingCell(null);
+    
     try {
       await api.put('/room-assignment/groups', { updates: [updatedGroup] });
-      setGroups(groups.map(g => g._id === groupId ? updatedGroup : g));
-      setEditingCell(null);
       showToast('Group updated', 'success');
     } catch (error) {
+      await fetchGroups();
       console.error('Error updating group:', error);
       showToast('Failed to update group', 'error');
     }
@@ -415,20 +466,21 @@ const RoomAssignment = ({ user, onClose }) => {
       return;
     }
     
-    setLoading(true);
+    const deletedIds = Array.from(selectedRows);
+    setGroups(prev => prev.filter(group => !deletedIds.includes(group._id)));
+    setSelectedRows(new Set());
+    
     try {
-      await api.delete('/room-assignment/groups', { data: { ids: Array.from(selectedRows) } });
-      await fetchGroups();
-      setSelectedRows(new Set());
-      showToast(`${selectedRows.size} groups deleted`, 'success');
+      await api.delete('/room-assignment/groups', { data: { ids: deletedIds } });
+      showToast(`${deletedIds.length} groups deleted`, 'success');
     } catch (error) {
+      await fetchGroups();
       console.error('Error deleting groups:', error);
       showToast('Failed to delete groups', 'error');
     }
-    setLoading(false);
   };
 
-  // ============ SORTING ALGORITHM ============
+  // Sorting algorithm
   const handleRunSorting = async () => {
     if (!selectedGroupForSorting) {
       showToast('Please select a group to sort', 'error');
@@ -451,10 +503,11 @@ const RoomAssignment = ({ user, onClose }) => {
       let bestRoomScore = 0;
       let bestWorkerScore = 0;
       
-      // Find best matching room
+      // Find best matching room based on type preference
       for (const room of availableRooms) {
         let roomScore = 0;
         
+        // Capacity match (60% of score)
         if (room.capacity >= selectedGroup.peopleCount) {
           roomScore += 60;
           if (room.capacity === selectedGroup.peopleCount) {
@@ -464,8 +517,11 @@ const RoomAssignment = ({ user, onClose }) => {
           roomScore += (room.capacity / selectedGroup.peopleCount) * 30;
         }
         
+        // Room type preference (20% of score)
         if (selectedGroup.preferredRoomType && selectedGroup.preferredRoomType === room.roomType) {
           roomScore += 20;
+        } else if (selectedGroup.preferredRoomType) {
+          roomScore += 5; // Small bonus for any room
         }
         
         if (roomScore > bestRoomScore) {
@@ -474,10 +530,11 @@ const RoomAssignment = ({ user, onClose }) => {
         }
       }
       
-      // Find best matching worker
+      // Find best matching worker by skill
       for (const worker of availableWorkers) {
         let workerScore = 0;
         
+        // Skill match (70% of score)
         if (selectedGroup.requiredSkill) {
           if (worker.specializations && worker.specializations.includes(selectedGroup.requiredSkill)) {
             workerScore += 70;
@@ -488,6 +545,7 @@ const RoomAssignment = ({ user, onClose }) => {
           workerScore += 70;
         }
         
+        // Worker type bonus (20% of score)
         if (worker.workerType === 'Regular') {
           workerScore += 20;
         } else if (worker.workerType === 'Substitute') {
@@ -523,10 +581,12 @@ const RoomAssignment = ({ user, onClose }) => {
         peopleCount: selectedGroup.peopleCount,
         requiredSkill: selectedGroup.requiredSkill,
         priority: selectedGroup.priority,
+        preferredRoomType: selectedGroup.preferredRoomType,
         roomId: bestRoom?._id,
         roomName: bestRoom?.name,
         roomNumber: bestRoom?.roomNumber,
         roomCapacity: bestRoom?.capacity,
+        roomType: bestRoom?.roomType,
         workerId: bestWorker?._id,
         workerName: bestWorker?.name,
         workerSpecializations: bestWorker?.specializations,
@@ -567,8 +627,7 @@ const RoomAssignment = ({ user, onClose }) => {
     try {
       await api.post('/room-assignment/confirm', {
         assignments: assignments.filter(a => a.roomId && a.workerId),
-        date: selectedDate,
-        shiftId: null
+        date: selectedDate
       });
       
       showToast('Assignments confirmed and saved!', 'success');
@@ -582,13 +641,15 @@ const RoomAssignment = ({ user, onClose }) => {
 
   // Selection helpers
   const toggleSelectRow = (id) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedRows(newSelected);
+    setSelectedRows(prev => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+      } else {
+        newSelected.add(id);
+      }
+      return newSelected;
+    });
   };
 
   const selectAll = () => {
@@ -613,6 +674,10 @@ const RoomAssignment = ({ user, onClose }) => {
     return '❌ Poor Match';
   };
 
+  // Responsive styles based on screen width
+  const isMobile = window.innerWidth <= 768;
+  const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+
   return (
     <div style={styles.container}>
       {/* Toast Notification */}
@@ -627,7 +692,7 @@ const RoomAssignment = ({ user, onClose }) => {
 
       {/* Header */}
       <div style={styles.header}>
-        <h1 style={styles.title}>🏢 Room Assignment System</h1>
+        <h1 style={{...styles.title, fontSize: isMobile ? '20px' : '24px'}}>🏢 Room Assignment System</h1>
         <button onClick={onClose} style={styles.closeButton}>✕</button>
       </div>
 
@@ -640,39 +705,46 @@ const RoomAssignment = ({ user, onClose }) => {
       </div>
 
       {/* Tabs */}
-      <div style={styles.tabs}>
-        <button onClick={() => { setActiveTab('rooms'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'rooms' ? '#00d1ff' : 'transparent'}}>🏠 Rooms</button>
-        <button onClick={() => { setActiveTab('workers'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'workers' ? '#00d1ff' : 'transparent'}}>👥 Workers</button>
-        <button onClick={() => { setActiveTab('groups'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'groups' ? '#00d1ff' : 'transparent'}}>📋 Groups</button>
-        <button onClick={() => { setActiveTab('sorting'); setShowMap(true); }} style={{...styles.tab, background: activeTab === 'sorting' ? '#00d1ff' : 'transparent'}}>🔄 Sort & Map</button>
+      <div style={{...styles.tabs, overflowX: isMobile ? 'auto' : 'visible', flexWrap: isMobile ? 'nowrap' : 'wrap'}}>
+        <button onClick={() => { setActiveTab('rooms'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'rooms' ? '#00d1ff' : 'transparent', padding: isMobile ? '8px 16px' : '10px 24px', fontSize: isMobile ? '12px' : '14px'}}>🏠 Rooms</button>
+        <button onClick={() => { setActiveTab('workers'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'workers' ? '#00d1ff' : 'transparent', padding: isMobile ? '8px 16px' : '10px 24px', fontSize: isMobile ? '12px' : '14px'}}>👥 Workers</button>
+        <button onClick={() => { setActiveTab('groups'); setSelectedRows(new Set()); setBulkMode(false); }} style={{...styles.tab, background: activeTab === 'groups' ? '#00d1ff' : 'transparent', padding: isMobile ? '8px 16px' : '10px 24px', fontSize: isMobile ? '12px' : '14px'}}>📋 Groups</button>
+        <button onClick={() => { setActiveTab('sorting'); setShowMap(true); }} style={{...styles.tab, background: activeTab === 'sorting' ? '#00d1ff' : 'transparent', padding: isMobile ? '8px 16px' : '10px 24px', fontSize: isMobile ? '12px' : '14px'}}>🔄 Sort & Map</button>
       </div>
 
       {/* Action Bar */}
-      <div style={styles.actionBar}>
+      <div style={{...styles.actionBar, flexDirection: isMobile ? 'column' : 'row'}}>
         {activeTab !== 'sorting' && (
           <>
-            <button onClick={selectAll} style={styles.actionButton}>✓ Select All</button>
-            <button onClick={deselectAll} style={styles.actionButton}>✗ Deselect All</button>
-            <button onClick={() => setBulkMode(!bulkMode)} style={styles.actionButton}>📦 Bulk Add</button>
-            {activeTab === 'rooms' && (
-              <button onClick={bulkToggleRoomAvailability} style={{...styles.actionButton, background: '#8b5cf6'}}>🔄 Mark Selected Available/Unavailable</button>
-            )}
-            <button onClick={activeTab === 'rooms' ? handleDeleteRooms : activeTab === 'workers' ? handleDeleteWorkers : handleDeleteGroups} style={{...styles.actionButton, background: '#ef4444'}}>🗑️ Delete Selected ({selectedRows.size})</button>
+            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+              <button onClick={selectAll} style={styles.actionButton}>✓ Select All</button>
+              <button onClick={deselectAll} style={styles.actionButton}>✗ Deselect All</button>
+              <button onClick={() => setBulkMode(!bulkMode)} style={styles.actionButton}>📦 Bulk Add</button>
+              {activeTab === 'rooms' && (
+                <button onClick={bulkToggleRoomAvailability} style={{...styles.actionButton, background: '#8b5cf6'}}>🔄 Mark Selected Available/Unavailable</button>
+              )}
+              {activeTab === 'groups' && (
+                <button onClick={() => setShowBulkGroupModal(true)} style={{...styles.actionButton, background: '#8b5cf6'}}>📦 Bulk Add Groups</button>
+              )}
+              <button onClick={activeTab === 'rooms' ? handleDeleteRooms : activeTab === 'workers' ? handleDeleteWorkers : handleDeleteGroups} style={{...styles.actionButton, background: '#ef4444'}}>🗑️ Delete Selected ({selectedRows.size})</button>
+            </div>
           </>
         )}
         {activeTab === 'sorting' && (
           <>
-            <div style={styles.sortingSelector}>
+            <div style={{...styles.sortingSelector, flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto'}}>
               <label style={styles.label}>Select Group to Sort:</label>
-              <select value={selectedGroupForSorting} onChange={(e) => setSelectedGroupForSorting(e.target.value)} style={styles.select}>
+              <select value={selectedGroupForSorting} onChange={(e) => setSelectedGroupForSorting(e.target.value)} style={{...styles.select, width: isMobile ? '100%' : '200px'}}>
                 <option value="">-- Select a group --</option>
                 {groups.filter(g => g.status !== 'assigned').map(group => (
                   <option key={group._id} value={group._id}>{group.name} ({group.peopleCount} people, {group.requiredSkill})</option>
                 ))}
               </select>
             </div>
-            <button onClick={handleRunSorting} style={styles.primaryButton} disabled={loading}>🔄 Run Sorting Algorithm</button>
-            <button onClick={handleConfirmAssignments} style={styles.successButton} disabled={loading}>✅ Confirm Assignments</button>
+            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+              <button onClick={handleRunSorting} style={styles.primaryButton} disabled={loading}>🔄 Run Sorting Algorithm</button>
+              <button onClick={handleConfirmAssignments} style={styles.successButton} disabled={loading}>✅ Confirm Assignments</button>
+            </div>
           </>
         )}
       </div>
@@ -687,14 +759,16 @@ const RoomAssignment = ({ user, onClose }) => {
             {bulkMode && (
               <div style={styles.bulkPanel}>
                 <h3>Bulk Create Rooms</h3>
-                <div style={styles.bulkForm}>
-                  <input type="text" placeholder="Prefix (e.g., 'A', 'Room ')" value={bulkRoomData.prefix} onChange={(e) => setBulkRoomData({...bulkRoomData, prefix: e.target.value})} style={styles.input} />
+                <div style={{...styles.bulkForm, flexDirection: isMobile ? 'column' : 'row'}}>
+                  <input type="text" placeholder="Prefix (e.g., 'A', 'Room ')" value={bulkRoomData.prefix} onChange={(e) => setBulkRoomData({...bulkRoomData, prefix: e.target.value})} style={{...styles.input, width: isMobile ? '100%' : 'auto'}} />
                   <input type="number" placeholder="Start Number" value={bulkRoomData.startNumber} onChange={(e) => setBulkRoomData({...bulkRoomData, startNumber: parseInt(e.target.value)})} style={styles.smallInput} />
                   <span>to</span>
                   <input type="number" placeholder="End Number" value={bulkRoomData.endNumber} onChange={(e) => setBulkRoomData({...bulkRoomData, endNumber: parseInt(e.target.value)})} style={styles.smallInput} />
                   <input type="number" placeholder="Capacity" value={bulkRoomData.capacity} onChange={(e) => setBulkRoomData({...bulkRoomData, capacity: parseInt(e.target.value)})} style={styles.smallInput} />
-                  <input type="text" placeholder="Room Type" value={bulkRoomData.roomType} onChange={(e) => setBulkRoomData({...bulkRoomData, roomType: e.target.value})} style={styles.input} />
-                  <button onClick={handleBulkCreateRooms} style={styles.submitButton}>Create {bulkRoomData.endNumber - bulkRoomData.startNumber + 1} Rooms</button>
+                  <select value={bulkRoomData.roomType} onChange={(e) => setBulkRoomData({...bulkRoomData, roomType: e.target.value})} style={{...styles.select, width: isMobile ? '100%' : 'auto'}}>
+                    {roomTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <button onClick={handleBulkCreateRooms} style={styles.submitButton}>Create Rooms</button>
                   <button onClick={() => setBulkMode(false)} style={styles.cancelButton}>Cancel</button>
                 </div>
               </div>
@@ -708,12 +782,18 @@ const RoomAssignment = ({ user, onClose }) => {
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortRooms('roomNumber')}>Room # {getSortIcon('roomNumber', roomSortField, roomSortDirection)}</th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortRooms('name')}>Name {getSortIcon('name', roomSortField, roomSortDirection)}</th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortRooms('capacity')}>Capacity {getSortIcon('capacity', roomSortField, roomSortDirection)}</th>
-                    <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortRooms('roomType')}>Type {getSortIcon('roomType', roomSortField, roomSortDirection)}</th>
+                    {!isMobile && <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortRooms('roomType')}>Type {getSortIcon('roomType', roomSortField, roomSortDirection)}</th>}
                     <th style={{...styles.th, color: 'white'}}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rooms.map(room => (
+                  {[...rooms]
+                    .sort((a, b) => {
+                      const aNum = parseInt(String(a.roomNumber).replace(/[^0-9]/g, '')) || 0;
+                      const bNum = parseInt(String(b.roomNumber).replace(/[^0-9]/g, '')) || 0;
+                      return aNum - bNum;
+                    })
+                    .map(room => (
                     <tr key={room._id} style={styles.tableRow}>
                       <td style={styles.td}><input type="checkbox" checked={selectedRows.has(room._id)} onChange={() => toggleSelectRow(room._id)} /></td>
                       <td style={styles.td}>
@@ -737,13 +817,17 @@ const RoomAssignment = ({ user, onClose }) => {
                           <span onClick={() => setEditingCell(`room-${room._id}-capacity`)} style={styles.editable}>{room.capacity}</span>
                         )}
                       </td>
-                      <td style={styles.td}>
-                        {editingCell === `room-${room._id}-roomType` ? (
-                          <input type="text" defaultValue={room.roomType} onBlur={(e) => handleUpdateRoom(room._id, 'roomType', e.target.value)} autoFocus style={styles.editInput} />
-                        ) : (
-                          <span onClick={() => setEditingCell(`room-${room._id}-roomType`)} style={styles.editable}>{room.roomType}</span>
-                        )}
-                      </td>
+                      {!isMobile && (
+                        <td style={styles.td}>
+                          {editingCell === `room-${room._id}-roomType` ? (
+                            <select defaultValue={room.roomType} onBlur={(e) => handleUpdateRoom(room._id, 'roomType', e.target.value)} autoFocus style={styles.editInput}>
+                              {roomTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                            </select>
+                          ) : (
+                            <span onClick={() => setEditingCell(`room-${room._id}-roomType`)} style={styles.editable}>{room.roomType}</span>
+                          )}
+                        </td>
+                      )}
                       <td style={styles.td}>
                         <button 
                           onClick={() => toggleRoomAvailability(room._id, room.isActive)} 
@@ -766,9 +850,9 @@ const RoomAssignment = ({ user, onClose }) => {
             {bulkMode && (
               <div style={styles.bulkPanel}>
                 <h3>Bulk Create Workers</h3>
-                <div style={styles.bulkForm}>
-                  <textarea placeholder="Enter worker names separated by commas&#10;Example: John Smith, Jane Doe, Bob Wilson" value={bulkWorkerData.names} onChange={(e) => setBulkWorkerData({...bulkWorkerData, names: e.target.value})} style={styles.textarea} rows="3" />
-                  <input type="text" placeholder="Default Specialization" value={bulkWorkerData.defaultSpecialization} onChange={(e) => setBulkWorkerData({...bulkWorkerData, defaultSpecialization: e.target.value})} style={styles.input} />
+                <div style={{...styles.bulkForm, flexDirection: isMobile ? 'column' : 'row'}}>
+                  <textarea placeholder="Enter worker names separated by commas&#10;Example: John Smith, Jane Doe, Bob Wilson" value={bulkWorkerData.names} onChange={(e) => setBulkWorkerData({...bulkWorkerData, names: e.target.value})} style={{...styles.textarea, width: isMobile ? '100%' : '300px'}} rows="3" />
+                  <input type="text" placeholder="Default Specialization" value={bulkWorkerData.defaultSpecialization} onChange={(e) => setBulkWorkerData({...bulkWorkerData, defaultSpecialization: e.target.value})} style={{...styles.input, width: isMobile ? '100%' : 'auto'}} />
                   <button onClick={handleBulkCreateWorkers} style={styles.submitButton}>Create Workers</button>
                   <button onClick={() => setBulkMode(false)} style={styles.cancelButton}>Cancel</button>
                 </div>
@@ -782,7 +866,6 @@ const RoomAssignment = ({ user, onClose }) => {
                     <th style={styles.th}><input type="checkbox" onChange={(e) => e.target.checked ? selectAll() : deselectAll()} /></th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortWorkers('name')}>Name {getSortIcon('name', workerSortField, workerSortDirection)}</th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortWorkers('specializations')}>Specializations {getSortIcon('specializations', workerSortField, workerSortDirection)}</th>
-                    <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortWorkers('workerType')}>Type {getSortIcon('workerType', workerSortField, workerSortDirection)}</th>
                     <th style={{...styles.th, color: 'white'}}>Status</th>
                   </tr>
                 </thead>
@@ -807,12 +890,6 @@ const RoomAssignment = ({ user, onClose }) => {
                         )}
                       </td>
                       <td style={styles.td}>
-                        <select value={worker.workerType} onChange={(e) => handleUpdateWorker(worker._id, 'workerType', e.target.value)} style={styles.smallSelect}>
-                          <option value="Regular">Regular</option>
-                          <option value="Substitute">Substitute</option>
-                        </select>
-                      </td>
-                      <td style={styles.td}>
                         <button 
                           onClick={() => toggleWorkerAvailability(worker._id, worker.isAvailable)} 
                           style={{...styles.statusButton, background: worker.isAvailable ? '#10b981' : '#ef4444'}}
@@ -831,8 +908,9 @@ const RoomAssignment = ({ user, onClose }) => {
         {/* GROUPS TAB */}
         {activeTab === 'groups' && !loading && (
           <div>
-            <div style={styles.quickAddBar}>
-              <button onClick={() => setShowAddGroupModal(true)} style={styles.addButton}>+ Add Group</button>
+            <div style={{...styles.quickAddBar, flexDirection: isMobile ? 'column' : 'row'}}>
+              <button onClick={() => setShowAddGroupModal(true)} style={styles.addButton}>+ Add Single Group</button>
+              <button onClick={() => setShowBulkGroupModal(true)} style={{...styles.addButton, background: '#8b5cf6'}}>📦 Add Multiple Groups</button>
             </div>
 
             <div style={styles.tableContainer}>
@@ -842,7 +920,8 @@ const RoomAssignment = ({ user, onClose }) => {
                     <th style={styles.th}><input type="checkbox" onChange={(e) => e.target.checked ? selectAll() : deselectAll()} /></th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('name')}>Group Name {getSortIcon('name', groupSortField, groupSortDirection)}</th>
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('peopleCount')}>People {getSortIcon('peopleCount', groupSortField, groupSortDirection)}</th>
-                    <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('requiredSkill')}>Required Skill {getSortIcon('requiredSkill', groupSortField, groupSortDirection)}</th>
+                    <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('requiredSkill')}>Skill {getSortIcon('requiredSkill', groupSortField, groupSortDirection)}</th>
+                    {!isMobile && <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('preferredRoomType')}>Preferred Room {getSortIcon('preferredRoomType', groupSortField, groupSortDirection)}</th>}
                     <th style={{...styles.th, cursor: 'pointer', color: 'white'}} onClick={() => sortGroups('priority')}>Priority {getSortIcon('priority', groupSortField, groupSortDirection)}</th>
                     <th style={{...styles.th, color: 'white'}}>Status</th>
                   </tr>
@@ -872,6 +951,18 @@ const RoomAssignment = ({ user, onClose }) => {
                           <span onClick={() => setEditingCell(`group-${group._id}-requiredSkill`)} style={styles.editable}>{group.requiredSkill || 'General'}</span>
                         )}
                       </td>
+                      {!isMobile && (
+                        <td style={styles.td}>
+                          {editingCell === `group-${group._id}-preferredRoomType` ? (
+                            <select defaultValue={group.preferredRoomType || ''} onBlur={(e) => handleUpdateGroup(group._id, 'preferredRoomType', e.target.value)} autoFocus style={styles.editInput}>
+                              <option value="">Any Room</option>
+                              {roomTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                            </select>
+                          ) : (
+                            <span onClick={() => setEditingCell(`group-${group._id}-preferredRoomType`)} style={styles.editable}>{group.preferredRoomType || 'Any'}</span>
+                          )}
+                        </td>
+                      )}
                       <td style={styles.td}>
                         <select value={group.priority} onChange={(e) => handleUpdateGroup(group._id, 'priority', e.target.value)} style={styles.smallSelect}>
                           <option value="Urgent">🔴 Urgent</option>
@@ -898,18 +989,14 @@ const RoomAssignment = ({ user, onClose }) => {
           <div>
             {showMap && assignments.length > 0 ? (
               <div>
-                <div style={styles.summaryStats}>
+                <div style={{...styles.summaryStats, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))'}}>
                   <div style={styles.statCard}>
                     <div style={styles.statValue}>{sortingResults?.summary?.totalGroups || 0}</div>
                     <div style={styles.statLabel}>Total Groups</div>
                   </div>
                   <div style={{...styles.statCard, background: 'rgba(16,185,129,0.1)'}}>
                     <div style={{...styles.statValue, color: '#10b981'}}>{sortingResults?.summary?.matchedGroups || 0}</div>
-                    <div style={styles.statLabel}>Perfect Matches</div>
-                  </div>
-                  <div style={{...styles.statCard, background: 'rgba(245,158,11,0.1)'}}>
-                    <div style={{...styles.statValue, color: '#f59e0b'}}>{sortingResults?.summary?.partialMatches || 0}</div>
-                    <div style={styles.statLabel}>Partial Matches</div>
+                    <div style={styles.statLabel}>Matches</div>
                   </div>
                   <div style={{...styles.statCard, background: 'rgba(239,68,68,0.1)'}}>
                     <div style={{...styles.statValue, color: '#ef4444'}}>{sortingResults?.summary?.unmatched || 0}</div>
@@ -922,7 +1009,7 @@ const RoomAssignment = ({ user, onClose }) => {
                 </div>
 
                 <h3 style={styles.mapTitle}>🗺️ Room Assignment Result</h3>
-                <div style={styles.mapGrid}>
+                <div style={{...styles.mapGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))'}}>
                   {assignments.map((assignment, idx) => {
                     const scoreColor = getScoreColor(assignment.matchScore);
                     return (
@@ -953,14 +1040,20 @@ const RoomAssignment = ({ user, onClose }) => {
                             <span style={styles.mapLabel}>📋 Needs:</span>
                             <span>{assignment.requiredSkill || 'General'}</span>
                           </div>
+                          {assignment.preferredRoomType && (
+                            <div style={styles.mapRow}>
+                              <span style={styles.mapLabel}>🏠 Prefers:</span>
+                              <span>{assignment.preferredRoomType} room</span>
+                            </div>
+                          )}
                           {assignment.roomCapacity && (
                             <div style={styles.mapRow}>
                               <span style={styles.mapLabel}>🏠 Room Info:</span>
-                              <span>Capacity: {assignment.roomCapacity}</span>
+                              <span>Capacity: {assignment.roomCapacity} ({assignment.roomType})</span>
                               {assignment.roomCapacity >= assignment.peopleCount ? (
                                 <span style={styles.goodBadge}>✅ Fits {assignment.peopleCount} people</span>
                               ) : (
-                                <span style={styles.warningBadge}>⚠️ Only fits {assignment.roomCapacity} of {assignment.peopleCount} people</span>
+                                <span style={styles.warningBadge}>⚠️ Only fits {assignment.roomCapacity} of {assignment.peopleCount}</span>
                               )}
                             </div>
                           )}
@@ -979,14 +1072,14 @@ const RoomAssignment = ({ user, onClose }) => {
               </div>
             ) : (
               <div style={styles.emptyState}>
-                <i className="fas fa-magic" style={{ fontSize: '48px', color: '#00d1ff', marginBottom: '16px' }}></i>
-                <h3>Select a group and click "Run Sorting Algorithm" to find the best room and worker</h3>
+                <i className="fas fa-magic" style={{ fontSize: isMobile ? '36px' : '48px', color: '#00d1ff', marginBottom: '16px' }}></i>
+                <h3 style={{fontSize: isMobile ? '16px' : '20px'}}>Select a group and click "Run Sorting Algorithm"</h3>
                 <p>The system will find the best available room and worker based on:</p>
                 <ul style={{textAlign: 'left', marginTop: '16px', color: 'rgba(255,255,255,0.7)'}}>
                   <li>✓ Room capacity vs group size</li>
                   <li>✓ Worker skills vs group requirements</li>
+                  {!isMobile && <li>✓ Preferred room type matching</li>}
                   <li>✓ Priority (Urgent → High → Normal → Low)</li>
-                  <li>✓ Room type preferences</li>
                   <li>✓ Worker type (Regular vs Substitute)</li>
                 </ul>
               </div>
@@ -995,14 +1088,18 @@ const RoomAssignment = ({ user, onClose }) => {
         )}
       </div>
 
-      {/* Add Group Modal */}
+      {/* Add Single Group Modal */}
       {showAddGroupModal && (
         <div style={styles.modalOverlay} onClick={() => setShowAddGroupModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : '400px'}} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Add New Group</h2>
             <input type="text" placeholder="Group Name" value={newGroupData.name} onChange={(e) => setNewGroupData({...newGroupData, name: e.target.value})} style={styles.input} />
             <input type="number" placeholder="Number of People" value={newGroupData.peopleCount} onChange={(e) => setNewGroupData({...newGroupData, peopleCount: parseInt(e.target.value)})} style={styles.input} />
             <input type="text" placeholder="Required Skill" value={newGroupData.requiredSkill} onChange={(e) => setNewGroupData({...newGroupData, requiredSkill: e.target.value})} style={styles.input} />
+            <select value={newGroupData.preferredRoomType} onChange={(e) => setNewGroupData({...newGroupData, preferredRoomType: e.target.value})} style={styles.select}>
+              <option value="">Any Room Type</option>
+              {roomTypes.map(type => <option key={type} value={type}>{type}</option>)}
+            </select>
             <select value={newGroupData.priority} onChange={(e) => setNewGroupData({...newGroupData, priority: e.target.value})} style={styles.select}>
               <option value="Urgent">🔴 Urgent</option>
               <option value="High">🟠 High</option>
@@ -1012,6 +1109,30 @@ const RoomAssignment = ({ user, onClose }) => {
             <div style={styles.modalButtons}>
               <button onClick={() => setShowAddGroupModal(false)} style={styles.cancelButton}>Cancel</button>
               <button onClick={handleAddGroup} style={styles.submitButton}>Add Group</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Add Groups Modal */}
+      {showBulkGroupModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowBulkGroupModal(false)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : '500px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Bulk Add Groups</h2>
+            <p style={{color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginBottom: '12px'}}>
+              Enter one group per line in format: <strong>Name, People Count, Required Skill, Priority, Preferred Room Type</strong><br/>
+              Example: Math Class, 25, Math, High, Classroom
+            </p>
+            <textarea 
+              placeholder="Math Class, 25, Math, High, Classroom&#10;Science Lab, 20, Science, Normal, Laboratory&#10;Physics Class, 18, Physics, Urgent, Classroom" 
+              value={bulkGroupsData} 
+              onChange={(e) => setBulkGroupsData(e.target.value)} 
+              style={{...styles.textarea, minHeight: '200px'}} 
+              rows="6"
+            />
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowBulkGroupModal(false)} style={styles.cancelButton}>Cancel</button>
+              <button onClick={handleBulkAddGroups} style={styles.submitButton}>Add Groups</button>
             </div>
           </div>
         </div>
@@ -1054,7 +1175,6 @@ const styles = {
     borderBottom: '1px solid rgba(255,255,255,0.1)'
   },
   title: {
-    fontSize: '24px',
     fontWeight: 'bold',
     color: 'white',
     margin: 0
@@ -1077,7 +1197,8 @@ const styles = {
   dateSelector: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px'
+    gap: '12px',
+    flexWrap: 'wrap'
   },
   label: {
     color: 'rgba(255,255,255,0.7)',
@@ -1095,19 +1216,17 @@ const styles = {
     gap: '8px',
     marginBottom: '20px',
     borderBottom: '1px solid rgba(255,255,255,0.1)',
-    paddingBottom: '12px',
-    flexWrap: 'wrap'
+    paddingBottom: '12px'
   },
   tab: {
-    padding: '10px 24px',
     background: 'transparent',
     border: 'none',
     borderRadius: '8px',
     color: 'white',
     cursor: 'pointer',
-    fontSize: '14px',
     fontWeight: '500',
-    transition: 'all 0.3s'
+    transition: 'all 0.3s',
+    whiteSpace: 'nowrap'
   },
   actionBar: {
     display: 'flex',
@@ -1159,8 +1278,7 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.2)',
     borderRadius: '8px',
     color: 'white',
-    cursor: 'pointer',
-    minWidth: '200px'
+    cursor: 'pointer'
   },
   content: {
     background: 'rgba(255,255,255,0.03)',
@@ -1194,7 +1312,7 @@ const styles = {
     borderRadius: '8px',
     color: 'white',
     flex: '1',
-    minWidth: '150px'
+    minWidth: '120px'
   },
   textarea: {
     padding: '10px 14px',
@@ -1203,7 +1321,8 @@ const styles = {
     borderRadius: '8px',
     color: 'white',
     width: '100%',
-    marginBottom: '12px'
+    marginBottom: '12px',
+    resize: 'vertical'
   },
   smallInput: {
     padding: '10px 14px',
@@ -1230,11 +1349,13 @@ const styles = {
     cursor: 'pointer'
   },
   tableContainer: {
-    overflowX: 'auto'
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch'
   },
   table: {
     width: '100%',
-    borderCollapse: 'collapse'
+    borderCollapse: 'collapse',
+    minWidth: '500px'
   },
   tableHeader: {
     borderBottom: '1px solid rgba(255,255,255,0.1)'
@@ -1251,13 +1372,17 @@ const styles = {
   td: {
     padding: '12px',
     color: 'white',
-    fontSize: '14px'
+    fontSize: '14px',
+    verticalAlign: 'middle'
   },
   editable: {
     cursor: 'pointer',
     padding: '4px 8px',
     borderRadius: '4px',
-    display: 'inline-block'
+    display: 'inline-block',
+    '&:hover': {
+      background: 'rgba(255,255,255,0.1)'
+    }
   },
   editInput: {
     padding: '6px 10px',
@@ -1299,7 +1424,10 @@ const styles = {
     display: 'inline-block'
   },
   quickAddBar: {
-    marginBottom: '20px'
+    marginBottom: '20px',
+    display: 'flex',
+    gap: '12px',
+    flexWrap: 'wrap'
   },
   addButton: {
     padding: '10px 20px',
@@ -1312,7 +1440,6 @@ const styles = {
   },
   summaryStats: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
     gap: '16px',
     marginBottom: '24px'
   },
@@ -1323,7 +1450,7 @@ const styles = {
     textAlign: 'center'
   },
   statValue: {
-    fontSize: '32px',
+    fontSize: '28px',
     fontWeight: 'bold',
     color: '#00d1ff'
   },
@@ -1339,7 +1466,6 @@ const styles = {
   },
   mapGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
     gap: '16px'
   },
   mapCard: {
@@ -1354,7 +1480,9 @@ const styles = {
     alignItems: 'center',
     padding: '12px 16px',
     background: 'rgba(255,255,255,0.03)',
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    flexWrap: 'wrap',
+    gap: '8px'
   },
   roomNumber: {
     fontWeight: 'bold',
@@ -1363,7 +1491,7 @@ const styles = {
   matchScore: {
     padding: '4px 8px',
     borderRadius: '20px',
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: '600',
     color: 'white'
   },
@@ -1431,7 +1559,7 @@ const styles = {
   },
   emptyState: {
     textAlign: 'center',
-    padding: '60px',
+    padding: '40px',
     color: 'rgba(255,255,255,0.6)'
   },
   modalOverlay: {
@@ -1450,8 +1578,8 @@ const styles = {
     background: '#1e293b',
     borderRadius: '16px',
     padding: '24px',
-    width: '400px',
-    maxWidth: '90%'
+    maxHeight: '85vh',
+    overflowY: 'auto'
   },
   modalTitle: {
     fontSize: '20px',
