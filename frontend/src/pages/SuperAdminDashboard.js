@@ -578,49 +578,59 @@ useEffect(() => {
   };
 
   const fetchDashboardData = async (showLoading = true) => {
-  if (isEditingRef.current) return; 
   if (showLoading) setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      
-      const usersData = await usersRes.json();
-      const branchesData = await branchesRes.json();
-      const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      
-      const allUsers = usersData.data || [];
-      const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
-      const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      
-      setAdmins(filteredAdmins);
-      setEmployees(filteredEmployees);
-      setBranches(branchesData.data || []);
-      setTasks(tasksData.data || []);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setStats({
-        totalAdmins: filteredAdmins.length,
-        totalEmployees: filteredEmployees.length,
-        totalTasks: tasksData.data?.length || 0,
-        totalBranches: branchesData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        totalJobDescriptions: jobsData.data?.length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+  try {
+    const token = localStorage.getItem('token');
+    
+    const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
+    ]);
+    
+    const usersData = await usersRes.json();
+    const branchesData = await branchesRes.json();
+    const tasksData = await tasksRes.json();
+    const appsData = await appsRes.json();
+    const jobsData = await jobsRes.json();
+    
+    const allUsers = usersData.data || [];
+    const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
+    const filteredEmployees = allUsers.filter(u => u.role === 'employee');
+    
+    // ✅ FILTER OUT PAST TASKS (only show today and future)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const allTasks = tasksData.data || [];
+    const filteredTasks = allTasks.filter(task => {
+      const taskDate = new Date(task.date);
+      taskDate.setHours(0, 0, 0, 0);
+      return taskDate >= today; // Only show today and future tasks
+    });
+    
+    setAdmins(filteredAdmins);
+    setEmployees(filteredEmployees);
+    setBranches(branchesData.data || []);
+    setTasks(filteredTasks); // ✅ Store only future tasks
+    setApplications(appsData.data || []);
+    setJobDescriptions(jobsData.data || []);
+    setStats({
+      totalAdmins: filteredAdmins.length,
+      totalEmployees: filteredEmployees.length,
+      totalTasks: filteredTasks.length, // ✅ Count only future tasks
+      totalBranches: branchesData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      totalJobDescriptions: jobsData.data?.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    if (showLoading) setLoading(false);
+  }
+};
 
   const handleUpdateProfile = async () => {
     if (profileData.newPassword !== profileData.confirmPassword) {
