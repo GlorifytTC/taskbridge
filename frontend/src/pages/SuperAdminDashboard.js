@@ -123,6 +123,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
   const isEditingRef = useRef(false);
+  
+  // Refs for inline edit containers to handle click outside
+  const adminEditRefs = useRef({});
+  const employeeEditRefs = useRef({});
+  const branchEditRefs = useRef({});
+  const jobEditRefs = useRef({});
+  const taskEditRefs = useRef({});
 
   const resetEditingStates = useCallback(() => {
     setEditingAdminId(null);
@@ -140,10 +147,45 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const goBack = useCallback(() => {
     if (previousTab) {
+      resetEditingStates();
       setActiveTab(previousTab);
       localStorage.setItem('taskbridge_activeTab', previousTab);
     }
-  }, [previousTab]);
+  }, [previousTab, resetEditingStates]);
+
+  // Handle click outside for inline edits
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // For admin edits
+      if (editingAdminId && adminEditRefs.current[editingAdminId] && 
+          !adminEditRefs.current[editingAdminId].contains(event.target)) {
+        cancelEditAdmin();
+      }
+      // For employee edits
+      if (editingEmployeeId && employeeEditRefs.current[editingEmployeeId] && 
+          !employeeEditRefs.current[editingEmployeeId].contains(event.target)) {
+        cancelEditEmployee();
+      }
+      // For branch edits
+      if (editingBranchId && branchEditRefs.current[editingBranchId] && 
+          !branchEditRefs.current[editingBranchId].contains(event.target)) {
+        cancelEditBranch();
+      }
+      // For job edits
+      if (editingJobId && jobEditRefs.current[editingJobId] && 
+          !jobEditRefs.current[editingJobId].contains(event.target)) {
+        cancelEditJob();
+      }
+      // For task edits
+      if (editingTaskId && taskEditRefs.current[editingTaskId] && 
+          !taskEditRefs.current[editingTaskId].contains(event.target)) {
+        cancelEditTask();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
 
   const fetchEmployeesForFilter = async () => {
     try {
@@ -1801,27 +1843,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <tr key={admin._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input
-                            key={`admin-${admin._id}-name`}  
-                            type="text"
-                            value={editAdminData.name || admin.name}
-                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
+                          <div ref={el => adminEditRefs.current[admin._id] = el}>
+                            <input
+                              key={`admin-${admin._id}-name`}  
+                              type="text"
+                              value={editAdminData.name || admin.name}
+                              onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
+                              style={styles.inlineInput}
+                              autoFocus
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           admin.name
                         )}
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input
-                            key={`admin-${admin._id}-email`}
-                            type="email"
-                            value={editAdminData.email || admin.email}
-                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
-                            style={styles.inlineInput}
-                          />
+                          <div ref={el => adminEditRefs.current[admin._id] = el}>
+                            <input
+                              key={`admin-${admin._id}-email`}
+                              type="email"
+                              value={editAdminData.email || admin.email}
+                              onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
+                              style={styles.inlineInput}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           isSmall ? admin.email?.substring(0, 15) + (admin.email?.length > 15 ? '...' : '') : admin.email
                         )}
@@ -1839,14 +1887,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       )}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingAdminId === admin._id ? (
-                          <select
-                            value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
-                            onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
-                            style={styles.inlineSelect}
-                          >
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                          </select>
+                          <div ref={el => adminEditRefs.current[admin._id] = el}>
+                            <select
+                              value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
+                              onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
+                              style={styles.inlineSelect}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <option value="true">Active</option>
+                              <option value="false">Inactive</option>
+                            </select>
+                          </div>
                         ) : (
                           <span style={{...styles.statusBadge, background: admin.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
                             {admin.isActive ? 'Active' : 'Inactive'}
@@ -1910,25 +1961,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <tr key={emp._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input
-                            type="text"
-                            value={editEmployeeData.name || emp.name}
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
+                          <div ref={el => employeeEditRefs.current[emp._id] = el}>
+                            <input
+                              type="text"
+                              value={editEmployeeData.name || emp.name}
+                              onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
+                              style={styles.inlineInput}
+                              autoFocus
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           emp.name
                         )}
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input
-                            type="email"
-                            value={editEmployeeData.email || emp.email}
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
-                            style={styles.inlineInput}
-                          />
+                          <div ref={el => employeeEditRefs.current[emp._id] = el}>
+                            <input
+                              type="email"
+                              value={editEmployeeData.email || emp.email}
+                              onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
+                              style={styles.inlineInput}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email
                         )}
@@ -1937,20 +1994,23 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
-                          <select
-                            value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
-                            style={styles.inlineSelect}
-                          >
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                          </select>
+                          <div ref={el => employeeEditRefs.current[emp._id] = el}>
+                            <select
+                              value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
+                              onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
+                              style={styles.inlineSelect}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <option value="true">Active</option>
+                              <option value="false">Inactive</option>
+                            </select>
+                          </div>
                         ) : (
                           <span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
                             {emp.isActive ? 'Active' : 'Inactive'}
                           </span>
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
@@ -2006,25 +2066,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <tr key={branch._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input
-                            type="text"
-                            value={editBranchData.name || branch.name}
-                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
+                          <div ref={el => branchEditRefs.current[branch._id] = el}>
+                            <input
+                              type="text"
+                              value={editBranchData.name || branch.name}
+                              onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
+                              style={styles.inlineInput}
+                              autoFocus
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           branch.name
                         )}
                        </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input
-                            type="text"
-                            value={editBranchData['address.city'] || branch.address?.city || ''}
-                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
-                            style={styles.inlineInput}
-                          />
+                          <div ref={el => branchEditRefs.current[branch._id] = el}>
+                            <input
+                              type="text"
+                              value={editBranchData['address.city'] || branch.address?.city || ''}
+                              onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
+                              style={styles.inlineInput}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           branch.address?.city || '-'
                         )}
@@ -2073,25 +2139,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <tr key={job._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <input
-                            type="text"
-                            value={editJobData.name || job.name}
-                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
+                          <div ref={el => jobEditRefs.current[job._id] = el}>
+                            <input
+                              type="text"
+                              value={editJobData.name || job.name}
+                              onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
+                              style={styles.inlineInput}
+                              autoFocus
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           job.name
                         )}
                        </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <textarea
-                            value={editJobData.description || job.description || ''}
-                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
-                            style={styles.inlineTextarea}
-                            rows="1"
-                          />
+                          <div ref={el => jobEditRefs.current[job._id] = el}>
+                            <textarea
+                              value={editJobData.description || job.description || ''}
+                              onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
+                              style={styles.inlineTextarea}
+                              rows="1"
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           job.description || '-'
                         )}
@@ -2142,25 +2214,31 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <tr key={task._id} style={styles.tableRow}>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input
-                            type="text"
-                            value={editTaskData.title || task.title}
-                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
+                          <div ref={el => taskEditRefs.current[task._id] = el}>
+                            <input
+                              type="text"
+                              value={editTaskData.title || task.title}
+                              onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
+                              style={styles.inlineInput}
+                              autoFocus
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
                         )}
                        </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input
-                            type="date"
-                            value={editTaskData.date || task.date?.split('T')[0]}
-                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
-                            style={styles.inlineInput}
-                          />
+                          <div ref={el => taskEditRefs.current[task._id] = el}>
+                            <input
+                              type="date"
+                              value={editTaskData.date || task.date?.split('T')[0]}
+                              onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
+                              style={styles.inlineInput}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           new Date(task.date).toLocaleDateString()
                         )}
@@ -2170,15 +2248,18 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
-                          <select
-                            value={editTaskData.status || task.status}
-                            onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
-                            style={styles.inlineSelect}
-                          >
-                            <option value="open">Open</option>
-                            <option value="closed">Closed</option>
-                            <option value="in-progress">In Progress</option>
-                          </select>
+                          <div ref={el => taskEditRefs.current[task._id] = el}>
+                            <select
+                              value={editTaskData.status || task.status}
+                              onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
+                              style={styles.inlineSelect}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <option value="open">Open</option>
+                              <option value="closed">Closed</option>
+                              <option value="in-progress">In Progress</option>
+                            </select>
+                          </div>
                         ) : (
                           <span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>
                             {task.status}
@@ -2543,7 +2624,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           }}>
                             {log.action}
                           </span>
-                         </td>
+                        </td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
                         <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
