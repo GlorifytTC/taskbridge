@@ -215,7 +215,17 @@ exports.getPendingApplications = async (req, res) => {
       status: 'pending'
     };
     
-    if (req.user.role === 'admin' && branch) {
+    // ✅ FIX: For admin, only show applications for tasks in their assigned branches
+    if (req.user.role === 'admin') {
+      if (req.user.assignedBranches && req.user.assignedBranches.length > 0) {
+        const tasks = await Task.find({ 
+          branch: { $in: req.user.assignedBranches },
+          organization: req.user.organization
+        });
+        query.task = { $in: tasks.map(t => t._id) };
+      }
+    } else if (branch) {
+      // For superadmin/master with branch filter
       const tasks = await Task.find({ branch });
       query.task = { $in: tasks.map(t => t._id) };
     }

@@ -11,6 +11,14 @@ exports.getUsers = async (req, res) => {
       deletedAt: { $eq: null }  // This excludes soft-deleted users
     };
     
+    // ✅ FIX: If admin, only show staff from assigned branches
+    if (req.user.role === 'admin' && req.user.assignedBranches && req.user.assignedBranches.length > 0) {
+      query.$or = [
+        { branch: { $in: req.user.assignedBranches } },
+        { role: 'admin' } // Admins can see other admins? Adjust as needed
+      ];
+    }
+    
     // Add role filter
     if (req.query.role) {
       query.role = req.query.role;
@@ -19,7 +27,7 @@ exports.getUsers = async (req, res) => {
     const users = await User.find(query)
       .populate('branch', 'name')
       .populate('jobDescription', 'name')
-      .populate('assignedBranches', 'name');  // ✅ ADD THIS LINE
+      .populate('assignedBranches', 'name');  
     
     res.json({
       success: true,
@@ -168,7 +176,7 @@ exports.updateUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, branch, jobDescription } = req.body;
+    const { name, email, password, role, branch, jobDescription, assignedBranches } = req.body;
     
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -182,7 +190,8 @@ exports.createUser = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const user = await User.create({
+    // ✅ FIX: Create user data object with assignedBranches for admins
+    const userData = {
       name,
       email,
       password: hashedPassword,
@@ -192,7 +201,17 @@ exports.createUser = async (req, res) => {
       jobDescription: jobDescription || null,
       createdBy: req.user.id,
       isActive: true
-    });
+    };
+    
+    // ✅ Add assignedBranches for admin role
+    if (role === 'admin' && assignedBranches && assignedBranches.length > 0) {
+      userData.assignedBranches = assignedBranches;
+    } else if (role === 'admin' && branch) {
+      // If only branch is provided but not assignedBranches, use that
+      userData.assignedBranches = [branch];
+    }
+    
+    const user = await User.create(userData);
     
     // Create audit log
     await AuditLog.create({
@@ -201,7 +220,7 @@ exports.createUser = async (req, res) => {
       action: 'create',
       entityType: 'user',
       entityId: user._id,
-      changes: { name, email, role },
+      changes: { name, email, role, assignedBranches: userData.assignedBranches },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -212,7 +231,8 @@ exports.createUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        assignedBranches: user.assignedBranches
       }
     });
   } catch (error) {

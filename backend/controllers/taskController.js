@@ -129,6 +129,14 @@ exports.getTasks = async (req, res) => {
     if (req.user.role === 'employee') {
       query.jobDescription = req.user.jobDescription;
       query.status = 'open';
+      
+      // ✅ FIX: Only show tasks that are NOT past date AND NOT filled
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      query.date = { $gte: today };
+      
+      // Also exclude tasks that are filled
+      query.$expr = { $lt: ["$currentEmployees", "$maxEmployees"] };
     } else if (req.user.role === 'admin') {
       // If admin has assigned branches, only show tasks from those branches
       if (req.user.assignedBranches && req.user.assignedBranches.length > 0) {
@@ -142,12 +150,15 @@ exports.getTasks = async (req, res) => {
       query.branch = { $in: branches };
     }
     
-    // Date filter
+    // Date filter (if provided by calendar, use that instead)
     if (req.query.startDate && req.query.endDate) {
       query.date = {
         $gte: new Date(req.query.startDate),
         $lte: new Date(req.query.endDate)
       };
+    } else if (req.user.role !== 'employee') {
+      // For non-employees, don't filter by date automatically
+      // Keep original behavior
     }
     
     const tasks = await Task.find(query)
