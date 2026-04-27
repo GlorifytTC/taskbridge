@@ -124,9 +124,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editTaskData, setEditTaskData] = useState({});
   const isEditingRef = useRef(false);
   
-  // Flag to prevent click outside during select interactions
-  const isSelectInteractingRef = useRef(false);
-  
   // Refs for inline edit containers
   const adminEditRefs = useRef({});
   const employeeEditRefs = useRef({});
@@ -156,52 +153,43 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   }, [previousTab, resetEditingStates]);
 
-  // Handle click outside for inline edits - with delay to allow select events
+  // Handle click outside for inline edits - using refs to check if click is inside the container
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Don't cancel if we're currently interacting with a select dropdown
-      if (isSelectInteractingRef.current) {
-        return;
-      }
-      
       // For admin edits
-      if (editingAdminId && adminEditRefs.current[editingAdminId] && 
-          !adminEditRefs.current[editingAdminId].contains(event.target)) {
-        cancelEditAdmin();
+      if (editingAdminId && adminEditRefs.current[editingAdminId]) {
+        if (!adminEditRefs.current[editingAdminId].contains(event.target)) {
+          cancelEditAdmin();
+        }
       }
       // For employee edits
-      if (editingEmployeeId && employeeEditRefs.current[editingEmployeeId] && 
-          !employeeEditRefs.current[editingEmployeeId].contains(event.target)) {
-        cancelEditEmployee();
+      if (editingEmployeeId && employeeEditRefs.current[editingEmployeeId]) {
+        if (!employeeEditRefs.current[editingEmployeeId].contains(event.target)) {
+          cancelEditEmployee();
+        }
       }
       // For branch edits
-      if (editingBranchId && branchEditRefs.current[editingBranchId] && 
-          !branchEditRefs.current[editingBranchId].contains(event.target)) {
-        cancelEditBranch();
+      if (editingBranchId && branchEditRefs.current[editingBranchId]) {
+        if (!branchEditRefs.current[editingBranchId].contains(event.target)) {
+          cancelEditBranch();
+        }
       }
       // For job edits
-      if (editingJobId && jobEditRefs.current[editingJobId] && 
-          !jobEditRefs.current[editingJobId].contains(event.target)) {
-        cancelEditJob();
+      if (editingJobId && jobEditRefs.current[editingJobId]) {
+        if (!jobEditRefs.current[editingJobId].contains(event.target)) {
+          cancelEditJob();
+        }
       }
       // For task edits
-      if (editingTaskId && taskEditRefs.current[editingTaskId] && 
-          !taskEditRefs.current[editingTaskId].contains(event.target)) {
-        cancelEditTask();
+      if (editingTaskId && taskEditRefs.current[editingTaskId]) {
+        if (!taskEditRefs.current[editingTaskId].contains(event.target)) {
+          cancelEditTask();
+        }
       }
     };
 
-    // Use a slight delay when clicking to allow select events to register first
-    const delayedClickHandler = (event) => {
-      setTimeout(() => {
-        if (!isSelectInteractingRef.current) {
-          handleClickOutside(event);
-        }
-      }, 50);
-    };
-
-    document.addEventListener('mousedown', delayedClickHandler);
-    return () => document.removeEventListener('mousedown', delayedClickHandler);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
 
   const fetchEmployeesForFilter = async () => {
@@ -1646,19 +1634,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     });
   };
 
-  // Functions to handle select interaction
-  const handleSelectMouseDown = () => {
-    isSelectInteractingRef.current = true;
-  };
-
-  const handleSelectChange = (callback) => (e) => {
-    callback(e);
-    // Allow time for the select event to complete before re-enabling click outside
-    setTimeout(() => {
-      isSelectInteractingRef.current = false;
-    }, 100);
-  };
-
   if (subscriptionData?.status === 'expired' || subscriptionData?.status === 'paused') {
     return (
       <div style={styles.subscriptionBlockedContainer}>
@@ -1881,8 +1856,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
                               style={styles.inlineInput}
                               autoFocus
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -1898,8 +1871,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               value={editAdminData.email || admin.email}
                               onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
                               style={styles.inlineInput}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -1922,10 +1893,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           <div ref={el => adminEditRefs.current[admin._id] = el}>
                             <select
                               value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
-                              onChange={handleSelectChange((e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'}))}
+                              onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
                               style={styles.inlineSelect}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             >
                               <option value="true">Active</option>
                               <option value="false">Inactive</option>
@@ -2001,8 +1970,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
                               style={styles.inlineInput}
                               autoFocus
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2017,8 +1984,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               value={editEmployeeData.email || emp.email}
                               onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
                               style={styles.inlineInput}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2032,10 +1997,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           <div ref={el => employeeEditRefs.current[emp._id] = el}>
                             <select
                               value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
-                              onChange={handleSelectChange((e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'}))}
+                              onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
                               style={styles.inlineSelect}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             >
                               <option value="true">Active</option>
                               <option value="false">Inactive</option>
@@ -2109,8 +2072,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
                               style={styles.inlineInput}
                               autoFocus
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2125,8 +2086,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               value={editBranchData['address.city'] || branch.address?.city || ''}
                               onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
                               style={styles.inlineInput}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2184,8 +2143,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
                               style={styles.inlineInput}
                               autoFocus
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2200,8 +2157,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
                               style={styles.inlineTextarea}
                               rows="1"
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2261,8 +2216,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
                               style={styles.inlineInput}
                               autoFocus
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2277,8 +2230,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               value={editTaskData.date || task.date?.split('T')[0]}
                               onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
                               style={styles.inlineInput}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             />
                           </div>
                         ) : (
@@ -2293,10 +2244,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           <div ref={el => taskEditRefs.current[task._id] = el}>
                             <select
                               value={editTaskData.status || task.status}
-                              onChange={handleSelectChange((e) => setEditTaskData({...editTaskData, status: e.target.value}))}
+                              onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
                               style={styles.inlineSelect}
-                              onMouseDown={handleSelectMouseDown}
-                              onBlur={() => setTimeout(() => { isSelectInteractingRef.current = false; }, 200)}
                             >
                               <option value="open">Open</option>
                               <option value="closed">Closed</option>
