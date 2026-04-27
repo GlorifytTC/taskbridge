@@ -1903,7 +1903,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         ) : (
                           emp.name
                         )}
-                      </table>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
                           <input
@@ -2185,7 +2185,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     </tr>
                   ))}
                 </tbody>
-              </tr>
+              </table>
             </div>
           </div>
         )}
@@ -2204,7 +2204,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Applied Date</th>
                     <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
-                  </table>
+                  </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
@@ -2220,7 +2220,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         }}>
                           {app.status}
                         </span>
-                       </div>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
@@ -2229,8 +2229,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '6px 10px' : '4px 8px', fontSize: isSmall ? '12px' : '12px', minWidth: '36px', minHeight: '36px'}}>✗</button>
                           </div>
                         )}
-                       </div>
-                     </table>
+                       </td>
+                     </tr>
                   ))}
                 </tbody>
               </table>
@@ -2419,7 +2419,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <div style={styles.tableContainer}>
                 <table style={{...styles.table, minWidth: isSmall ? '500px' : '700px'}}>
                   <thead><tr style={styles.tableHeaderRow}><th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th><th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.entityType}</th><th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.user}</th><th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.timestamp}</th><th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.changes}</th></tr></thead>
-                  <tbody>{auditLogs.map(log => (<tr key={log._id} style={styles.tableRow}><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><span style={{...styles.statusBadge, background: log.action === 'create' ? '#10b981' : log.action === 'update' ? '#3b82f6' : log.action === 'delete' ? '#ef4444' : '#6b7280'}}>{log.action}</span></div><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</div><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</div><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{new Date(log.createdAt).toLocaleString()}</div><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>{JSON.stringify(log.changes, null, 2)}</pre></div></tr>))}</tbody>
+                  <tbody>{auditLogs.map(log => (<tr key={log._id} style={styles.tableRow}><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><span style={{...styles.statusBadge, background: log.action === 'create' ? '#10b981' : log.action === 'update' ? '#3b82f6' : log.action === 'delete' ? '#ef4444' : '#6b7280'}}>{log.action}</span></td><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{new Date(log.createdAt).toLocaleString()}</td><td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}><pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap'}}>{JSON.stringify(log.changes, null, 2)}</pre></td></tr>))}</tbody>
                 </table>
               </div>
             )}
