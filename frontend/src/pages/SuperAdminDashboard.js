@@ -66,6 +66,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+  
   const [reportFilters, setReportFilters] = useState({
     branch: 'all',
     jobRole: 'all',
@@ -77,10 +78,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [showReportFilters, setShowReportFilters] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+  
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
-
+  
   const quickQuestions = {
     en: [
       "📋 How do I create a new task?",
@@ -120,10 +122,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editJobData, setEditJobData] = useState({});
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
-
   const isEditingRef = useRef(false);
   
-  // Single ref per row - attached to the <tr> element
+  const isSelectInteractingRef = useRef(false);
+  
   const adminRowRefs = useRef({});
   const employeeRowRefs = useRef({});
   const branchRowRefs = useRef({});
@@ -152,44 +154,72 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   }, [previousTab, resetEditingStates]);
 
-  // Handle click outside - using single ref per row on the <tr>
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // For admin edits - check if click is outside the entire row
-      if (editingAdminId && adminRowRefs.current[editingAdminId]) {
-        if (!adminRowRefs.current[editingAdminId].contains(event.target)) {
-          cancelEditAdmin();
-        }
+      if (isSelectInteractingRef.current) {
+        return;
       }
-      // For employee edits
-      if (editingEmployeeId && employeeRowRefs.current[editingEmployeeId]) {
-        if (!employeeRowRefs.current[editingEmployeeId].contains(event.target)) {
-          cancelEditEmployee();
+      
+      setTimeout(() => {
+        if (isSelectInteractingRef.current) {
+          return;
         }
-      }
-      // For branch edits
-      if (editingBranchId && branchRowRefs.current[editingBranchId]) {
-        if (!branchRowRefs.current[editingBranchId].contains(event.target)) {
-          cancelEditBranch();
+        
+        if (editingAdminId && adminRowRefs.current[editingAdminId]) {
+          if (!adminRowRefs.current[editingAdminId].contains(event.target)) {
+            cancelEditAdmin();
+          }
         }
-      }
-      // For job edits
-      if (editingJobId && jobRowRefs.current[editingJobId]) {
-        if (!jobRowRefs.current[editingJobId].contains(event.target)) {
-          cancelEditJob();
+        if (editingEmployeeId && employeeRowRefs.current[editingEmployeeId]) {
+          if (!employeeRowRefs.current[editingEmployeeId].contains(event.target)) {
+            cancelEditEmployee();
+          }
         }
-      }
-      // For task edits
-      if (editingTaskId && taskRowRefs.current[editingTaskId]) {
-        if (!taskRowRefs.current[editingTaskId].contains(event.target)) {
-          cancelEditTask();
+        if (editingBranchId && branchRowRefs.current[editingBranchId]) {
+          if (!branchRowRefs.current[editingBranchId].contains(event.target)) {
+            cancelEditBranch();
+          }
         }
-      }
+        if (editingJobId && jobRowRefs.current[editingJobId]) {
+          if (!jobRowRefs.current[editingJobId].contains(event.target)) {
+            cancelEditJob();
+          }
+        }
+        if (editingTaskId && taskRowRefs.current[editingTaskId]) {
+          if (!taskRowRefs.current[editingTaskId].contains(event.target)) {
+            cancelEditTask();
+          }
+        }
+      }, 50);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (editingAdminId) cancelEditAdmin();
+        if (editingEmployeeId) cancelEditEmployee();
+        if (editingBranchId) cancelEditBranch();
+        if (editingJobId) cancelEditJob();
+        if (editingTaskId) cancelEditTask();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
+
+  const handleSelectMouseDown = () => {
+    isSelectInteractingRef.current = true;
+  };
+
+  const handleSelectBlur = () => {
+    setTimeout(() => {
+      isSelectInteractingRef.current = false;
+    }, 100);
+  };
 
   const fetchEmployeesForFilter = async () => {
     try {
@@ -208,6 +238,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setGeneratingReport(true);
     try {
       const token = localStorage.getItem('token');
+      
       let url = 'https://taskbridge-production-9d91.up.railway.app/api/reports/attendance?';
       
       if (reportFilters.branch !== 'all') {
@@ -224,7 +255,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       } else {
         url += `range=${reportFilters.dateRange}&`;
       }
-
+      
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -244,6 +275,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
+    
     const printWindow = window.open('', '_blank');
     const reportDate = new Date().toLocaleString();
     const filters = `
@@ -252,50 +284,50 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
       Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
     `;
-
+    
     printWindow.document.write(`
       <html>
-      <head>
-        <title>TaskBridge Report</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
-          h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
-          .filters p { margin: 5px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-          th { background-color: #00d1ff; color: white; }
-          .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
-          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
-          @media print {
-            body { padding: 0; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>TaskBridge Report</h1>
-          <p>Generated: ${reportDate}</p>
-        </div>
-        <div class="filters">
-          <h3>Report Filters:</h3>
-          <p>${filters.replace(/\n/g, '<br>')}</p>
-        </div>
-        <div class="report-content">
-          <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
-        </div>
-        <div class="footer">
-          <p>TaskBridge - Workforce Management System</p>
-          <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
-        </div>
-        <div class="no-print" style="text-align: center; margin-top: 20px;">
-          <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
-        </div>
-      </body>
+        <head>
+          <title>TaskBridge Report</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+            h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
+            .filters p { margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #00d1ff; color: white; }
+            .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
+            .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TaskBridge Report</h1>
+            <p>Generated: ${reportDate}</p>
+          </div>
+          <div class="filters">
+            <h3>Report Filters:</h3>
+            <p>${filters.replace(/\n/g, '<br>')}</p>
+          </div>
+          <div class="report-content">
+            <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
+          </div>
+          <div class="footer">
+            <p>TaskBridge - Workforce Management System</p>
+            <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+          </div>
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
+          </div>
+        </body>
       </html>
     `);
     printWindow.document.close();
@@ -307,15 +339,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
-    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n";
+    
+    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n\n";
     csvContent += "Filters:\n";
     csvContent += `Branch,${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}\n`;
     csvContent += `Job Role,${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}\n`;
     csvContent += `Employee,${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}\n`;
-    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n`;
+    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n\n`;
+    
     csvContent += "Report Data:\n";
     csvContent += JSON.stringify(reportData, null, 2);
-
+    
     const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -408,6 +442,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     return current < limit;
   };
 
+
+  
   const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
     setConfirmationModal({
       isOpen: true,
@@ -586,6 +622,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      
       const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
         fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -593,33 +630,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-
+      
       const usersData = await usersRes.json();
       const branchesData = await branchesRes.json();
       const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
       const jobsData = await jobsRes.json();
-
+      
       const allUsers = usersData.data || [];
       const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
       const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      
       const allTasks = tasksData.data || [];
       const filteredTasks = allTasks.filter(task => {
         const taskDate = new Date(task.date);
         taskDate.setHours(0, 0, 0, 0);
         return taskDate >= today;
       });
-
+      
       setAdmins(filteredAdmins);
       setEmployees(filteredEmployees);
       setBranches(branchesData.data || []);
       setTasks(filteredTasks);
       setApplications(appsData.data || []);
       setJobDescriptions(jobsData.data || []);
-
       setStats({
         totalAdmins: filteredAdmins.length,
         totalEmployees: filteredEmployees.length,
@@ -665,56 +702,22 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   useEffect(() => {
     fetchDashboardData(true);
     fetchSubscriptionData();
-    
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
-
     setChatMessages([{
       text: language === 'en' 
-        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\nTry clicking one of the quick questions below!" 
-        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\nProva att klicka på en av snabbfrågorna nedan!",
+        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
+        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
       sender: 'ai',
       time: new Date().toLocaleTimeString(),
       showQuickQuestions: true
     }]);
-
     const interval = setInterval(() => {
-      // FIX: Only fetch background data if NO modals are open. 
-      // This prevents re-renders from interrupting typing/focus in forms.
-      const isAnyModalOpen = 
-        showCreateAdminModal || 
-        showCreateEmployeeModal || 
-        showCreateBranchModal || 
-        showCreateJobModal || 
-        showCreateTaskModal || 
-        showResetPasswordModal || 
-        showChangeEmailModal || 
-        showProfileModal || 
-        showDeleteAccountModal || 
-        showBranchAssignmentModal ||
-        showAuditModal;
-
-      if (!isAnyModalOpen) {
-        fetchDashboardData(false);
-        fetchSubscriptionData();
-      }
+      fetchDashboardData(false);
+      fetchSubscriptionData();
     }, 30000);
-
     return () => clearInterval(interval);
-  }, [
-    language, 
-    showCreateAdminModal, 
-    showCreateEmployeeModal, 
-    showCreateBranchModal, 
-    showCreateJobModal, 
-    showCreateTaskModal, 
-    showResetPasswordModal, 
-    showChangeEmailModal, 
-    showProfileModal, 
-    showDeleteAccountModal, 
-    showBranchAssignmentModal,
-    showAuditModal
-  ]);
+  }, [language]);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -748,6 +751,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             newPassword: profileData.newPassword
           })
         });
+        
         if (response.ok) {
           showToast(language === 'en' ? 'Password changed successfully!' : 'Lösenordet ändrades!', 'success');
           setShowProfileModal(false);
@@ -776,11 +780,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
+        body: JSON.stringify({ 
           email: changeEmailData.newEmail,
-          password: changeEmailData.password
+          password: changeEmailData.password 
         })
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Email changed! Please login again.' : 'E-post ändrad! Logga in igen.', 'success');
         setTimeout(() => {
@@ -825,6 +830,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editAdminData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin updated!' : 'Administratör uppdaterad!', 'success');
         setEditingAdminId(null);
@@ -868,6 +874,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editEmployeeData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee updated!' : 'Anställd uppdaterad!', 'success');
         setEditingEmployeeId(null);
@@ -913,6 +920,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           address: { city: editBranchData['address.city'] }
         })
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch updated!' : 'Avdelning uppdaterad!', 'success');
         setEditingBranchId(null);
@@ -955,6 +963,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editJobData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role updated!' : 'Jobbroll uppdaterad!', 'success');
         setEditingJobId(null);
@@ -1003,6 +1012,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editTaskData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Task updated!' : 'Uppgift uppdaterad!', 'success');
         setEditingTaskId(null);
@@ -1020,10 +1030,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
+    
     if (!canAddAdmin()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
+    
     try {
       const token = localStorage.getItem('token');
       const adminData = {
@@ -1034,6 +1046,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         branch: formData.branch || null,
         assignedBranches: formData.branch ? [formData.branch] : []
       };
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -1042,7 +1055,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(adminData)
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
         setShowCreateAdminModal(false);
@@ -1069,7 +1084,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ branchId })
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         const assignedBranch = branches.find(b => b._id === branchId);
         setSelectedAdminForBranch(prev => ({
@@ -1079,7 +1096,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
-              ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] } 
+              ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
               : admin
           )
         );
@@ -1106,7 +1123,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ branchId })
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         setSelectedAdminForBranch(prev => ({
           ...prev,
@@ -1115,7 +1134,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
-              ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) } 
+              ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
               : admin
           )
         );
@@ -1132,10 +1151,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
+    
     if (!canAddEmployee()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
+    
     try {
       const token = localStorage.getItem('token');
       const employeeData = {
@@ -1146,6 +1167,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         jobDescription: formData.jobDescription,
         branch: formData.branch || null
       };
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -1154,7 +1176,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(employeeData)
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
         setShowCreateEmployeeModal(false);
@@ -1171,10 +1195,12 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateBranch = async (e) => {
     e.preventDefault();
+    
     if (!canAddBranch()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
+    
     try {
       const token = localStorage.getItem('token');
       const branchData = {
@@ -1186,6 +1212,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           country: formData.country || 'Sweden'
         }
       };
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
         method: 'POST',
         headers: {
@@ -1194,6 +1221,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(branchData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
         setShowCreateBranchModal(false);
@@ -1217,6 +1245,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         name: formData.name,
         description: formData.description || ''
       };
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
         method: 'POST',
         headers: {
@@ -1225,6 +1254,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(jobData)
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
         setShowCreateJobModal(false);
@@ -1256,6 +1286,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         location: formData.location || '',
         notes: formData.notes || ''
       };
+      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
         method: 'POST',
         headers: {
@@ -1264,7 +1295,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(taskData)
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
         setShowCreateTaskModal(false);
@@ -1294,6 +1327,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ password: resetPasswordData.newPassword })
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? `Password for ${selectedUser.name} reset!` : `Lösenord för ${selectedUser.name} återställt!`, 'success');
         setShowResetPasswordModal(false);
@@ -1317,7 +1351,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
         fetchDashboardData(true);
@@ -1340,7 +1376,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json'
         }
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
         fetchDashboardData(true);
@@ -1363,7 +1401,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json'
         }
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
         fetchDashboardData(true);
@@ -1378,20 +1418,24 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleDeleteJob = async (jobId, jobName) => {
     const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
+    
     if (employeesWithJob > 0) {
-      const errorMsg = language === 'en' 
+      const errorMsg = language === 'en'
         ? `Cannot delete "${jobName}" because ${employeesWithJob} employee(s) have this job role. Please reassign them first.`
         : `Kan inte radera "${jobName}" eftersom ${employeesWithJob} anställd(a) har denna jobbroll. Vänligen omplacera dem först.`;
       showToast(errorMsg, 'error');
       return;
     }
+    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
         fetchDashboardData(true);
@@ -1411,7 +1455,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
         fetchDashboardData(true);
@@ -1431,6 +1477,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
         fetchDashboardData(true);
@@ -1458,6 +1505,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ reason })
       });
+      
       if (response.ok) {
         showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
         fetchDashboardData(true);
@@ -1478,6 +1526,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       if (response.ok) {
         localStorage.removeItem('token');
         onLogout();
@@ -1513,53 +1562,53 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setChatMessages([...chatMessages, userMessage]);
     setChatInput('');
     setIsAiTyping(true);
-
+    
     setTimeout(() => {
       const input = userMessageText.toLowerCase();
       let response = "";
-
+      
       if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
         response = language === 'en' 
-          ? "📋 **To create a new task:**\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\nThe task will be visible to employees with matching job roles."
-          : "📋 **För att skapa en ny uppgift:**\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\nUppgiften syns för anställda med matchande jobbroll.";
+          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
+          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
       } 
       else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
-        response = language === 'en' 
-          ? "👥 **To add a new employee:**\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\nThe employee will receive a welcome email with login instructions."
-          : "👥 **För att lägga till en ny anställd:**\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
+        response = language === 'en'
+          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
+          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
       }
       else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
-        response = language === 'en' 
-          ? "🏢 **To create a new branch:**\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\nAfter creation, you can assign admins to manage this branch."
-          : "🏢 **För att skapa en ny avdelning:**\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+        response = language === 'en'
+          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
       }
       else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
-        response = language === 'en' 
-          ? "📊 **To generate reports:**\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\nReports help track productivity and attendance patterns."
-          : "📊 **För att generera rapporter:**\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+        response = language === 'en'
+          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
+          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
       }
       else if (input.includes('reset password') || input.includes('återställ lösenord')) {
-        response = language === 'en' 
-          ? "🔑 **To reset a user's password:**\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\nThe user can now log in with the new password."
-          : "🔑 **För att återställa en användares lösenord:**\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\nAnvändaren kan nu logga in med det nya lösenordet.";
+        response = language === 'en'
+          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
+          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
       }
       else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
-        response = language === 'en' 
+        response = language === 'en'
           ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
           : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
       }
       else {
-        response = language === 'en' 
-          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
+        response = language === 'en'
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
       }
-
+      
       const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
       setChatMessages(prev => [...prev, aiMessage]);
       setIsAiTyping(false);
     }, 800);
   };
-
+  
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
       setter(false);
@@ -1569,6 +1618,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const confirmDelete = (type, id, name) => {
     let title = '';
     let message = '';
+    
     switch(type) {
       case 'admin':
         title = lang.confirmDelete;
@@ -1581,9 +1631,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       case 'branch':
         const employeeCount = employees.filter(e => e.branch?._id === id).length;
         title = lang.confirmDelete;
-        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}
-${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}
-${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}\n\n${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}\n\n${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
         break;
       case 'job':
         title = lang.confirmDelete;
@@ -1596,6 +1644,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
       default:
         return;
     }
+    
     setConfirmationModal({
       isOpen: true,
       title,
@@ -1795,7 +1844,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* ADMINS TABLE - with single ref on the row */}
         {activeTab === 'admins' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -1807,7 +1855,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   } else {
                     setShowCreateAdminModal(true);
                   }
-                }}
+                }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addAdmin}
@@ -1826,18 +1874,18 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </thead>
                 <tbody>
                   {admins.map(admin => (
-                    <tr 
+                    <tr
                       key={admin._id}
                       ref={editingAdminId === admin._id ? el => adminRowRefs.current[admin._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input 
+                          <input
                             key={`admin-${admin._id}-name`}
-                            type="text" 
-                            value={editAdminData.name || admin.name} 
-                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})} 
+                            type="text"
+                            value={editAdminData.name || admin.name}
+                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
                             style={styles.inlineInput}
                             autoFocus
                           />
@@ -1847,11 +1895,11 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input 
+                          <input
                             key={`admin-${admin._id}-email`}
-                            type="email" 
-                            value={editAdminData.email || admin.email} 
-                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})} 
+                            type="email"
+                            value={editAdminData.email || admin.email}
+                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
                             style={styles.inlineInput}
                           />
                         ) : (
@@ -1871,10 +1919,12 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                       )}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingAdminId === admin._id ? (
-                          <select 
+                          <select
                             value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
                             onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -1899,7 +1949,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                           </div>
                         )}
                       </td>
-                    </tr>
+                    <tr>
                   ))}
                 </tbody>
               </table>
@@ -1907,7 +1957,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* EMPLOYEES TABLE - with single ref on the row */}
         {activeTab === 'employees' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -1919,7 +1968,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   } else {
                     setShowCreateEmployeeModal(true);
                   }
-                }}
+                }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addStaff}
@@ -1940,17 +1989,17 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </thead>
                 <tbody>
                   {filteredEmployees.map(emp => (
-                    <tr 
+                    <tr
                       key={emp._id}
                       ref={editingEmployeeId === emp._id ? el => employeeRowRefs.current[emp._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input 
-                            type="text" 
-                            value={editEmployeeData.name || emp.name} 
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})} 
+                          <input
+                            type="text"
+                            value={editEmployeeData.name || emp.name}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
                             style={styles.inlineInput}
                             autoFocus
                           />
@@ -1960,10 +2009,10 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input 
-                            type="email" 
-                            value={editEmployeeData.email || emp.email} 
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})} 
+                          <input
+                            type="email"
+                            value={editEmployeeData.email || emp.email}
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
                             style={styles.inlineInput}
                           />
                         ) : (
@@ -1974,10 +2023,12 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
-                          <select 
+                          <select
                             value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
                             onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -1987,7 +2038,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             {emp.isActive ? 'Active' : 'Inactive'}
                           </span>
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
@@ -2001,7 +2052,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2010,7 +2061,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* BRANCHES TABLE - with single ref on the row */}
         {activeTab === 'branches' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -2022,7 +2072,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   } else {
                     setShowCreateBranchModal(true);
                   }
-                }}
+                }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddBranch() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addBranch}
@@ -2041,36 +2091,36 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </thead>
                 <tbody>
                   {branches.map(branch => (
-                    <tr 
+                    <tr
                       key={branch._id}
                       ref={editingBranchId === branch._id ? el => branchRowRefs.current[branch._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input 
-                            type="text" 
-                            value={editBranchData.name || branch.name} 
-                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})} 
+                          <input
+                            type="text"
+                            value={editBranchData.name || branch.name}
+                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           branch.name
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input 
-                            type="text" 
-                            value={editBranchData['address.city'] || branch.address?.city || ''} 
-                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})} 
+                          <input
+                            type="text"
+                            value={editBranchData['address.city'] || branch.address?.city || ''}
+                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
                             style={styles.inlineInput}
                           />
                         ) : (
                           branch.address?.city || '-'
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
@@ -2085,7 +2135,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             <button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2094,7 +2144,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* JOBS TABLE - with single ref on the row */}
         {activeTab === 'jobs' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -2113,36 +2162,36 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </thead>
                 <tbody>
                   {jobDescriptions.map(job => (
-                    <tr 
+                    <tr
                       key={job._id}
                       ref={editingJobId === job._id ? el => jobRowRefs.current[job._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <input 
-                            type="text" 
-                            value={editJobData.name || job.name} 
-                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})} 
+                          <input
+                            type="text"
+                            value={editJobData.name || job.name}
+                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           job.name
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <textarea 
-                            value={editJobData.description || job.description || ''} 
-                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})} 
+                          <textarea
+                            value={editJobData.description || job.description || ''}
+                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
                             style={styles.inlineTextarea}
                             rows="1"
                           />
                         ) : (
                           job.description || '-'
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingJobId === job._id ? (
@@ -2156,7 +2205,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             <button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2165,7 +2214,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* TASKS TABLE - with single ref on the row */}
         {activeTab === 'tasks' && (
           <div>
             <div style={{...styles.taskHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -2187,45 +2235,47 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </thead>
                 <tbody>
                   {tasks.map(task => (
-                    <tr 
+                    <tr
                       key={task._id}
                       ref={editingTaskId === task._id ? el => taskRowRefs.current[task._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input 
-                            type="text" 
-                            value={editTaskData.title || task.title} 
-                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})} 
+                          <input
+                            type="text"
+                            value={editTaskData.title || task.title}
+                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
                         )}
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input 
-                            type="date" 
-                            value={editTaskData.date || task.date?.split('T')[0]} 
-                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})} 
+                          <input
+                            type="date"
+                            value={editTaskData.date || task.date?.split('T')[0]}
+                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
                             style={styles.inlineInput}
                           />
                         ) : (
                           new Date(task.date).toLocaleDateString()
                         )}
-                      </td>
+                       </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
-                          <select 
+                          <select
                             value={editTaskData.status || task.status}
                             onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="open">Open</option>
                             <option value="closed">Closed</option>
@@ -2236,7 +2286,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             {task.status}
                           </span>
                         )}
-                      </td>
+                       </tr>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
@@ -2249,7 +2299,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             <button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2258,7 +2308,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* APPLICATIONS TAB */}
         {activeTab === 'applications' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>All Applications</h2>
@@ -2289,7 +2338,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                         }}>
                           {app.status}
                         </span>
-                      </td>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
@@ -2298,7 +2347,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                             <button onClick={() => handleRejectApplication(app._id)} style={{...styles.rejectButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>✗</button>
                           </div>
                         )}
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2307,10 +2356,10 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* REPORTS TAB */}
         {activeTab === 'reports' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
+            
             <div style={styles.reportFiltersCard}>
               <div style={styles.reportFiltersHeader}>
                 <h3 style={{color: 'white', fontSize: '14px', margin: 0}}>
@@ -2320,13 +2369,14 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   {showReportFilters ? '▲' : '▼'}
                 </button>
               </div>
+              
               {showReportFilters && (
                 <div style={styles.reportFiltersBody}>
                   <div style={styles.filterRow}>
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.branch}:</label>
                       <select 
-                        value={reportFilters.branch}
+                        value={reportFilters.branch} 
                         onChange={(e) => setReportFilters({...reportFilters, branch: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2336,10 +2386,11 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                         ))}
                       </select>
                     </div>
+                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.roles}:</label>
                       <select 
-                        value={reportFilters.jobRole}
+                        value={reportFilters.jobRole} 
                         onChange={(e) => setReportFilters({...reportFilters, jobRole: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2349,10 +2400,11 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                         ))}
                       </select>
                     </div>
+                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.employees}:</label>
                       <select 
-                        value={reportFilters.employee}
+                        value={reportFilters.employee} 
                         onChange={(e) => setReportFilters({...reportFilters, employee: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2362,10 +2414,11 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                         ))}
                       </select>
                     </div>
+                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{language === 'en' ? 'Date Range' : 'Datumintervall'}:</label>
                       <select 
-                        value={reportFilters.dateRange}
+                        value={reportFilters.dateRange} 
                         onChange={(e) => setReportFilters({...reportFilters, dateRange: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2378,13 +2431,14 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                       </select>
                     </div>
                   </div>
+                  
                   {reportFilters.dateRange === 'custom' && (
                     <div style={styles.customDateRange}>
                       <div style={styles.filterGroup}>
                         <label style={styles.filterLabel}>{lang.startDate}:</label>
                         <input 
                           type="date" 
-                          value={reportFilters.startDate}
+                          value={reportFilters.startDate} 
                           onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
                           style={styles.filterInput}
                         />
@@ -2393,7 +2447,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                         <label style={styles.filterLabel}>{lang.endDate}:</label>
                         <input 
                           type="date" 
-                          value={reportFilters.endDate}
+                          value={reportFilters.endDate} 
                           onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
                           style={styles.filterInput}
                         />
@@ -2403,6 +2457,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </div>
               )}
             </div>
+            
             <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : (isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))')}}>
               <div style={styles.reportCard}>
                 <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
@@ -2411,7 +2466,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   {language === 'en' ? 'Employee attendance summary' : 'Sammanfattning av anställdas närvaro'}
                 </p>
                 <button 
-                  onClick={generateAttendanceReport}
+                  onClick={generateAttendanceReport} 
                   disabled={generatingReport}
                   style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
                 >
@@ -2422,14 +2477,16 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   )}
                 </button>
               </div>
+              
               <div style={styles.reportCard}>
-                <i className={`fas ${language === 'en' ? 'fa-clock' : 'fa-clock'}`} style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
+                <i className="fas fa-clock" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Total hours worked summary' : 'Sammanfattning av arbetade timmar'}
                 </p>
                 <button onClick={generateAttendanceReport} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.generateReport}</button>
               </div>
+              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
@@ -2438,6 +2495,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 </p>
                 <button onClick={exportToPDF} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportPDF}</button>
               </div>
+              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
@@ -2447,6 +2505,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                 <button onClick={exportToExcel} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportExcel}</button>
               </div>
             </div>
+            
             {reportData && (
               <div style={styles.reportPreview}>
                 <div style={styles.reportPreviewHeader}>
@@ -2465,7 +2524,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.settingsManagement}</h2>
@@ -2490,7 +2548,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         )}
 
-        {/* PREMIUM FEATURES TAB */}
         {activeTab === 'premium' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
@@ -2499,6 +2556,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
             <p style={{...styles.sectionDesc, fontSize: isSmall ? '11px' : '12px', marginBottom: '20px'}}>
               {lang.roomAssignmentDesc}
             </p>
+            
             <div style={styles.premiumCard}>
               <div style={styles.premiumIcon}>
                 <i className="fas fa-door-open"></i>
@@ -2514,10 +2572,11 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   <span style={styles.premiumFeatureBadge}>📊 Printable Reports</span>
                   <span style={styles.premiumFeatureBadge}>🔄 Shift Management</span>
                 </div>
+                
                 <div style={styles.premiumActions}>
                   {hasRoomAccess ? (
                     <button 
-                      onClick={() => onNavigate('room-assignment')}
+                      onClick={() => onNavigate('room-assignment')} 
                       style={{...styles.premiumButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                     >
                       ⭐ {lang.accessRoomAssignment}
@@ -2525,14 +2584,14 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                   ) : (
                     <>
                       <button 
-                        onClick={() => showToast(lang.limitWarning, 'info')}
+                        onClick={() => showToast(lang.limitWarning, 'info')} 
                         style={{...styles.upgradeButton, opacity: 0.6, cursor: 'not-allowed', minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                         disabled
                       >
                         🔒 {lang.accessRoomAssignment} - {lang.upgradeRequired}
                       </button>
                       <button 
-                        onClick={() => window.open('mailto:sales@taskbridge.com')}
+                        onClick={() => window.open('mailto:sales@taskbridge.com')} 
                         style={{...styles.upgradeButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                       >
                         💎 Upgrade to Premium
@@ -2549,7 +2608,6 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
         )}
       </div>
 
-      {/* MODALS SECTION - same as before */}
       {showAuditModal && (
         <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
           <div style={{...styles.modalLarge, width: isMobile ? '95%' : (isTablet ? '90%' : '800px'), maxWidth: isMobile ? '400px' : '800px'}} onClick={(e) => e.stopPropagation()}>
@@ -2582,8 +2640,8 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
                           <span style={{
                             ...styles.statusBadge,
                             background: log.action === 'create' ? '#10b981' : 
-                            log.action === 'update' ? '#3b82f6' : 
-                            log.action === 'delete' ? '#ef4444' : '#6b7280'
+                                      log.action === 'update' ? '#3b82f6' :
+                                      log.action === 'delete' ? '#ef4444' : '#6b7280'
                           }}>
                             {log.action}
                           </span>
@@ -2610,7 +2668,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
           </div>
         </div>
       )}
-
+      
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
@@ -2863,6 +2921,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={{...styles.chatClose, minWidth: '36px', minHeight: '36px'}}>✕</button>
           </div>
+          
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
@@ -2880,6 +2939,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
               </div>
             )}
           </div>
+          
           <div style={styles.quickQuestionsContainer}>
             <div style={styles.quickQuestionsHeader}>
               <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
@@ -2896,6 +2956,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
               ))}
             </div>
           </div>
+          
           <div style={styles.chatInputContainer}>
             <input
               type="text"
@@ -2913,7 +2974,7 @@ ${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`
       )}
     </div>
   );
-};
+}
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
@@ -3046,10 +3107,10 @@ const styles = {
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '45px', height: '45px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
-  chatModal: { position: 'fixed', bottom: '75px', right: '20px', width: '300px', maxHeight: '400px', height: 'auto', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
+  chatModal: { position: 'fixed', bottom: '75px', right: '20px', width: '380px', maxWidth: '90vw', height: '550px', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
   chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white' },
   chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', borderRadius: '8px' },
-  chatMessages: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', minHeight: '180px' },
+  chatMessages: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: 'calc(100% - 120px)', minHeight: '200px' },
   chatMessage: { display: 'flex' },
   messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '16px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word', whiteSpace: 'pre-wrap' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right' },
