@@ -1949,7 +1949,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           </div>
                         )}
                       </td>
-                    <tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -2286,7 +2286,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             {task.status}
                           </span>
                         )}
-                       </tr>
+                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
