@@ -66,7 +66,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
-  
   const [reportFilters, setReportFilters] = useState({
     branch: 'all',
     jobRole: 'all',
@@ -78,11 +77,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [showReportFilters, setShowReportFilters] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
-  
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
-  
+
   const quickQuestions = {
     en: [
       "📋 How do I create a new task?",
@@ -122,6 +120,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editJobData, setEditJobData] = useState({});
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
+
   const isEditingRef = useRef(false);
   
   // Single ref per row - attached to the <tr> element
@@ -209,7 +208,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setGeneratingReport(true);
     try {
       const token = localStorage.getItem('token');
-      
       let url = 'https://taskbridge-production-9d91.up.railway.app/api/reports/attendance?';
       
       if (reportFilters.branch !== 'all') {
@@ -226,7 +224,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       } else {
         url += `range=${reportFilters.dateRange}&`;
       }
-      
+
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -246,7 +244,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
-    
     const printWindow = window.open('', '_blank');
     const reportDate = new Date().toLocaleString();
     const filters = `
@@ -255,50 +252,50 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
       Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
     `;
-    
+
     printWindow.document.write(`
       <html>
-        <head>
-          <title>TaskBridge Report</title>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
-            h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
-            .filters p { margin: 5px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-            th { background-color: #00d1ff; color: white; }
-            .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
-            .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
-            @media print {
-              body { padding: 0; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>TaskBridge Report</h1>
-            <p>Generated: ${reportDate}</p>
-          </div>
-          <div class="filters">
-            <h3>Report Filters:</h3>
-            <p>${filters.replace(/\n/g, '<br>')}</p>
-          </div>
-          <div class="report-content">
-            <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
-          </div>
-          <div class="footer">
-            <p>TaskBridge - Workforce Management System</p>
-            <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
-          </div>
-          <div class="no-print" style="text-align: center; margin-top: 20px;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
-          </div>
-        </body>
+      <head>
+        <title>TaskBridge Report</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+          h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
+          .filters p { margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+          th { background-color: #00d1ff; color: white; }
+          .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>TaskBridge Report</h1>
+          <p>Generated: ${reportDate}</p>
+        </div>
+        <div class="filters">
+          <h3>Report Filters:</h3>
+          <p>${filters.replace(/\n/g, '<br>')}</p>
+        </div>
+        <div class="report-content">
+          <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
+        </div>
+        <div class="footer">
+          <p>TaskBridge - Workforce Management System</p>
+          <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+        </div>
+        <div class="no-print" style="text-align: center; margin-top: 20px;">
+          <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
+        </div>
+      </body>
       </html>
     `);
     printWindow.document.close();
@@ -310,17 +307,15 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
       return;
     }
-    
-    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n\n";
+    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n";
     csvContent += "Filters:\n";
     csvContent += `Branch,${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}\n`;
     csvContent += `Job Role,${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}\n`;
     csvContent += `Employee,${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}\n`;
-    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n\n`;
-    
+    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n`;
     csvContent += "Report Data:\n";
     csvContent += JSON.stringify(reportData, null, 2);
-    
+
     const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -413,8 +408,598 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     return current < limit;
   };
 
+  const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm(itemId, itemName);
+        setConfirmationModal({ ...confirmationModal, isOpen: false });
+      },
+      itemId,
+      itemName,
+      type
+    });
+  };
 
+  const t = {
+    en: {
+      dashboard: 'Dashboard',
+      admins: 'Admins',
+      staff: 'Staff',
+      branches: 'Branches',
+      calendar: 'Calendar',
+      roles: 'Roles',
+      tasks: 'Tasks',
+      requests: 'Requests',
+      reports: 'Reports',
+      settings: 'Settings',
+      profile: 'Profile',
+      logout: 'Logout',
+      welcome: 'Welcome',
+      subscriptionOverview: 'Subscription',
+      daysRemaining: 'days remaining',
+      usage: 'Usage',
+      employees: 'Employees',
+      adminsLabel: 'Admins',
+      branchesLabel: 'Branches',
+      contactSales: 'Contact Sales',
+      manage: 'Manage',
+      search: 'Search...',
+      addAdmin: 'Add Admin',
+      addStaff: 'Add Staff',
+      addBranch: 'Add Branch',
+      addRole: 'Add Role',
+      createTask: 'Create Task',
+      pendingRequests: 'Pending Requests',
+      activeTasks: 'active tasks',
+      noData: 'No data found',
+      success: 'Success',
+      error: 'Error',
+      subscriptionExpired: 'Your subscription has expired. Please contact your administrator.',
+      subscriptionPaused: 'Your subscription is paused. Please contact support.',
+      generateReport: 'Generate Report',
+      exportPDF: 'Export PDF',
+      exportExcel: 'Export Excel',
+      attendance: 'Attendance',
+      hoursWorked: 'Hours Worked',
+      selectDateRange: 'Select Date Range',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      adminManagement: 'Admin Management',
+      staffManagement: 'Staff Management',
+      branchManagement: 'Branch Management',
+      roleManagement: 'Role Management',
+      taskManagement: 'Task Management',
+      applicationManagement: 'Application Management',
+      reportManagement: 'Report Management',
+      settingsManagement: 'Settings Management',
+      language: 'Language',
+      swedish: 'Swedish',
+      english: 'English',
+      currentPlan: 'Current Plan',
+      auditLogs: 'Audit Logs',
+      confirmDelete: 'Confirm Delete',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      areYouSure: 'Are you sure?',
+      viewAudit: 'View Audit Logs',
+      close: 'Close',
+      action: 'Action',
+      entityType: 'Entity Type',
+      user: 'User',
+      timestamp: 'Timestamp',
+      changes: 'Changes',
+      limitWarning: 'You have reached the limit for this feature. Please upgrade your plan.',
+      upgradeRequired: 'Upgrade Required',
+      premiumFeatures: 'Premium Features',
+      roomAssignmentDesc: 'Advanced room and shift assignment system. Automatically match groups to available rooms and workers based on skills, capacity, and availability.',
+      accessRoomAssignment: 'Access Room Assignment'
+    },
+    sv: {
+      dashboard: 'Instrumentpanel',
+      admins: 'Administratörer',
+      staff: 'Personal',
+      branches: 'Avdelningar',
+      calendar: 'Kalender',
+      roles: 'Roller',
+      tasks: 'Uppgifter',
+      requests: 'Förfrågningar',
+      reports: 'Rapporter',
+      settings: 'Inställningar',
+      profile: 'Profil',
+      logout: 'Logga ut',
+      welcome: 'Välkommen',
+      subscriptionOverview: 'Prenumeration',
+      daysRemaining: 'dagar kvar',
+      usage: 'Användning',
+      employees: 'Anställda',
+      adminsLabel: 'Administratörer',
+      branchesLabel: 'Avdelningar',
+      contactSales: 'Kontakta oss',
+      manage: 'Hantera',
+      search: 'Sök...',
+      addAdmin: 'Lägg till administratör',
+      addStaff: 'Lägg till personal',
+      addBranch: 'Lägg till avdelning',
+      addRole: 'Lägg till roll',
+      createTask: 'Skapa uppgift',
+      pendingRequests: 'Väntande förfrågningar',
+      activeTasks: 'aktiva uppgifter',
+      noData: 'Ingen data hittades',
+      success: 'Klart',
+      error: 'Fel',
+      subscriptionExpired: 'Din prenumeration har löpt ut. Kontakta din administratör.',
+      subscriptionPaused: 'Din prenumeration är pausad. Kontakta support.',
+      generateReport: 'Generera rapport',
+      exportPDF: 'Exportera PDF',
+      exportExcel: 'Exportera Excel',
+      attendance: 'Närvaro',
+      hoursWorked: 'Arbetade timmar',
+      selectDateRange: 'Välj datumintervall',
+      startDate: 'Startdatum',
+      endDate: 'Slutdatum',
+      adminManagement: 'Administratörshantering',
+      staffManagement: 'Personalhantering',
+      branchManagement: 'Avdelningshantering',
+      roleManagement: 'Rollhantering',
+      taskManagement: 'Uppgiftshantering',
+      applicationManagement: 'Ansökningshantering',
+      reportManagement: 'Rapporthantering',
+      settingsManagement: 'Inställningshantering',
+      language: 'Språk',
+      swedish: 'Svenska',
+      english: 'Engelska',
+      currentPlan: 'Nuvarande plan',
+      auditLogs: 'Granskningsloggar',
+      confirmDelete: 'Bekräfta radering',
+      cancel: 'Avbryt',
+      delete: 'Radera',
+      areYouSure: 'Är du säker?',
+      viewAudit: 'Visa granskningsloggar',
+      close: 'Stäng',
+      action: 'Åtgärd',
+      entityType: 'Enhetstyp',
+      user: 'Användare',
+      timestamp: 'Tidpunkt',
+      changes: 'Ändringar',
+      limitWarning: 'Du har nått gränsen för denna funktion. Uppgradera din plan.',
+      upgradeRequired: 'Uppgradering krävs',
+      premiumFeatures: 'Premiumfunktioner',
+      roomAssignmentDesc: 'Avancerat system för rums- och skifttilldelning. Matchar automatiskt grupper till tillgängliga rum och arbetare baserat på kompetens, kapacitet och tillgänglighet.',
+      accessRoomAssignment: 'Öppna Rumsplacering'
+    }
+  };
+
+  const lang = t[language];
+  const isSmall = screenWidth <= 480;
+
+  const changeLanguage = (langCode) => {
+    setLanguage(langCode);
+    localStorage.setItem('taskbridge_language', langCode);
+    setShowLanguageDropdown(false);
+    showToast(langCode === 'en' ? 'Language changed to English' : 'Språk ändrat till Svenska', 'success');
+  };
+
+  const fetchDashboardData = async (showLoading =Here is the fully corrected code.
+
+**The Fix:**
+I have modified the `useEffect` hook that handles the background data polling (around line 360). The issue was that the dashboard was fetching new data every 30 seconds, causing a re-render that interrupted your typing or focus in the modals.
+
+I added a check inside the interval to **pause background updates** if any modal is currently open. This ensures that when you are typing in "Create Task" or any other form, the screen won't refresh underneath you, preserving your input and focus.
+
+```javascript
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('taskbridge_activeTab') || 'dashboard';
+  });
+  const [previousTab, setPreviousTab] = useState('dashboard');
+  const [loading, setLoading] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [showCreateEmployeeModal, setShowCreateEmployeeModal] = useState(false);
+  const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
+  const [showCreateJobModal, setShowCreateJobModal] = useState(false);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
+  const [changeEmailData, setChangeEmailData] = useState({ newEmail: '', confirmEmail: '', password: '' });
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [hasRoomAccess, setHasRoomAccess] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [stats, setStats] = useState({
+    totalAdmins: 0,
+    totalEmployees: 0,
+    totalTasks: 0,
+    totalBranches: 0,
+    pendingApplications: 0,
+    totalJobDescriptions: 0
+  });
+  const [subscriptionData, setSubscriptionData] = useState(null);
+  const [usageData, setUsageData] = useState({
+    employees: { current: 0, limit: 0, percentage: 0, warning: false },
+    branches: { current: 0, limit: 0, percentage: 0, warning: false },
+    admins: { current: 0, limit: 0, percentage: 0, warning: false },
+    emails: { current: 0, limit: 0, percentage: 0, warning: false }
+  });
+  const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [jobDescriptions, setJobDescriptions] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
+  const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('taskbridge_language') || 'en';
+  });
+  const [reportData, setReportData] = useState(null);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+  const [reportFilters, setReportFilters] = useState({
+    branch: 'all',
+    jobRole: 'all',
+    employee: 'all',
+    dateRange: 'month',
+    startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+  const [showReportFilters, setShowReportFilters] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  const quickQuestions = {
+    en: [
+      "📋 How do I create a new task?",
+      "👥 How to add a new employee?",
+      "🏢 How to create a branch?",
+      "📊 How to generate reports?",
+      "🔑 How to reset a user's password?",
+      "💰 How to change subscription plan?"
+    ],
+    sv: [
+      "📋 Hur skapar jag en ny uppgift?",
+      "👥 Hur lägger jag till en ny anställd?",
+      "🏢 Hur skapar jag en avdelning?",
+      "📊 Hur genererar jag rapporter?",
+      "🔑 Hur återställer jag lösenord?",
+      "💰 Hur ändrar jag prenumerationsplan?"
+    ]
+  };
+
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    itemName: '',
+    itemId: null,
+    type: ''
+  });
+
+  const [editingAdminId, setEditingAdminId] = useState(null);
+  const [editAdminData, setEditAdminData] = useState({});
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  const [editEmployeeData, setEditEmployeeData] = useState({});
+  const [editingBranchId, setEditingBranchId] = useState(null);
+  const [editBranchData, setEditBranchData] = useState({});
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [editJobData, setEditJobData] = useState({});
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTaskData, setEditTaskData] = useState({});
+
+  const isEditingRef = useRef(false);
   
+  // Single ref per row - attached to the <tr> element
+  const adminRowRefs = useRef({});
+  const employeeRowRefs = useRef({});
+  const branchRowRefs = useRef({});
+  const jobRowRefs = useRef({});
+  const taskRowRefs = useRef({});
+
+  const resetEditingStates = useCallback(() => {
+    setEditingAdminId(null);
+    setEditAdminData({});
+    setEditingEmployeeId(null);
+    setEditEmployeeData({});
+    setEditingBranchId(null);
+    setEditBranchData({});
+    setEditingJobId(null);
+    setEditJobData({});
+    setEditingTaskId(null);
+    setEditTaskData({});
+    isEditingRef.current = false;
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (previousTab) {
+      resetEditingStates();
+      setActiveTab(previousTab);
+      localStorage.setItem('taskbridge_activeTab', previousTab);
+    }
+  }, [previousTab, resetEditingStates]);
+
+  // Handle click outside - using single ref per row on the <tr>
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // For admin edits - check if click is outside the entire row
+      if (editingAdminId && adminRowRefs.current[editingAdminId]) {
+        if (!adminRowRefs.current[editingAdminId].contains(event.target)) {
+          cancelEditAdmin();
+        }
+      }
+      // For employee edits
+      if (editingEmployeeId && employeeRowRefs.current[editingEmployeeId]) {
+        if (!employeeRowRefs.current[editingEmployeeId].contains(event.target)) {
+          cancelEditEmployee();
+        }
+      }
+      // For branch edits
+      if (editingBranchId && branchRowRefs.current[editingBranchId]) {
+        if (!branchRowRefs.current[editingBranchId].contains(event.target)) {
+          cancelEditBranch();
+        }
+      }
+      // For job edits
+      if (editingJobId && jobRowRefs.current[editingJobId]) {
+        if (!jobRowRefs.current[editingJobId].contains(event.target)) {
+          cancelEditJob();
+        }
+      }
+      // For task edits
+      if (editingTaskId && taskRowRefs.current[editingTaskId]) {
+        if (!taskRowRefs.current[editingTaskId].contains(event.target)) {
+          cancelEditTask();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
+
+  const fetchEmployeesForFilter = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users?role=employee', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setAvailableEmployees(data.data || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const generateAttendanceReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const token = localStorage.getItem('token');
+      let url = 'https://taskbridge-production-9d91.up.railway.app/api/reports/attendance?';
+      
+      if (reportFilters.branch !== 'all') {
+        url += `branch=${reportFilters.branch}&`;
+      }
+      if (reportFilters.jobRole !== 'all') {
+        url += `jobRole=${reportFilters.jobRole}&`;
+      }
+      if (reportFilters.employee !== 'all') {
+        url += `employee=${reportFilters.employee}&`;
+      }
+      if (reportFilters.dateRange === 'custom') {
+        url += `startDate=${reportFilters.startDate}&endDate=${reportFilters.endDate}&`;
+      } else {
+        url += `range=${reportFilters.dateRange}&`;
+      }
+
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setReportData(data);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'generated!' : 'genererad!'), 'success');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'failed' : 'misslyckades'), 'error');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const exportToPDF = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    const reportDate = new Date().toLocaleString();
+    const filters = `
+      Branch: ${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}
+      Job Role: ${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}
+      Employee: ${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}
+      Period: ${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}
+    `;
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>TaskBridge Report</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+          h1 { color: #00d1ff; border-bottom: 2px solid #00d1ff; padding-bottom: 10px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .filters { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; }
+          .filters p { margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+          th { background-color: #00d1ff; color: white; }
+          .summary { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 8px; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>TaskBridge Report</h1>
+          <p>Generated: ${reportDate}</p>
+        </div>
+        <div class="filters">
+          <h3>Report Filters:</h3>
+          <p>${filters.replace(/\n/g, '<br>')}</p>
+        </div>
+        <div class="report-content">
+          <pre style="white-space: pre-wrap; font-family: inherit;">${JSON.stringify(reportData, null, 2)}</pre>
+        </div>
+        <div class="footer">
+          <p>TaskBridge - Workforce Management System</p>
+          <p>© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+        </div>
+        <div class="no-print" style="text-align: center; margin-top: 20px;">
+          <button onclick="window.print()" style="padding: 10px 20px; background: #00d1ff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Report</button>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const exportToExcel = () => {
+    if (!reportData) {
+      showToast(lang.generateReport + ' ' + (language === 'en' ? 'first' : 'först'), 'error');
+      return;
+    }
+    let csvContent = "Report Generated: " + new Date().toLocaleString() + "\n";
+    csvContent += "Filters:\n";
+    csvContent += `Branch,${reportFilters.branch !== 'all' ? branches.find(b => b._id === reportFilters.branch)?.name || 'All' : 'All'}\n`;
+    csvContent += `Job Role,${reportFilters.jobRole !== 'all' ? jobDescriptions.find(j => j._id === reportFilters.jobRole)?.name || 'All' : 'All'}\n`;
+    csvContent += `Employee,${reportFilters.employee !== 'all' ? availableEmployees.find(e => e._id === reportFilters.employee)?.name || 'All' : 'All'}\n`;
+    csvContent += `Period,${reportFilters.dateRange === 'custom' ? `${reportFilters.startDate} to ${reportFilters.endDate}` : reportFilters.dateRange}\n`;
+    csvContent += "Report Data:\n";
+    csvContent += JSON.stringify(reportData, null, 2);
+
+    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `taskbridge_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(lang.exportExcel + ' ' + (language === 'en' ? 'exported!' : 'exporterad!'), 'success');
+  };
+
+  const checkRoomAccess = () => {
+    console.log('=== CHECKING ROOM ACCESS ===');
+    console.log('Subscription plan:', subscriptionData?.plan);
+    const plan = subscriptionData?.plan?.toLowerCase();
+    console.log('Plan lowercase:', plan);
+    const allowedPlans = ['business', 'enterprise', 'corporate'];
+    const hasAccess = allowedPlans.includes(plan);
+    console.log('Has access:', hasAccess);
+    console.log('Allowed plans:', allowedPlans);
+    setHasRoomAccess(hasAccess);
+    return hasAccess;
+  };
+
+  const fetchAuditLogsEnhanced = async () => {
+    setLoadingAudit(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/audit-logs?limit=100', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        const sanitizedLogs = (data.data || []).map(log => {
+          const sanitized = { ...log };
+          if (sanitized.changes) {
+            if (sanitized.changes.password) delete sanitized.changes.password;
+            if (sanitized.changes.newPassword) delete sanitized.changes.newPassword;
+            if (sanitized.changes.currentPassword) delete sanitized.changes.currentPassword;
+            if (sanitized.changes.oldPassword) delete sanitized.changes.oldPassword;
+            if (sanitized.ipAddress) delete sanitized.ipAddress;
+            if (sanitized.userAgent) delete sanitized.userAgent;
+          }
+          return sanitized;
+        });
+        setAuditLogs(sanitizedLogs);
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const w = window.innerWidth;
+      setScreenWidth(w);
+      setIsMobile(w <= 768);
+      setIsTablet(w > 768 && w <= 1024);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    fetchEmployeesForFilter();
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const canAddEmployee = () => {
+    const limit = usageData.employees?.limit;
+    const current = usageData.employees?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
+  const canAddBranch = () => {
+    const limit = usageData.branches?.limit;
+    const current = usageData.branches?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
+  const canAddAdmin = () => {
+    const limit = usageData.admins?.limit;
+    const current = usageData.admins?.current;
+    if (limit === Infinity) return true;
+    return current < limit;
+  };
+
   const showConfirmation = (title, message, onConfirm, itemId, itemName, type) => {
     setConfirmationModal({
       isOpen: true,
@@ -593,7 +1178,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      
       const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
         fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -601,33 +1185,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
-      
+
       const usersData = await usersRes.json();
       const branchesData = await branchesRes.json();
       const tasksData = await tasksRes.json();
       const appsData = await appsRes.json();
       const jobsData = await jobsRes.json();
-      
+
       const allUsers = usersData.data || [];
       const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
       const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
       const allTasks = tasksData.data || [];
       const filteredTasks = allTasks.filter(task => {
         const taskDate = new Date(task.date);
         taskDate.setHours(0, 0, 0, 0);
         return taskDate >= today;
       });
-      
+
       setAdmins(filteredAdmins);
       setEmployees(filteredEmployees);
       setBranches(branchesData.data || []);
       setTasks(filteredTasks);
       setApplications(appsData.data || []);
       setJobDescriptions(jobsData.data || []);
+
       setStats({
         totalAdmins: filteredAdmins.length,
         totalEmployees: filteredEmployees.length,
@@ -673,22 +1257,56 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   useEffect(() => {
     fetchDashboardData(true);
     fetchSubscriptionData();
+    
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
+
     setChatMessages([{
       text: language === 'en' 
-        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!" 
-        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
+        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\nTry clicking one of the quick questions below!" 
+        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\nProva att klicka på en av snabbfrågorna nedan!",
       sender: 'ai',
       time: new Date().toLocaleTimeString(),
       showQuickQuestions: true
     }]);
+
     const interval = setInterval(() => {
-      fetchDashboardData(false);
-      fetchSubscriptionData();
+      // FIX: Only fetch background data if NO modals are open. 
+      // This prevents re-renders from interrupting typing/focus in forms.
+      const isAnyModalOpen = 
+        showCreateAdminModal || 
+        showCreateEmployeeModal || 
+        showCreateBranchModal || 
+        showCreateJobModal || 
+        showCreateTaskModal || 
+        showResetPasswordModal || 
+        showChangeEmailModal || 
+        showProfileModal || 
+        showDeleteAccountModal || 
+        showBranchAssignmentModal ||
+        showAuditModal;
+
+      if (!isAnyModalOpen) {
+        fetchDashboardData(false);
+        fetchSubscriptionData();
+      }
     }, 30000);
+
     return () => clearInterval(interval);
-  }, [language]);
+  }, [
+    language, 
+    showCreateAdminModal, 
+    showCreateEmployeeModal, 
+    showCreateBranchModal, 
+    showCreateJobModal, 
+    showCreateTaskModal, 
+    showResetPasswordModal, 
+    showChangeEmailModal, 
+    showProfileModal, 
+    showDeleteAccountModal, 
+    showBranchAssignmentModal,
+    showAuditModal
+  ]);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -722,7 +1340,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             newPassword: profileData.newPassword
           })
         });
-        
         if (response.ok) {
           showToast(language === 'en' ? 'Password changed successfully!' : 'Lösenordet ändrades!', 'success');
           setShowProfileModal(false);
@@ -751,12 +1368,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email: changeEmailData.newEmail,
-          password: changeEmailData.password 
+          password: changeEmailData.password
         })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Email changed! Please login again.' : 'E-post ändrad! Logga in igen.', 'success');
         setTimeout(() => {
@@ -801,7 +1417,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editAdminData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin updated!' : 'Administratör uppdaterad!', 'success');
         setEditingAdminId(null);
@@ -845,7 +1460,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editEmployeeData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee updated!' : 'Anställd uppdaterad!', 'success');
         setEditingEmployeeId(null);
@@ -891,7 +1505,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           address: { city: editBranchData['address.city'] }
         })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch updated!' : 'Avdelning uppdaterad!', 'success');
         setEditingBranchId(null);
@@ -934,7 +1547,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editJobData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role updated!' : 'Jobbroll uppdaterad!', 'success');
         setEditingJobId(null);
@@ -983,7 +1595,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(editTaskData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task updated!' : 'Uppgift uppdaterad!', 'success');
         setEditingTaskId(null);
@@ -1001,12 +1612,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
-    
     if (!canAddAdmin()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const adminData = {
@@ -1017,7 +1626,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         branch: formData.branch || null,
         assignedBranches: formData.branch ? [formData.branch] : []
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -1026,9 +1634,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(adminData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin created successfully!' : 'Administratör skapad!', 'success');
         setShowCreateAdminModal(false);
@@ -1055,9 +1661,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ branchId })
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         const assignedBranch = branches.find(b => b._id === branchId);
         setSelectedAdminForBranch(prev => ({
@@ -1067,7 +1671,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
-              ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] }
+              ? { ...admin, assignedBranches: [...(admin.assignedBranches || []), assignedBranch] } 
               : admin
           )
         );
@@ -1094,9 +1698,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ branchId })
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         setSelectedAdminForBranch(prev => ({
           ...prev,
@@ -1105,7 +1707,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         setAdmins(prevAdmins => 
           prevAdmins.map(admin => 
             admin._id === selectedAdminForBranch._id 
-              ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) }
+              ? { ...admin, assignedBranches: (admin.assignedBranches || []).filter(b => b._id !== branchId) } 
               : admin
           )
         );
@@ -1122,12 +1724,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
-    
     if (!canAddEmployee()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const employeeData = {
@@ -1138,7 +1738,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         jobDescription: formData.jobDescription,
         branch: formData.branch || null
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/users', {
         method: 'POST',
         headers: {
@@ -1147,9 +1746,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(employeeData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee created successfully!' : 'Anställd skapad!', 'success');
         setShowCreateEmployeeModal(false);
@@ -1166,12 +1763,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleCreateBranch = async (e) => {
     e.preventDefault();
-    
     if (!canAddBranch()) {
       showToast(lang.limitWarning, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const branchData = {
@@ -1183,7 +1778,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           country: formData.country || 'Sweden'
         }
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', {
         method: 'POST',
         headers: {
@@ -1192,7 +1786,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(branchData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch created successfully!' : 'Avdelning skapad!', 'success');
         setShowCreateBranchModal(false);
@@ -1216,7 +1809,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         name: formData.name,
         description: formData.description || ''
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', {
         method: 'POST',
         headers: {
@@ -1225,7 +1817,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(jobData)
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role created successfully!' : 'Jobbroll skapad!', 'success');
         setShowCreateJobModal(false);
@@ -1257,7 +1848,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         location: formData.location || '',
         notes: formData.notes || ''
       };
-      
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', {
         method: 'POST',
         headers: {
@@ -1266,9 +1856,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify(taskData)
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task created successfully!' : 'Uppgift skapad!', 'success');
         setShowCreateTaskModal(false);
@@ -1298,7 +1886,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ password: resetPasswordData.newPassword })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? `Password for ${selectedUser.name} reset!` : `Lösenord för ${selectedUser.name} återställt!`, 'success');
         setShowResetPasswordModal(false);
@@ -1322,9 +1909,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Admin deleted successfully!' : 'Administratör borttagen!', 'success');
         fetchDashboardData(true);
@@ -1347,9 +1932,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json'
         }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Employee deleted successfully!' : 'Anställd borttagen!', 'success');
         fetchDashboardData(true);
@@ -1372,9 +1955,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           'Content-Type': 'application/json'
         }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Branch deleted successfully!' : 'Avdelning borttagen!', 'success');
         fetchDashboardData(true);
@@ -1389,24 +1970,20 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   const handleDeleteJob = async (jobId, jobName) => {
     const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
-    
     if (employeesWithJob > 0) {
-      const errorMsg = language === 'en'
+      const errorMsg = language === 'en' 
         ? `Cannot delete "${jobName}" because ${employeesWithJob} employee(s) have this job role. Please reassign them first.`
         : `Kan inte radera "${jobName}" eftersom ${employeesWithJob} anställd(a) har denna jobbroll. Vänligen omplacera dem först.`;
       showToast(errorMsg, 'error');
       return;
     }
-    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/job-descriptions/${jobId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Job role deleted successfully!' : 'Jobbroll borttagen!', 'success');
         fetchDashboardData(true);
@@ -1426,9 +2003,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Task deleted successfully!' : 'Uppgift borttagen!', 'success');
         fetchDashboardData(true);
@@ -1448,7 +2023,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Application approved!' : 'Ansökan godkänd!', 'success');
         fetchDashboardData(true);
@@ -1476,7 +2050,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         },
         body: JSON.stringify({ reason })
       });
-      
       if (response.ok) {
         showToast(language === 'en' ? 'Application rejected!' : 'Ansökan avslagen!', 'success');
         fetchDashboardData(true);
@@ -1497,7 +2070,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         localStorage.removeItem('token');
         onLogout();
@@ -1533,53 +2105,53 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     setChatMessages([...chatMessages, userMessage]);
     setChatInput('');
     setIsAiTyping(true);
-    
+
     setTimeout(() => {
       const input = userMessageText.toLowerCase();
       let response = "";
-      
+
       if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift') || input.includes('ny uppgift')) {
         response = language === 'en' 
-          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\n\nThe task will be visible to employees with matching job roles."
-          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\n\nUppgiften syns för anställda med matchande jobbroll.";
+          ? "📋 **To create a new task:**\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details:\n   • Title\n   • Date & Time\n   • Job Role\n   • Branch\n   • Max Employees\n4. Click **Create**\nThe task will be visible to employees with matching job roles."
+          : "📋 **För att skapa en ny uppgift:**\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna:\n   • Titel\n   • Datum & Tid\n   • Jobbroll\n   • Avdelning\n   • Max antal anställda\n4. Klicka på **Skapa**\nUppgiften syns för anställda med matchande jobbroll.";
       } 
       else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd') || input.includes('ny anställd')) {
-        response = language === 'en'
-          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\n\nThe employee will receive a welcome email with login instructions."
-          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\n\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
+        response = language === 'en' 
+          ? "👥 **To add a new employee:**\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full Name\n   • Email Address\n   • Temporary Password\n   • Job Role\n   • Branch\n4. Click **Create**\nThe employee will receive a welcome email with login instructions."
+          : "👥 **För att lägga till en ny anställd:**\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll\n   • Avdelning\n4. Klicka på **Skapa**\nDen anställda får ett välkomstmail med inloggningsinstruktioner.";
       }
       else if (input.includes('add branch') || input.includes('create branch') || input.includes('lägg till avdelning') || input.includes('skapa avdelning')) {
-        response = language === 'en'
-          ? "🏢 **To create a new branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\n\nAfter creation, you can assign admins to manage this branch."
-          : "🏢 **För att skapa en ny avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\n\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
+        response = language === 'en' 
+          ? "🏢 **To create a new branch:**\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch Name\n   • City (optional)\n4. Click **Create**\nAfter creation, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en ny avdelning:**\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i:\n   • Avdelningsnamn\n   • Stad (valfritt)\n4. Klicka på **Skapa**\nEfter skapandet kan du tilldela administratörer att hantera denna avdelning.";
       }
       else if (input.includes('report') || input.includes('generate report') || input.includes('rapport') || input.includes('generera rapport')) {
-        response = language === 'en'
-          ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\n\nReports help track productivity and attendance patterns."
-          : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\n\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
+        response = language === 'en' 
+          ? "📊 **To generate reports:**\n1. Go to the **Reports** tab\n2. Click **Generate Report** for:\n   • Attendance Report\n   • Hours Worked Report\n3. Export options:\n   • Export PDF\n   • Export Excel\nReports help track productivity and attendance patterns."
+          : "📊 **För att generera rapporter:**\n1. Gå till fliken **Rapporter**\n2. Klicka på **Generera rapport** för:\n   • Närvarorapport\n   • Rapport för arbetade timmar\n3. Exportalternativ:\n   • Exportera PDF\n   • Exportera Excel\nRapporter hjälper dig att spåra produktivitet och närvaromönster.";
       }
       else if (input.includes('reset password') || input.includes('återställ lösenord')) {
-        response = language === 'en'
-          ? "🔑 **To reset a user's password:**\n\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\n\nThe user can now log in with the new password."
-          : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\n\nAnvändaren kan nu logga in med det nya lösenordet.";
+        response = language === 'en' 
+          ? "🔑 **To reset a user's password:**\n1. Go to **Staff** or **Admins** tab\n2. Find the user\n3. Click the **🔑 (key)** button\n4. Enter a new password (min 6 characters)\n5. Click **Reset Password**\nThe user can now log in with the new password."
+          : "🔑 **För att återställa en användares lösenord:**\n1. Gå till fliken **Personal** eller **Administratörer**\n2. Hitta användaren\n3. Klicka på **🔑 (nyckel)** knappen\n4. Ange ett nytt lösenord (minst 6 tecken)\n5. Klicka på **Återställ lösenord**\nAnvändaren kan nu logga in med det nya lösenordet.";
       }
       else if (input.includes('subscription') || input.includes('plan') || input.includes('upgrade') || input.includes('prenumeration') || input.includes('uppgradera')) {
-        response = language === 'en'
+        response = language === 'en' 
           ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}\n\n**To change your plan:**\n1. Go to **Settings**\n2. Click on **Subscription**\n3. Select a new plan\n4. Choose duration\n5. Confirm the change\n\nContact sales@taskbridge.com for custom plans.`
           : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}\n\n**För att ändra din plan:**\n1. Gå till **Inställningar**\n2. Klicka på **Prenumeration**\n3. Välj en ny plan\n4. Välj varaktighet\n5. Bekräfta ändringen\n\nKontakta sales@taskbridge.com för anpassade planer.`;
       }
       else {
-        response = language === 'en'
-          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
-          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
+        response = language === 'en' 
+          ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n📋 Creating tasks\n👥 Adding employees\n🏢 Managing branches\n📊 Generating reports\n🔑 Resetting passwords\n💰 Subscription plans\n\n**Try clicking one of the quick questions below!**\n\nWhat would you like to learn about?"
+          : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n📋 Skapa uppgifter\n👥 Lägga till anställda\n🏢 Hantera avdelningar\n📊 Generera rapporter\n🔑 Återställa lösenord\n💰 Prenumerationsplaner\n\n**Prova att klicka på en av snabbfrågorna nedan!**\n\nVad vill du lära dig om?";
       }
-      
+
       const aiMessage = { text: response, sender: 'ai', time: new Date().toLocaleTimeString(), showQuickQuestions: !input.includes('subscription') };
       setChatMessages(prev => [...prev, aiMessage]);
       setIsAiTyping(false);
     }, 800);
   };
-  
+
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget) {
       setter(false);
@@ -1589,7 +2161,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const confirmDelete = (type, id, name) => {
     let title = '';
     let message = '';
-    
     switch(type) {
       case 'admin':
         title = lang.confirmDelete;
@@ -1602,7 +2173,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       case 'branch':
         const employeeCount = employees.filter(e => e.branch?._id === id).length;
         title = lang.confirmDelete;
-        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}\n\n${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}\n\n${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
+        message = `${lang.areYouSure} ${language === 'en' ? `Delete branch "${name}"?` : `Radera avdelning "${name}"?`}
+${language === 'en' ? `This branch has ${employeeCount} employees. They will be permanently deleted!` : `Denna avdelning har ${employeeCount} anställda. De kommer att raderas permanent!`}
+${language === 'en' ? 'This cannot be undone.' : 'Detta går inte att ångra.'}`;
         break;
       case 'job':
         title = lang.confirmDelete;
@@ -1615,7 +2188,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       default:
         return;
     }
-    
     setConfirmationModal({
       isOpen: true,
       title,
@@ -1827,7 +2399,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   } else {
                     setShowCreateAdminModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addAdmin}
@@ -1846,18 +2418,18 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {admins.map(admin => (
-                    <tr
+                    <tr 
                       key={admin._id}
                       ref={editingAdminId === admin._id ? el => adminRowRefs.current[admin._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input
+                          <input 
                             key={`admin-${admin._id}-name`}
-                            type="text"
-                            value={editAdminData.name || admin.name}
-                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})}
+                            type="text" 
+                            value={editAdminData.name || admin.name} 
+                            onChange={(e) => setEditAdminData({...editAdminData, name: e.target.value})} 
                             style={styles.inlineInput}
                             autoFocus
                           />
@@ -1867,11 +2439,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
-                          <input
+                          <input 
                             key={`admin-${admin._id}-email`}
-                            type="email"
-                            value={editAdminData.email || admin.email}
-                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})}
+                            type="email" 
+                            value={editAdminData.email || admin.email} 
+                            onChange={(e) => setEditAdminData({...editAdminData, email: e.target.value})} 
                             style={styles.inlineInput}
                           />
                         ) : (
@@ -1891,7 +2463,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       )}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingAdminId === admin._id ? (
-                          <select
+                          <select 
                             value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
                             onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
@@ -1939,7 +2511,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   } else {
                     setShowCreateEmployeeModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addStaff}
@@ -1960,17 +2532,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {filteredEmployees.map(emp => (
-                    <tr
+                    <tr 
                       key={emp._id}
                       ref={editingEmployeeId === emp._id ? el => employeeRowRefs.current[emp._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input
-                            type="text"
-                            value={editEmployeeData.name || emp.name}
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})}
+                          <input 
+                            type="text" 
+                            value={editEmployeeData.name || emp.name} 
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, name: e.target.value})} 
                             style={styles.inlineInput}
                             autoFocus
                           />
@@ -1980,10 +2552,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
-                          <input
-                            type="email"
-                            value={editEmployeeData.email || emp.email}
-                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})}
+                          <input 
+                            type="email" 
+                            value={editEmployeeData.email || emp.email} 
+                            onChange={(e) => setEditEmployeeData({...editEmployeeData, email: e.target.value})} 
                             style={styles.inlineInput}
                           />
                         ) : (
@@ -1994,7 +2566,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
-                          <select
+                          <select 
                             value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
                             onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
@@ -2007,7 +2579,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             {emp.isActive ? 'Active' : 'Inactive'}
                           </span>
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
@@ -2021,7 +2593,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => confirmDelete('employee', emp._id, emp.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2042,7 +2614,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   } else {
                     setShowCreateBranchModal(true);
                   }
-                }} 
+                }}
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddBranch() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
               >
                 + {lang.addBranch}
@@ -2061,36 +2633,36 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {branches.map(branch => (
-                    <tr
+                    <tr 
                       key={branch._id}
                       ref={editingBranchId === branch._id ? el => branchRowRefs.current[branch._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input
-                            type="text"
-                            value={editBranchData.name || branch.name}
-                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})}
+                          <input 
+                            type="text" 
+                            value={editBranchData.name || branch.name} 
+                            onChange={(e) => setEditBranchData({...editBranchData, name: e.target.value})} 
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           branch.name
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
-                          <input
-                            type="text"
-                            value={editBranchData['address.city'] || branch.address?.city || ''}
-                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})}
+                          <input 
+                            type="text" 
+                            value={editBranchData['address.city'] || branch.address?.city || ''} 
+                            onChange={(e) => setEditBranchData({...editBranchData, 'address.city': e.target.value})} 
                             style={styles.inlineInput}
                           />
                         ) : (
                           branch.address?.city || '-'
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
@@ -2105,7 +2677,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => confirmDelete('branch', branch._id, branch.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2133,36 +2705,36 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {jobDescriptions.map(job => (
-                    <tr
+                    <tr 
                       key={job._id}
                       ref={editingJobId === job._id ? el => jobRowRefs.current[job._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <input
-                            type="text"
-                            value={editJobData.name || job.name}
-                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})}
+                          <input 
+                            type="text" 
+                            value={editJobData.name || job.name} 
+                            onChange={(e) => setEditJobData({...editJobData, name: e.target.value})} 
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           job.name
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
-                          <textarea
-                            value={editJobData.description || job.description || ''}
-                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})}
+                          <textarea 
+                            value={editJobData.description || job.description || ''} 
+                            onChange={(e) => setEditJobData({...editJobData, description: e.target.value})} 
                             style={styles.inlineTextarea}
                             rows="1"
                           />
                         ) : (
                           job.description || '-'
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingJobId === job._id ? (
@@ -2176,7 +2748,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => confirmDelete('job', job._id, job.name)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2207,42 +2779,42 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {tasks.map(task => (
-                    <tr
+                    <tr 
                       key={task._id}
                       ref={editingTaskId === task._id ? el => taskRowRefs.current[task._id] = el : null}
                       style={styles.tableRow}
                     >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input
-                            type="text"
-                            value={editTaskData.title || task.title}
-                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})}
+                          <input 
+                            type="text" 
+                            value={editTaskData.title || task.title} 
+                            onChange={(e) => setEditTaskData({...editTaskData, title: e.target.value})} 
                             style={styles.inlineInput}
                             autoFocus
                           />
                         ) : (
                           isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
-                          <input
-                            type="date"
-                            value={editTaskData.date || task.date?.split('T')[0]}
-                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})}
+                          <input 
+                            type="date" 
+                            value={editTaskData.date || task.date?.split('T')[0]} 
+                            onChange={(e) => setEditTaskData({...editTaskData, date: e.target.value})} 
                             style={styles.inlineInput}
                           />
                         ) : (
                           new Date(task.date).toLocaleDateString()
                         )}
-                       </td>
+                      </td>
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
                       {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
-                          <select
+                          <select 
                             value={editTaskData.status || task.status}
                             onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
                             style={styles.inlineSelect}
@@ -2256,7 +2828,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             {task.status}
                           </span>
                         )}
-                       </td>
+                      </td>
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
@@ -2269,7 +2841,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => confirmDelete('task', task._id, task.title)} style={{...styles.deleteButton, padding: isSmall ? '3px 6px' : '4px 8px', fontSize: isSmall ? '10px' : '12px', minWidth: '36px', minHeight: '36px'}}>🗑️</button>
                           </div>
                         )}
-                       </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2331,7 +2903,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         {activeTab === 'reports' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
-            
             <div style={styles.reportFiltersCard}>
               <div style={styles.reportFiltersHeader}>
                 <h3 style={{color: 'white', fontSize: '14px', margin: 0}}>
@@ -2341,14 +2912,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   {showReportFilters ? '▲' : '▼'}
                 </button>
               </div>
-              
               {showReportFilters && (
                 <div style={styles.reportFiltersBody}>
                   <div style={styles.filterRow}>
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.branch}:</label>
                       <select 
-                        value={reportFilters.branch} 
+                        value={reportFilters.branch}
                         onChange={(e) => setReportFilters({...reportFilters, branch: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2358,11 +2928,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.roles}:</label>
                       <select 
-                        value={reportFilters.jobRole} 
+                        value={reportFilters.jobRole}
                         onChange={(e) => setReportFilters({...reportFilters, jobRole: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2372,11 +2941,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{lang.employees}:</label>
                       <select 
-                        value={reportFilters.employee} 
+                        value={reportFilters.employee}
                         onChange={(e) => setReportFilters({...reportFilters, employee: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2386,11 +2954,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         ))}
                       </select>
                     </div>
-                    
                     <div style={styles.filterGroup}>
                       <label style={styles.filterLabel}>{language === 'en' ? 'Date Range' : 'Datumintervall'}:</label>
                       <select 
-                        value={reportFilters.dateRange} 
+                        value={reportFilters.dateRange}
                         onChange={(e) => setReportFilters({...reportFilters, dateRange: e.target.value})}
                         style={styles.filterSelect}
                       >
@@ -2403,14 +2970,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                       </select>
                     </div>
                   </div>
-                  
                   {reportFilters.dateRange === 'custom' && (
                     <div style={styles.customDateRange}>
                       <div style={styles.filterGroup}>
                         <label style={styles.filterLabel}>{lang.startDate}:</label>
                         <input 
                           type="date" 
-                          value={reportFilters.startDate} 
+                          value={reportFilters.startDate}
                           onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
                           style={styles.filterInput}
                         />
@@ -2419,7 +2985,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                         <label style={styles.filterLabel}>{lang.endDate}:</label>
                         <input 
                           type="date" 
-                          value={reportFilters.endDate} 
+                          value={reportFilters.endDate}
                           onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
                           style={styles.filterInput}
                         />
@@ -2429,7 +2995,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </div>
               )}
             </div>
-            
             <div style={{...styles.reportsGrid, gridTemplateColumns: isSmall ? '1fr' : (isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))')}}>
               <div style={styles.reportCard}>
                 <i className="fas fa-chart-bar" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
@@ -2438,7 +3003,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   {language === 'en' ? 'Employee attendance summary' : 'Sammanfattning av anställdas närvaro'}
                 </p>
                 <button 
-                  onClick={generateAttendanceReport} 
+                  onClick={generateAttendanceReport}
                   disabled={generatingReport}
                   style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
                 >
@@ -2449,7 +3014,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   )}
                 </button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className={`fas ${language === 'en' ? 'fa-clock' : 'fa-clock'}`} style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.hoursWorked}</h3>
@@ -2458,7 +3022,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </p>
                 <button onClick={generateAttendanceReport} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.generateReport}</button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-pdf" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportPDF}</h3>
@@ -2467,7 +3030,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </p>
                 <button onClick={exportToPDF} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportPDF}</button>
               </div>
-              
               <div style={styles.reportCard}>
                 <i className="fas fa-file-excel" style={{ color: '#00d1ff', fontSize: isSmall ? '28px' : '32px', marginBottom: '12px' }}></i>
                 <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px', marginBottom: '8px'}}>{lang.exportExcel}</h3>
@@ -2477,7 +3039,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <button onClick={exportToExcel} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportExcel}</button>
               </div>
             </div>
-            
             {reportData && (
               <div style={styles.reportPreview}>
                 <div style={styles.reportPreviewHeader}>
@@ -2530,7 +3091,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             <p style={{...styles.sectionDesc, fontSize: isSmall ? '11px' : '12px', marginBottom: '20px'}}>
               {lang.roomAssignmentDesc}
             </p>
-            
             <div style={styles.premiumCard}>
               <div style={styles.premiumIcon}>
                 <i className="fas fa-door-open"></i>
@@ -2546,11 +3106,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   <span style={styles.premiumFeatureBadge}>📊 Printable Reports</span>
                   <span style={styles.premiumFeatureBadge}>🔄 Shift Management</span>
                 </div>
-                
                 <div style={styles.premiumActions}>
                   {hasRoomAccess ? (
                     <button 
-                      onClick={() => onNavigate('room-assignment')} 
+                      onClick={() => onNavigate('room-assignment')}
                       style={{...styles.premiumButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                     >
                       ⭐ {lang.accessRoomAssignment}
@@ -2558,14 +3117,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   ) : (
                     <>
                       <button 
-                        onClick={() => showToast(lang.limitWarning, 'info')} 
+                        onClick={() => showToast(lang.limitWarning, 'info')}
                         style={{...styles.upgradeButton, opacity: 0.6, cursor: 'not-allowed', minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                         disabled
                       >
                         🔒 {lang.accessRoomAssignment} - {lang.upgradeRequired}
                       </button>
                       <button 
-                        onClick={() => window.open('mailto:sales@taskbridge.com')} 
+                        onClick={() => window.open('mailto:sales@taskbridge.com')}
                         style={{...styles.upgradeButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                       >
                         💎 Upgrade to Premium
@@ -2615,8 +3174,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           <span style={{
                             ...styles.statusBadge,
                             background: log.action === 'create' ? '#10b981' : 
-                                      log.action === 'update' ? '#3b82f6' :
-                                      log.action === 'delete' ? '#ef4444' : '#6b7280'
+                            log.action === 'update' ? '#3b82f6' : 
+                            log.action === 'delete' ? '#ef4444' : '#6b7280'
                           }}>
                             {log.action}
                           </span>
@@ -2643,7 +3202,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         </div>
       )}
-      
+
       {showCreateAdminModal && (
         <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
@@ -2896,7 +3455,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={{...styles.chatClose, minWidth: '36px', minHeight: '36px'}}>✕</button>
           </div>
-          
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start'}}>
@@ -2914,7 +3472,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               </div>
             )}
           </div>
-          
           <div style={styles.quickQuestionsContainer}>
             <div style={styles.quickQuestionsHeader}>
               <i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
@@ -2931,7 +3488,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               ))}
             </div>
           </div>
-          
           <div style={styles.chatInputContainer}>
             <input
               type="text"
@@ -2949,8 +3505,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
     </div>
   );
-}
-
+};
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
