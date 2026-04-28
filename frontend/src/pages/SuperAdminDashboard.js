@@ -2214,7 +2214,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             {task.status}
                           </span>
                         )}
-                      </tr>
+                      </td>
                       <td style={styles.td}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
