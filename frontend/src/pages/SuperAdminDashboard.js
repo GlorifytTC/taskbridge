@@ -154,48 +154,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   }, [previousTab, resetEditingStates]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isSelectInteractingRef.current) {
-        return;
-      }
-      
-      setTimeout(() => {
-        if (isSelectInteractingRef.current) {
-          return;
-        }
-        
-        if (editingAdminId && adminRowRefs.current[editingAdminId]) {
-          if (!adminRowRefs.current[editingAdminId].contains(event.target)) {
-            cancelEditAdmin();
-          }
-        }
-        if (editingEmployeeId && employeeRowRefs.current[editingEmployeeId]) {
-          if (!employeeRowRefs.current[editingEmployeeId].contains(event.target)) {
-            cancelEditEmployee();
-          }
-        }
-        if (editingBranchId && branchRowRefs.current[editingBranchId]) {
-          if (!branchRowRefs.current[editingBranchId].contains(event.target)) {
-            cancelEditBranch();
-          }
-        }
-        if (editingJobId && jobRowRefs.current[editingJobId]) {
-          if (!jobRowRefs.current[editingJobId].contains(event.target)) {
-            cancelEditJob();
-          }
-        }
-        if (editingTaskId && taskRowRefs.current[editingTaskId]) {
-          if (!taskRowRefs.current[editingTaskId].contains(event.target)) {
-            cancelEditTask();
-          }
-        }
-      }, 50);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
+  
 
   useEffect(() => {
     const handleEscape = (e) => {
