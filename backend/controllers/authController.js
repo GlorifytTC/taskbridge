@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Organization = require('../models/Organization');
 const Branch = require('../models/Branch');
+const JobDescription = require('../models/JobDescription');
 const AuditLog = require('../models/AuditLog');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
