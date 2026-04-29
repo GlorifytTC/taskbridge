@@ -43,57 +43,48 @@ function App() {
   }, []);
 
   // ✅ FIXED: Check token and validate with backend AFTER login
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
+  // In App.js, add this at the beginning of your auth check:
+useEffect(() => {
+  const checkAuth = async () => {
+    let token = localStorage.getItem('token');
+    
+    // ✅ Fix: Check if token is null, 'null', or 'undefined'
+    if (!token || token === 'null' || token === 'undefined') {
+      console.log('❌ Invalid token found, clearing...');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('🔐 Checking auth with token length:', token.length);
+    
+    try {
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
-      console.log('🔐 Checking auth, token exists:', !!token);
+      const data = await response.json();
+      console.log('📡 Auth check response:', data);
       
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const data = await response.json();
-        console.log('📡 Auth check response:', data);
-        
-        if (data.success && data.user) {
-          setUser(data.user);
-          // ✅ Redirect based on role
-          if (data.user.role === 'master') {
-            setCurrentPage('master');
-          } else if (data.user.role === 'superadmin') {
-            setCurrentPage('superadmin');
-          } else if (data.user.role === 'admin') {
-            setCurrentPage('admin');
-          } else if (data.user.role === 'employee') {
-            setCurrentPage('employee');
-          } else {
-            setCurrentPage('dashboard');
-          }
-        } else {
-          // Token invalid, clear it
-          console.log('❌ Token invalid, clearing');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setCurrentPage('landing');
-        }
-      } catch (err) {
-        console.error('❌ Auth check error:', err);
+      if (data.success && data.user) {
+        setUser(data.user);
+        // Redirect based on role...
+      } else {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
       }
-    };
-    
-    checkAuth();
-  }, []); // ✅ Run once on mount
+    } catch (err) {
+      console.error('❌ Auth check error:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  checkAuth();
+}, []);
 
   const goToLogin = () => {
     setCurrentPage('login');

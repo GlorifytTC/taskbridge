@@ -26,41 +26,58 @@ const Login = ({ onBack, onLogin }) => {
   const [signupSuccess, setSignupSuccess] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      console.log('🔐 Attempting login for:', email);
+  try {
+    console.log('🔐 Attempting login for:', email);
+    
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    console.log('📡 Response status:', response.status);
+    
+    const data = await response.json();
+    console.log('📦 Response data:', data);
+
+    if (response.ok && data.success && data.token) {
+      // ✅ Ensure token is not null or undefined
+      const token = data.token;
+      console.log('✅ Token received:', token.substring(0, 50) + '...');
       
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      console.log('📡 Response status:', response.status);
+      // ✅ Store token properly
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       
-      const data = await response.json();
-      console.log('📦 Response data:', data);
-
-      if (response.ok && data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.user);
-      } else {
-        setError(data.message || 'Invalid credentials');
+      // ✅ Verify token was stored correctly
+      const storedToken = localStorage.getItem('token');
+      console.log('✅ Token stored, length:', storedToken?.length);
+      
+      if (!storedToken || storedToken === 'null' || storedToken === 'undefined') {
+        console.error('❌ Token storage failed!');
+        setError('Login failed. Please try again.');
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('❌ Login error:', err);
-      setError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
+      
+      onLogin(data.user);
+    } else {
+      setError(data.message || 'Invalid credentials');
     }
-  };
+  } catch (err) {
+    console.error('❌ Login error:', err);
+    setError('Network error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
