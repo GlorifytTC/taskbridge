@@ -39,6 +39,23 @@ exports.protect = async (req, res, next) => {
       email: user.email
     });
     
+    // Add these to your existing auth.js file
+const {
+  // ... existing imports
+  selfSignup,           // ✅ ADD
+  verifyEmail,          // ✅ ADD
+  resendVerification,   // ✅ ADD
+  cancelSubscription,   // ✅ ADD
+  checkTrialStatus      // ✅ ADD (middleware)
+} = require('../controllers/authController');
+
+// Public routes (add these)
+router.post('/signup', selfSignup);
+router.get('/verify-email/:token', verifyEmail);
+router.post('/resend-verification', resendVerification);
+
+// Protected routes (add these)
+router.post('/cancel-subscription', protect, cancelSubscription);
     // Check if user is active
     if (user.isActive === false) {
       console.log('❌ User account is deactivated');

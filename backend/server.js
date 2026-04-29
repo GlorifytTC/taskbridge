@@ -112,6 +112,52 @@ app.get('/api/debug/users', async (req, res) => {
   }
 });
 
+
+// Check for expired trials daily
+const checkExpiredTrials = async () => {
+  try {
+    const User = require('./models/User');
+    const Organization = require('./models/Organization');
+    
+    const now = new Date();
+    
+    // Find expired trials
+    const expiredUsers = await User.find({
+      paymentStatus: 'trial',
+      trialEndDate: { $lt: now },
+      isActive: true
+    });
+    
+    for (const user of expiredUsers) {
+      user.isActive = false;
+      user.paymentStatus = 'expired';
+      await user.save();
+      console.log(`⏰ Trial expired for user: ${user.email}`);
+    }
+    
+    // Also update organizations
+    const expiredOrgs = await Organization.find({
+      'subscription.status': 'trial',
+      'subscription.endDate': { $lt: now }
+    });
+    
+    for (const org of expiredOrgs) {
+      org.subscription.status = 'expired';
+      await org.save();
+      console.log(`⏰ Organization trial expired: ${org.name}`);
+    }
+    
+  } catch (error) {
+    console.error('Error checking expired trials:', error);
+  }
+};
+
+// Run every hour
+setInterval(checkExpiredTrials, 60 * 60 * 1000);
+// Run once on startup
+checkExpiredTrials();
+
+
 // ============ SUBSCRIPTION CHECK ============
 const checkSubscriptions = async () => {
   const Subscription = require('./models/Subscription');

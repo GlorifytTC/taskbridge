@@ -598,3 +598,390 @@ exports.deleteAccount = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// ============ NEW SELF-SIGNUP FUNCTIONS ============
+
+// @desc    Self-signup with 14-day trial (no credit card required)
+// @route   POST /api/auth/signup
+// @access  Public
+exports.selfSignup = async (req, res) => {
+  try {
+    const { 
+      name, 
+      email, 
+      password, 
+      companyName, 
+      companySize, 
+      phoneNumber 
+    } = req.body;
+    
+    console.log('📝 Self-signup attempt:', email);
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'An account with this email already exists. Please login.' 
+      });
+    }
+    
+    // Check if email domain is from free provider (anti-fraud)
+    const freeEmailDomains = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'aol.com'];
+    const emailDomain = email.split('@')[1].toLowerCase();
+    const isFreeEmail = freeEmailDomains.includes(emailDomain);
+    
+    // Create organization (14-day trial)
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
+    
+    const organization = await Organization.create({
+      name: companyName || `${name}'s Organization`,
+      email: email.toLowerCase(),
+      phone: phoneNumber || '',
+      subscription: {
+        plan: 'trial',
+        status: 'trial',
+        startDate: new Date(),
+        endDate: trialEndDate
+      },
+      settings: {
+        timezone: 'UTC',
+        language: 'en',
+        dateFormat: 'YYYY-MM-DD'
+      }
+    });
+    
+    // Create default branch
+    const defaultBranch = await Branch.create({
+      name: 'Main Branch',
+      organization: organization._id,
+      isActive: true
+    });
+    
+    // Create default job description if none exists
+    let defaultJob = await JobDescription.findOne({ organization: organization._id });
+    if (!defaultJob) {
+      defaultJob = await JobDescription.create({
+        name: 'General Staff',
+        description: 'General staff position',
+        organization: organization._id,
+        isActive: true
+      });
+    }
+    
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create user as superadmin
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: 'superadmin',
+      organization: organization._id,
+      branch: defaultBranch._id,
+      jobDescription: defaultJob._id,
+      isActive: true,
+      isAccountSetup: true,
+      emailVerified: false,
+      verificationToken,
+      verificationExpires,
+      trialStartDate: new Date(),
+      trialEndDate: trialEndDate,
+      companyName: companyName || '',
+      companySize: companySize || '1-10',
+      phoneNumber: phoneNumber || '',
+      signupIP: req.ip,
+      signupUserAgent: req.headers['user-agent'],
+      paymentStatus: 'trial'
+    });
+    
+    // Create subscription record
+    const Subscription = require('../models/Subscription');
+    await Subscription.create({
+      organization: organization._id,
+      plan: 'trial',
+      status: 'trial',
+      startDate: new Date(),
+      endDate: trialEndDate,
+      trialEndDate: trialEndDate,
+      price: { amount: 0, currency: 'SEK', vat: { rate: 25, amount: 0 } },
+      features: {
+        maxEmployees: 10,
+        maxBranches: 2,
+        maxEmailsPerMonth: 50,
+        maxAdmins: 1,
+        reportLevel: 'basic',
+        exportReports: false,
+        customReports: false,
+        apiAccess: false,
+        prioritySupport: false
+      }
+    });
+    
+    // Send verification email
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    
+    await exports.sendVerificationEmail(user, verificationUrl);
+    
+    console.log('✅ Self-signup successful:', email);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Account created! Please check your email to verify your account and start your 14-day free trial.',
+      trialEndDate: trialEndDate,
+      requiresVerification: true
+    });
+    
+  } catch (error) {
+    console.error('Self-signup error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
+// @desc    Send verification email
+// @route   Internal
+exports.sendVerificationEmail = async (user, verificationUrl) => {
+  const subject = 'Verify Your Email - TaskBridge';
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 24px; text-align: center;">
+        <h1 style="color: white; margin: 0;">✅ Verify Your Email</h1>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello <strong>${user.name}</strong>,</p>
+        
+        <p style="color: #334155;">Thank you for signing up for TaskBridge! Please verify your email address to activate your <strong>14-day free trial</strong>.</p>
+        
+        <div style="background: #e2e8f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 0; color: #0f172a;">📧 <strong>Email:</strong> ${user.email}</p>
+          <p style="margin: 8px 0 0 0; color: #0f172a;">📅 <strong>Trial expires:</strong> ${new Date(user.trialEndDate).toLocaleDateString()}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${verificationUrl}" 
+             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Verify Email & Start Trial →
+          </a>
+        </div>
+        
+        <p style="color: #475569; font-size: 14px;">This link will expire in 24 hours.</p>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #64748b; font-size: 12px;">
+          If you didn't sign up for TaskBridge, please ignore this email.
+        </p>
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  await exports.sendEmail({ to: user.email, subject, html });
+};
+
+// @desc    Verify email
+// @route   GET /api/auth/verify-email/:token
+// @access  Public
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired verification link. Please request a new one.' 
+      });
+    }
+    
+    user.emailVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpires = undefined;
+    user.isActive = true;
+    await user.save();
+    
+    console.log('✅ Email verified for:', user.email);
+    
+    // Generate JWT token for auto-login
+    const jwtToken = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Email verified! Your 14-day trial has started.',
+      token: jwtToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        organization: user.organization
+      }
+    });
+    
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
+// @desc    Resend verification email
+// @route   POST /api/auth/resend-verification
+// @access  Public
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    if (user.emailVerified) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email already verified' 
+      });
+    }
+    
+    // Generate new verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+    
+    user.verificationToken = verificationToken;
+    user.verificationExpires = verificationExpires;
+    await user.save();
+    
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    await exports.sendVerificationEmail(user, verificationUrl);
+    
+    res.json({
+      success: true,
+      message: 'Verification email sent. Please check your inbox.'
+    });
+    
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
+// @desc    Cancel subscription (stops at end of billing period)
+// @route   POST /api/auth/cancel-subscription
+// @access  Private
+exports.cancelSubscription = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    user.cancelAtPeriodEnd = true;
+    user.paymentStatus = 'cancelled';
+    await user.save();
+    
+    // Also update organization subscription
+    const organization = await Organization.findById(user.organization);
+    if (organization) {
+      organization.subscription.status = 'cancelled';
+      await organization.save();
+    }
+    
+    const Subscription = require('../models/Subscription');
+    await Subscription.findOneAndUpdate(
+      { organization: user.organization },
+      { status: 'cancelled', autoRenew: false }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Subscription cancelled. You will have access until the end of your billing period.',
+      endDate: organization?.subscription?.endDate
+    });
+    
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};
+
+// @desc    Check if user can access features (trial check middleware)
+exports.checkTrialStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).populate('organization');
+    
+    if (!user || !user.organization) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Organization not found' 
+      });
+    }
+    
+    const trialEndDate = user.trialEndDate || user.organization.subscription?.endDate;
+    const isTrialExpired = trialEndDate && new Date() > new Date(trialEndDate);
+    const isPaidActive = user.paymentStatus === 'active';
+    const isCancelledButActive = user.cancelAtPeriodEnd && user.paymentStatus === 'cancelled';
+    
+    // Check if user has paid subscription or trial is still active
+    if (!isPaidActive && !isCancelledButActive && isTrialExpired) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your trial has expired. Please upgrade to continue using TaskBridge.',
+        code: 'TRIAL_EXPIRED',
+        upgradeRequired: true
+      });
+    }
+    
+    // For admins, also check organization subscription
+    if (user.role !== 'master') {
+      const organizationSub = user.organization.subscription;
+      if (organizationSub && organizationSub.status === 'expired') {
+        return res.status(403).json({
+          success: false,
+          message: 'Organization subscription has expired. Please contact your administrator.',
+          code: 'SUBSCRIPTION_EXPIRED'
+        });
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Trial check error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
+  }
+};

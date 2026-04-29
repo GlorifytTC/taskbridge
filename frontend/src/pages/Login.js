@@ -9,6 +9,21 @@ const Login = ({ onBack, onLogin }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  
+  // Signup states
+  const [showSignup, setShowSignup] = useState(false);
+  const [signupData, setSignupData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    companyName: '',
+    companySize: '1-10',
+    phoneNumber: ''
+  });
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupError, setSignupError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,12 +47,11 @@ const Login = ({ onBack, onLogin }) => {
       const data = await response.json();
       console.log('📦 Response data:', data);
 
-      // In your handleSubmit function, keep it simple:
-        if (response.ok && data.success) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          onLogin(data.user);
-        } else {
+      if (response.ok && data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onLogin(data.user);
+      } else {
         setError(data.message || 'Invalid credentials');
       }
     } catch (err) {
@@ -79,6 +93,64 @@ const Login = ({ onBack, onLogin }) => {
     }
   };
 
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setSignupError('');
+    setSignupSuccess('');
+    
+    if (signupData.password !== signupData.confirmPassword) {
+      setSignupError('Passwords do not match');
+      return;
+    }
+    
+    if (signupData.password.length < 6) {
+      setSignupError('Password must be at least 6 characters');
+      return;
+    }
+    
+    setSignupLoading(true);
+    
+    try {
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: signupData.name,
+          email: signupData.email,
+          password: signupData.password,
+          companyName: signupData.companyName,
+          companySize: signupData.companySize,
+          phoneNumber: signupData.phoneNumber
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setSignupSuccess(data.message || 'Account created! Please check your email to verify your account.');
+        setTimeout(() => {
+          setShowSignup(false);
+          setSignupData({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            companyName: '',
+            companySize: '1-10',
+            phoneNumber: ''
+          });
+          setSignupSuccess('');
+        }, 5000);
+      } else {
+        setSignupError(data.message || 'Failed to create account');
+      }
+    } catch (err) {
+      setSignupError('Network error: ' + err.message);
+    } finally {
+      setSignupLoading(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.bgAnimation}>
@@ -94,7 +166,8 @@ const Login = ({ onBack, onLogin }) => {
             <h1 style={styles.logoTitle}>TaskBridge</h1>
           </div>
 
-          {!showForgotPassword ? (
+          {!showForgotPassword && !showSignup ? (
+            // LOGIN FORM
             <>
               <h2 style={styles.welcomeTitle}>Welcome Back</h2>
               <p style={styles.welcomeSubtitle}>Sign in to your account</p>
@@ -159,8 +232,23 @@ const Login = ({ onBack, onLogin }) => {
                   )}
                 </button>
               </form>
+
+              {/* Sign Up Section */}
+              <div style={styles.signupSection}>
+                <div style={styles.divider}>
+                  <span style={styles.dividerText}>New to TaskBridge?</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSignup(true)}
+                  style={styles.signupButton}
+                >
+                  <i className="fas fa-user-plus"></i> Create Free Account (14-day trial)
+                </button>
+              </div>
             </>
-          ) : (
+          ) : showForgotPassword ? (
+            // FORGOT PASSWORD FORM
             <>
               <h2 style={styles.welcomeTitle}>Reset Password</h2>
               <p style={styles.welcomeSubtitle}>Enter your email to receive reset link</p>
@@ -210,6 +298,163 @@ const Login = ({ onBack, onLogin }) => {
                   style={styles.backToLoginButton}
                 >
                   ← Back to Login
+                </button>
+              </form>
+            </>
+          ) : (
+            // SIGNUP FORM
+            <>
+              <h2 style={styles.welcomeTitle}>Start Your Free Trial</h2>
+              <p style={styles.welcomeSubtitle}>14-day free trial. No credit card required.</p>
+
+              {signupError && (
+                <div style={styles.errorMessage}>
+                  <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
+                  {signupError}
+                </div>
+              )}
+
+              {signupSuccess && (
+                <div style={styles.successMessage}>
+                  <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
+                  {signupSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleSignup} style={styles.form}>
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Full Name *</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-user" style={styles.inputIcon}></i>
+                    <input
+                      type="text"
+                      placeholder="Your full name"
+                      value={signupData.name}
+                      onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Email Address *</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-envelope" style={styles.inputIcon}></i>
+                    <input
+                      type="email"
+                      placeholder="your@company.com"
+                      value={signupData.email}
+                      onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Company Name</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-building" style={styles.inputIcon}></i>
+                    <input
+                      type="text"
+                      placeholder="Your company or school name"
+                      value={signupData.companyName}
+                      onChange={(e) => setSignupData({...signupData, companyName: e.target.value})}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Company Size</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-users" style={styles.inputIcon}></i>
+                    <select
+                      value={signupData.companySize}
+                      onChange={(e) => setSignupData({...signupData, companySize: e.target.value})}
+                      style={styles.select}
+                    >
+                      <option value="1-10">1-10 employees</option>
+                      <option value="11-50">11-50 employees</option>
+                      <option value="51-200">51-200 employees</option>
+                      <option value="201-500">201-500 employees</option>
+                      <option value="500+">500+ employees</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Phone Number (optional)</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-phone" style={styles.inputIcon}></i>
+                    <input
+                      type="tel"
+                      placeholder="+46 123 456 789"
+                      value={signupData.phoneNumber}
+                      onChange={(e) => setSignupData({...signupData, phoneNumber: e.target.value})}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Password *</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-lock" style={styles.inputIcon}></i>
+                    <input
+                      type="password"
+                      placeholder="Create a password (min 6 characters)"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.inputGroup}>
+                  <label style={styles.label}>Confirm Password *</label>
+                  <div style={styles.inputWrapper}>
+                    <i className="fas fa-check-circle" style={styles.inputIcon}></i>
+                    <input
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={signupData.confirmPassword}
+                      onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                      style={styles.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.infoBox}>
+                  <i className="fas fa-gift" style={{ color: '#f59e0b', marginRight: '8px' }}></i>
+                  <span>14-day free trial • No credit card required • Cancel anytime</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={signupLoading}
+                  style={signupLoading ? { ...styles.button, ...styles.buttonDisabled } : styles.button}
+                >
+                  {signupLoading ? (
+                    <span><i className="fas fa-spinner fa-spin"></i> Creating account...</span>
+                  ) : (
+                    'Start Free Trial'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSignup(false);
+                    setSignupError('');
+                    setSignupSuccess('');
+                  }}
+                  style={styles.backToLoginButton}
+                >
+                  ← Already have an account? Sign In
                 </button>
               </form>
             </>
@@ -397,6 +642,17 @@ const styles = {
     boxSizing: 'border-box',
     outline: 'none',
   },
+  select: {
+    width: '100%',
+    padding: '14px 14px 14px 42px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '14px',
+    appearance: 'none',
+    cursor: 'pointer',
+  },
   forgotPasswordLink: {
     textAlign: 'right',
     marginTop: '-8px',
@@ -439,6 +695,48 @@ const styles = {
     opacity: 0.7,
     cursor: 'not-allowed',
   },
+  signupSection: {
+    marginTop: '24px',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    textAlign: 'center',
+    margin: '16px 0',
+  },
+  dividerText: {
+    flex: 1,
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.4)',
+    padding: '0 10px',
+  },
+  signupButton: {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(16, 185, 129, 0.2)',
+    border: '1px solid #10b981',
+    borderRadius: '12px',
+    color: '#34d399',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  infoBox: {
+    background: 'rgba(245, 158, 11, 0.1)',
+    border: '1px solid rgba(245, 158, 11, 0.3)',
+    borderRadius: '12px',
+    padding: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    color: '#f59e0b',
+  },
   backLink: {
     marginTop: '32px',
     textAlign: 'center',
@@ -471,7 +769,12 @@ styleSheet.textContent = `
     0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
     50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.2); }
   }
-  input:focus {
+  .signupButton:hover {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: #34d399;
+    transform: translateY(-2px);
+  }
+  input:focus, select:focus {
     border-color: #00d1ff !important;
     box-shadow: 0 0 0 3px rgba(0, 209, 255, 0.1);
   }

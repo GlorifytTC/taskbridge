@@ -11,20 +11,26 @@ const ResetPassword = ({ onBack, onLogin, onNavigate }) => {
   const [validToken, setValidToken] = useState(true);
   const [verifying, setVerifying] = useState(true);
 
-  useEffect(() => {
-    // Extract token from current URL
-    const path = window.location.pathname;
-    const tokenFromUrl = path.split('/reset-password/')[1];
-    
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      verifyToken(tokenFromUrl);
-    } else {
-      setError('Invalid reset link. Please request a new one.');
-      setValidToken(false);
-      setVerifying(false);
-    }
-  }, []);
+  // Update the useEffect that checks URL paths (around line 18):
+useEffect(() => {
+  const path = window.location.pathname;
+  console.log('Current path:', path);
+  
+  if (path.startsWith('/reset-password/')) {
+    console.log('Reset password page detected');
+    setCurrentPage('reset-password');
+    setLoading(false);
+    return;
+  }
+  
+  // ✅ ADD THIS - Check for verify-email path
+  if (path.startsWith('/verify-email/')) {
+    console.log('Verify email page detected');
+    setCurrentPage('verify-email');
+    setLoading(false);
+    return;
+  }
+}, []);
 
   const verifyToken = async (resetToken) => {
     try {

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { trialGuard } = require('../middleware/trialGuard');
 const { protect, authorize } = require('../middleware/auth');
 const {
   createTask,
@@ -11,7 +12,9 @@ const {
 
 // All routes require authentication
 router.use(protect);
-
+router.post('/', protect, trialGuard, createTask);
+router.put('/:id', protect, trialGuard, updateTask);
+router.delete('/:id', protect, trialGuard, deleteTask);
 // Routes
 router.route('/')
   .get(getTasks)

@@ -15,7 +15,7 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import ResetPassword from './pages/ResetPassword';
 import RoomAssignment from './components/RoomAssignment';
-
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -33,19 +33,24 @@ function App() {
       setLoading(false);
       return;
     }
+    
+    if (path.startsWith('/verify-email/')) {
+      console.log('Verify email page detected');
+      setCurrentPage('verify-email');
+      setLoading(false);
+      return;
+    }
   }, []);
 
   // Check token and validate with backend
   useEffect(() => {
     const token = localStorage.getItem('token');
     
-    // If no token, just stop loading
     if (!token) {
       setLoading(false);
       return;
     }
     
-    // Validate token with backend
     fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -53,7 +58,6 @@ function App() {
       .then(data => {
         if (data.success && data.user) {
           setUser(data.user);
-          // Redirect based on role
           if (data.user.role === 'master') {
             setCurrentPage('master');
           } else if (data.user.role === 'superadmin') {
@@ -66,7 +70,6 @@ function App() {
             setCurrentPage('dashboard');
           }
         } else {
-          // Token invalid, clear it
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
@@ -74,7 +77,6 @@ function App() {
       })
       .catch((err) => {
         console.error('Auth check error:', err);
-        // Don't clear token on network error, keep user logged in
         setLoading(false);
       });
   }, []);
@@ -123,6 +125,11 @@ function App() {
     return <ResetPassword onBack={goToLanding} onNavigate={handleNavigate} />;
   }
 
+  // Verify Email route
+  if (currentPage === 'verify-email') {
+    return <VerifyEmail onLogin={handleLogin} />;
+  }
+
   // Public routes
   if (currentPage === 'login') {
     return <Login onBack={goToLanding} onLogin={handleLogin} onNavigate={handleNavigate} />;
@@ -150,10 +157,9 @@ function App() {
     return <Contact user={user} onNavigate={handleNavigate} />;
   }
 
-  // ============ ROOM ASSIGNMENT ROUTE ============
+  // Room Assignment route
   if (currentPage === 'room-assignment' && user) {
     return <RoomAssignment user={user} onClose={() => {
-      // Go back to appropriate dashboard based on user role
       if (user?.role === 'master') setCurrentPage('master');
       else if (user?.role === 'superadmin') setCurrentPage('superadmin');
       else if (user?.role === 'admin') setCurrentPage('admin');

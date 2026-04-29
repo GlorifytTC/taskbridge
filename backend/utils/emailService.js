@@ -454,6 +454,75 @@ exports.sendEmailChangedNotification = async (user, oldEmail, newEmail, ipAddres
   });
 };
 
+// Send verification email for self-signup
+exports.sendVerificationEmail = async (user, verificationUrl) => {
+  const subject = '✅ Verify Your Email - TaskBridge';
+  
+  const daysLeft = user.trialEndDate 
+    ? Math.ceil((new Date(user.trialEndDate) - new Date()) / (1000 * 60 * 60 * 24))
+    : 14;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 24px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Verify Your Email</h1>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello <strong>${user.name || user.email.split('@')[0]}</strong>,</p>
+        
+        <p style="color: #334155;">Thank you for signing up for TaskBridge! Please verify your email address to activate your <strong style="color: #10b981;">${daysLeft}-day free trial</strong>.</p>
+        
+        <div style="background: #e2e8f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 4px 0; color: #0f172a;">📧 <strong>Email:</strong> ${user.email}</p>
+          <p style="margin: 8px 0 0 0; color: #0f172a;">📅 <strong>Trial expires:</strong> ${new Date(user.trialEndDate).toLocaleDateString()}</p>
+          ${user.companyName ? `<p style="margin: 8px 0 0 0; color: #0f172a;">🏢 <strong>Company:</strong> ${user.companyName}</p>` : ''}
+        </div>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${verificationUrl}" 
+             style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #10b981, #059669); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Verify Email & Start Free Trial →
+          </a>
+        </div>
+        
+        <p style="color: #475569; font-size: 13px;">
+          This link will expire in <strong>24 hours</strong>.
+        </p>
+        
+        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 0; color: #92400e; font-size: 12px;">
+            💡 <strong>No credit card required</strong> for the trial. Cancel anytime.
+          </p>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #64748b; font-size: 12px;">
+          If you didn't sign up for TaskBridge, please ignore this email.
+        </p>
+        <p style="color: #64748b; font-size: 12px;">© ${new Date().getFullYear()} TaskBridge. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  return await exports.sendEmail({ 
+    to: user.email, 
+    subject, 
+    html
+  });
+};// Resend verification email
+exports.resendVerificationEmail = async (user) => {
+  const verificationToken = user.verificationToken;
+  if (!verificationToken) {
+    console.error('No verification token found for user');
+    return { error: 'No verification token' };
+  }
+  
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+  return await exports.sendVerificationEmail(user, verificationUrl);
+};
+
 // Send login notification (optional - for new device logins)
 exports.sendLoginNotification = async (user, ipAddress, userAgent, isNewDevice = true) => {
   if (!isNewDevice) return; // Only send for new devices
