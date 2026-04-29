@@ -48,26 +48,29 @@ const Login = ({ onBack, onLogin }) => {
     console.log('📦 Response data:', data);
 
     if (response.ok && data.success && data.token) {
-      // ✅ Ensure token is not null or undefined
-      const token = data.token;
-      console.log('✅ Token received:', token.substring(0, 50) + '...');
+      // ✅ Clean the token - remove any spaces or quotes
+      const cleanToken = data.token.trim();
+      console.log('✅ Token received (first 20 chars):', cleanToken.substring(0, 20) + '...');
       
-      // ✅ Store token properly
-      localStorage.setItem('token', token);
+      // ✅ Store token
+      localStorage.setItem('token', cleanToken);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      // ✅ Verify token was stored correctly
-      const storedToken = localStorage.getItem('token');
-      console.log('✅ Token stored, length:', storedToken?.length);
+      // ✅ Verify storage worked
+      const verifyToken = localStorage.getItem('token');
+      console.log('✅ Token verified in storage:', verifyToken ? 'Yes (length: ' + verifyToken.length + ')' : 'No');
       
-      if (!storedToken || storedToken === 'null' || storedToken === 'undefined') {
+      if (!verifyToken || verifyToken === 'null') {
         console.error('❌ Token storage failed!');
         setError('Login failed. Please try again.');
         setLoading(false);
         return;
       }
       
-      onLogin(data.user);
+      // ✅ Small delay to ensure storage is complete
+      setTimeout(() => {
+        onLogin(data.user);
+      }, 100);
     } else {
       setError(data.message || 'Invalid credentials');
     }

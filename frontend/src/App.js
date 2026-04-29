@@ -42,34 +42,56 @@ function App() {
     }
   }, []);
 
-  // ✅ FIXED: Check token and validate with backend AFTER login
-  // In App.js, add this at the beginning of your auth check:
-useEffect(() => {
+  useEffect(() => {
   const checkAuth = async () => {
-    let token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     
-    // ✅ Fix: Check if token is null, 'null', or 'undefined'
-    if (!token || token === 'null' || token === 'undefined') {
-      console.log('❌ Invalid token found, clearing...');
+    console.log('🔐 App.js checking auth, token exists:', !!token);
+    console.log('Token preview:', token ? token.substring(0, 30) + '...' : 'null');
+    
+    // ✅ Validate token is not null or empty
+    if (!token || token === 'null' || token === 'undefined' || token.length < 10) {
+      console.log('❌ Invalid or missing token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setLoading(false);
       return;
     }
     
-    console.log('🔐 Checking auth with token length:', token.length);
-    
     try {
       const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
+      console.log('📡 Auth check response status:', response.status);
+      
+      if (response.status === 401) {
+        console.log('❌ Token invalid, clearing');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setLoading(false);
+        return;
+      }
+      
       const data = await response.json();
-      console.log('📡 Auth check response:', data);
+      console.log('📡 Auth check data:', data);
       
       if (data.success && data.user) {
         setUser(data.user);
-        // Redirect based on role...
+        if (data.user.role === 'master') {
+          setCurrentPage('master');
+        } else if (data.user.role === 'superadmin') {
+          setCurrentPage('superadmin');
+        } else if (data.user.role === 'admin') {
+          setCurrentPage('admin');
+        } else if (data.user.role === 'employee') {
+          setCurrentPage('employee');
+        } else {
+          setCurrentPage('dashboard');
+        }
       } else {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
