@@ -42,22 +42,29 @@ function App() {
     }
   }, []);
 
-  // Check token and validate with backend
+  // ✅ FIXED: Check token and validate with backend AFTER login
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    
-    fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      
+      console.log('🔐 Checking auth, token exists:', !!token);
+      
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        console.log('📡 Auth check response:', data);
+        
         if (data.success && data.user) {
           setUser(data.user);
+          // ✅ Redirect based on role
           if (data.user.role === 'master') {
             setCurrentPage('master');
           } else if (data.user.role === 'superadmin') {
@@ -70,16 +77,23 @@ function App() {
             setCurrentPage('dashboard');
           }
         } else {
+          // Token invalid, clear it
+          console.log('❌ Token invalid, clearing');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          setCurrentPage('landing');
         }
+      } catch (err) {
+        console.error('❌ Auth check error:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Auth check error:', err);
-        setLoading(false);
-      });
-  }, []);
+      }
+    };
+    
+    checkAuth();
+  }, []); // ✅ Run once on mount
 
   const goToLogin = () => {
     setCurrentPage('login');
@@ -95,7 +109,9 @@ function App() {
   };
 
   const handleLogin = (userData) => {
+    console.log('✅ Login successful, user:', userData);
     setUser(userData);
+    // ✅ Redirect based on role immediately
     if (userData.role === 'master') {
       setCurrentPage('master');
     } else if (userData.role === 'superadmin') {
@@ -110,6 +126,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    console.log('Logging out');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
@@ -168,7 +185,7 @@ function App() {
     }} />;
   }
 
-  // Protected routes with role-based dashboards
+  // ✅ Protected routes - CHECK USER EXISTS
   if (currentPage === 'master' && user) {
     return <MasterDashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
   }
@@ -187,6 +204,12 @@ function App() {
 
   if (currentPage === 'dashboard' && user) {
     return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
+  }
+
+  // ✅ If no user but trying to access protected page, redirect to landing
+  if (!user && (currentPage === 'superadmin' || currentPage === 'admin' || currentPage === 'employee' || currentPage === 'dashboard')) {
+    console.log('No user found, redirecting to landing');
+    return <Landing onLoginClick={goToLogin} onNavigate={handleNavigate} />;
   }
 
   // Feature pages
