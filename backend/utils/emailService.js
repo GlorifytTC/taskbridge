@@ -455,6 +455,7 @@ exports.sendEmailChangedNotification = async (user, oldEmail, newEmail, ipAddres
 };
 
 // Send verification email for self-signup
+// Send verification email for self-signup
 exports.sendVerificationEmail = async (user, verificationUrl) => {
   const subject = '✅ Verify Your Email - TaskBridge';
   
@@ -511,7 +512,9 @@ exports.sendVerificationEmail = async (user, verificationUrl) => {
     subject, 
     html
   });
-};// Resend verification email
+};
+
+
 exports.resendVerificationEmail = async (user) => {
   const verificationToken = user.verificationToken;
   if (!verificationToken) {
