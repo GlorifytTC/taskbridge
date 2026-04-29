@@ -94,63 +94,63 @@ const Login = ({ onBack, onLogin }) => {
   };
 
   const handleSignup = async (e) => {
-    e.preventDefault();
-    setSignupError('');
-    setSignupSuccess('');
+  e.preventDefault();
+  setSignupError('');
+  setSignupSuccess('');
+  
+  if (signupData.password !== signupData.confirmPassword) {
+    setSignupError('Passwords do not match');
+    return;
+  }
+  
+  if (signupData.password.length < 6) {
+    setSignupError('Password must be at least 6 characters');
+    return;
+  }
+  
+  setSignupLoading(true);
+  
+  try {
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        companyName: signupData.companyName,
+        companySize: signupData.companySize,
+        phoneNumber: signupData.phoneNumber
+      })
+    });
     
-    if (signupData.password !== signupData.confirmPassword) {
-      setSignupError('Passwords do not match');
-      return;
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
+      setSignupSuccess(data.message || 'Account created! Please check your email to verify your account.');
+      setTimeout(() => {
+        setShowSignup(false);
+        setSignupData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          companyName: '',
+          companySize: '1-10',
+          phoneNumber: ''
+        });
+        setSignupSuccess('');
+      }, 5000);
+    } else {
+      // Show user-friendly error message from backend
+      setSignupError(data.message || 'Failed to create account');
     }
-    
-    if (signupData.password.length < 6) {
-      setSignupError('Password must be at least 6 characters');
-      return;
-    }
-    
-    setSignupLoading(true);
-    
-    try {
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: signupData.name,
-          email: signupData.email,
-          password: signupData.password,
-          companyName: signupData.companyName,
-          companySize: signupData.companySize,
-          phoneNumber: signupData.phoneNumber
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setSignupSuccess(data.message || 'Account created! Please check your email to verify your account.');
-        setTimeout(() => {
-          setShowSignup(false);
-          setSignupData({
-            name: '',
-            email: '',
-            password: '',
-            confirmPassword: '',
-            companyName: '',
-            companySize: '1-10',
-            phoneNumber: ''
-          });
-          setSignupSuccess('');
-        }, 5000);
-      } else {
-        setSignupError(data.message || 'Failed to create account');
-      }
-    } catch (err) {
-      setSignupError('Network error: ' + err.message);
-    } finally {
-      setSignupLoading(false);
-    }
-  };
-
+  } catch (err) {
+    setSignupError('Network error: ' + err.message);
+  } finally {
+    setSignupLoading(false);
+  }
+};
   return (
     <div style={styles.container}>
       <div style={styles.bgAnimation}>

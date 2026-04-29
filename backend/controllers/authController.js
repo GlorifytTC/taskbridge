@@ -618,12 +618,37 @@ exports.selfSignup = async (req, res) => {
     
     console.log('📝 Self-signup attempt:', email);
     
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide name, email and password.' 
+      });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long.' 
+      });
+    }
+    
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ 
         success: false, 
-        message: 'An account with this email already exists. Please login.' 
+        message: 'An account with this email already exists. Please login instead.' 
+      });
+    }
+    
+    // Check if organization name is already taken
+    const orgName = companyName || `${name}'s Organization`;
+    const existingOrg = await Organization.findOne({ name: orgName });
+    if (existingOrg) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Organization name "${orgName}" is already taken. Please choose a different company name.` 
       });
     }
     
@@ -632,7 +657,7 @@ exports.selfSignup = async (req, res) => {
     trialEndDate.setDate(trialEndDate.getDate() + 14);
     
     const organization = await Organization.create({
-      name: companyName || `${name}'s Organization`,
+      name: orgName,
       email: email.toLowerCase(),
       phone: phoneNumber || '',
       subscription: {
@@ -655,7 +680,7 @@ exports.selfSignup = async (req, res) => {
       isActive: true
     });
     
-    // Create default job description if none exists
+    // Create default job description
     let defaultJob = await JobDescription.findOne({ organization: organization._id });
     if (!defaultJob) {
       defaultJob = await JobDescription.create({
@@ -669,7 +694,7 @@ exports.selfSignup = async (req, res) => {
     // Generate verification token
     const crypto = require('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    const verificationExpires = Date.now() + 24 * 60 * 60 * 1000;
     
     // Hash password
     const bcrypt = require('bcryptjs');
@@ -722,7 +747,7 @@ exports.selfSignup = async (req, res) => {
       }
     });
     
-    // ✅ FIX: Use the emailService function directly (not exports.sendVerificationEmail)
+    // Send verification email
     const { sendVerificationEmail } = require('../utils/emailService');
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     await sendVerificationEmail(user, verificationUrl);
@@ -738,9 +763,30 @@ exports.selfSignup = async (req, res) => {
     
   } catch (error) {
     console.error('Self-signup error:', error);
+    
+    // Handle duplicate key errors with user-friendly messages
+    if (error.code === 11000) {
+      if (error.keyPattern?.name) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This organization name is already taken. Please choose a different company name.' 
+        });
+      }
+      if (error.keyPattern?.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This email is already registered. Please login instead.' 
+        });
+      }
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Duplicate entry. Please check your information and try again.' 
+      });
+    }
+    
     res.status(500).json({ 
       success: false, 
-      message: 'Server error: ' + error.message 
+      message: 'Server error. Please try again later.' 
     });
   }
 };
