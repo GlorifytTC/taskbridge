@@ -45,35 +45,23 @@ const Login = ({ onBack, onLogin }) => {
     console.log('📡 Response status:', response.status);
     
     const data = await response.json();
-    console.log('📦 Response data:', data);
-
+    console.log('📦 Full response data:', JSON.stringify(data, null, 2));
+    console.log('📦 Token in response:', data.token);
+    console.log('📦 Success:', data.success);
+    
     if (response.ok && data.success && data.token) {
-  console.log('✅ RAW token from server:', data.token);
-  console.log('✅ Token length:', data.token.length);
-  console.log('✅ Token starts with:', data.token.substring(0, 20));
-  
-  localStorage.setItem('token', data.token);
-  localStorage.setItem('user', JSON.stringify(data.user));
-  
-  // ✅ IMMEDIATELY verify it was saved
-  const savedToken = localStorage.getItem('token');
-  console.log('✅ Saved token verification:', savedToken ? 'Saved (length: ' + savedToken.length + ')' : 'FAILED TO SAVE!');
-  
-  if (!savedToken) {
-    console.error('❌ CRITICAL: Token not saved to localStorage!');
-    setError('Login failed. Please try again.');
-    setLoading(false);
-    return;
-  }
-  
-  onLogin(data.user);
-}
+      const cleanToken = data.token.trim();
+      console.log('✅ Token received, length:', cleanToken.length);
       
-      // ✅ Small delay to ensure storage is complete
-      setTimeout(() => {
-        onLogin(data.user);
-      }, 100);
+      localStorage.setItem('token', cleanToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      const verifyToken = localStorage.getItem('token');
+      console.log('✅ Token stored, length:', verifyToken?.length);
+      
+      onLogin(data.user);
     } else {
+      console.log('❌ Login failed - no token or invalid response');
       setError(data.message || 'Invalid credentials');
     }
   } catch (err) {
