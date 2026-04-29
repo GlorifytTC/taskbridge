@@ -455,7 +455,6 @@ exports.sendEmailChangedNotification = async (user, oldEmail, newEmail, ipAddres
 };
 
 // Send verification email for self-signup
-// Send verification email for self-signup
 exports.sendVerificationEmail = async (user, verificationUrl) => {
   const subject = '✅ Verify Your Email - TaskBridge';
   

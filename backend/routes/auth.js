@@ -12,7 +12,6 @@ const {
   validateOrganization,
   setupOrganizationAccount,
   verifyResetToken,
-  // ✅ ADD THESE NEW FUNCTIONS
   selfSignup,
   verifyEmail,
   resendVerification,

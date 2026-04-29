@@ -627,11 +627,6 @@ exports.selfSignup = async (req, res) => {
       });
     }
     
-    // Check if email domain is from free provider (anti-fraud)
-    const freeEmailDomains = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'aol.com'];
-    const emailDomain = email.split('@')[1].toLowerCase();
-    const isFreeEmail = freeEmailDomains.includes(emailDomain);
-    
     // Create organization (14-day trial)
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 14);
@@ -672,10 +667,12 @@ exports.selfSignup = async (req, res) => {
     }
     
     // Generate verification token
+    const crypto = require('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     
     // Hash password
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
     
     // Create user as superadmin
@@ -725,10 +722,10 @@ exports.selfSignup = async (req, res) => {
       }
     });
     
-    // Send verification email
+    // ✅ FIX: Use the emailService function directly (not exports.sendVerificationEmail)
+    const { sendVerificationEmail } = require('../utils/emailService');
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    
-    await exports.sendVerificationEmail(user, verificationUrl);
+    await sendVerificationEmail(user, verificationUrl);
     
     console.log('✅ Self-signup successful:', email);
     
