@@ -127,6 +127,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const jobRowRefs = useRef({});
   const taskRowRefs = useRef({});
 
+  // Prevents modal from closing when user drags text selection out of modal
+  const mouseDownInsideModal = useRef(false);
+
   // Use refs to track current editing IDs without stale closure issues
   const editingAdminIdRef = useRef(null);
   const editingEmployeeIdRef = useRef(null);
@@ -927,8 +930,19 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }, 800);
   };
 
+  // Modal overlay mousedown — record whether press started inside modal content
+  const handleOverlayMouseDown = (e) => {
+    // If mousedown target is not the overlay itself, it started inside the modal
+    mouseDownInsideModal.current = e.target !== e.currentTarget;
+  };
+
+  // Only close if BOTH mousedown AND mouseup (click) happened on the overlay
+  // This prevents closing when user drags text selection out of the modal
   const handleModalClose = (setter) => (e) => {
-    if (e.target === e.currentTarget) setter(false);
+    if (e.target === e.currentTarget && !mouseDownInsideModal.current) {
+      setter(false);
+    }
+    mouseDownInsideModal.current = false;
   };
 
   const confirmDelete = (type, id, name) => {
@@ -1652,7 +1666,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showCreateAdminModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowCreateAdminModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>{lang.addAdmin}</h2>
             <form onSubmit={handleCreateAdmin}>
@@ -1673,7 +1687,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showCreateEmployeeModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowCreateEmployeeModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>{lang.addStaff}</h2>
             <form onSubmit={handleCreateEmployee}>
@@ -1698,7 +1712,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showCreateBranchModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateBranchModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowCreateBranchModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>{lang.addBranch}</h2>
             <form onSubmit={handleCreateBranch}>
@@ -1714,7 +1728,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showCreateJobModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateJobModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowCreateJobModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>{lang.addRole}</h2>
             <form onSubmit={handleCreateJob}>
@@ -1730,7 +1744,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showCreateTaskModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowCreateTaskModal)}>
           <div style={{ ...styles.modalLarge, width: isMobile ? '95%' : '600px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>{lang.createTask}</h2>
             <form onSubmit={handleCreateTask}>
@@ -1775,7 +1789,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showResetPasswordModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowResetPasswordModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowResetPasswordModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Reset Password</h2>
             <p style={{ color: 'white' }}>Reset password for <strong>{selectedUser?.name}</strong></p>
@@ -1809,7 +1823,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showChangeEmailModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowChangeEmailModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Change Email</h2>
             <p style={{ color: 'white' }}>Current: <strong>{user?.email}</strong></p>
@@ -1825,7 +1839,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showProfileModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowProfileModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Profile Settings</h2>
             <div style={styles.profileInfo}>
@@ -1850,7 +1864,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       )}
 
       {showDeleteAccountModal && (
-        <div style={styles.modalOverlay} onClick={handleModalClose(setShowDeleteAccountModal)}>
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowDeleteAccountModal)}>
           <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Delete Your Account</h2>
             <p style={{ color: 'white' }}>Are you sure you want to delete your account?</p>
