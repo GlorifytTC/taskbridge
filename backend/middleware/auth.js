@@ -8,7 +8,7 @@ exports.protect = async (req, res, next) => {
   
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
-    console.log('✅ Token found');
+    console.log('✅ Token found, length:', token?.length);
   }
   
   if (!token) {
@@ -17,40 +17,20 @@ exports.protect = async (req, res, next) => {
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey123');
     console.log('✅ Token verified for user ID:', decoded.id);
     
-    const user = await User.findById(decoded.id)
-      .select('-password')
-      .populate('organization', 'name isActive')
-      .populate('branch', 'name')
-      .populate('assignedBranches', 'name')
-      .populate('jobDescription', 'name');
+    const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
-      console.log('❌ User not found in database');
+      console.log('❌ User not found');
       return res.status(401).json({ message: 'User not found' });
     }
     
-    console.log('✅ User found:', {
-      id: user._id,
-      name: user.name,
-      role: user.role,
-      email: user.email
-    });
-    
-    if (user.isActive === false) {
-      console.log('❌ User account is deactivated');
-      return res.status(401).json({ message: 'Account is deactivated' });
-    }
-    
-    if (user.role !== 'master' && user.organization && !user.organization.isActive) {
-      console.log('❌ Organization is deactivated');
-      return res.status(401).json({ message: 'Organization is deactivated' });
-    }
+    console.log('✅ User found:', { id: user._id, name: user.name, role: user.role });
     
     req.user = user;
-    console.log('✅ User attached to req.user');
     next();
   } catch (error) {
     console.error('❌ Auth error:', error.message);
