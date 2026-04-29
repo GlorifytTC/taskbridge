@@ -123,6 +123,18 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskData, setEditTaskData] = useState({});
   const isEditingRef = useRef(false);
+  
+  // Ref to track if we're currently interacting with a select
+  const isSelectInteractingRef = useRef(false);
+  // Ref to track if user is dragging (selecting text)
+  const isDraggingRef = useRef(false);
+  
+  // Refs for each row to detect clicks outside
+  const adminRowRefs = useRef({});
+  const employeeRowRefs = useRef({});
+  const branchRowRefs = useRef({});
+  const jobRowRefs = useRef({});
+  const taskRowRefs = useRef({});
 
   const resetEditingStates = useCallback(() => {
     setEditingAdminId(null);
@@ -145,6 +157,90 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       localStorage.setItem('taskbridge_activeTab', previousTab);
     }
   }, [previousTab, resetEditingStates]);
+
+  // Handle click outside - using 'click' event instead of 'mousedown' to allow text selection
+  useEffect(() => {
+    // Track mouse movement to detect drag (text selection)
+    const handleMouseMove = () => {
+      isDraggingRef.current = true;
+    };
+    
+    const handleMouseUp = () => {
+      // Reset drag flag after a short delay
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 100);
+    };
+
+    const handleClickOutside = (event) => {
+      // CRITICAL: Don't cancel if user was dragging (selecting text)
+      if (isDraggingRef.current) {
+        return;
+      }
+      
+      // Don't cancel if interacting with a select dropdown
+      if (isSelectInteractingRef.current) {
+        return;
+      }
+      
+      // For admin edits
+      if (editingAdminId && adminRowRefs.current[editingAdminId]) {
+        if (!adminRowRefs.current[editingAdminId].contains(event.target)) {
+          cancelEditAdmin();
+        }
+      }
+      // For employee edits
+      if (editingEmployeeId && employeeRowRefs.current[editingEmployeeId]) {
+        if (!employeeRowRefs.current[editingEmployeeId].contains(event.target)) {
+          cancelEditEmployee();
+        }
+      }
+      // For branch edits
+      if (editingBranchId && branchRowRefs.current[editingBranchId]) {
+        if (!branchRowRefs.current[editingBranchId].contains(event.target)) {
+          cancelEditBranch();
+        }
+      }
+      // For job edits
+      if (editingJobId && jobRowRefs.current[editingJobId]) {
+        if (!jobRowRefs.current[editingJobId].contains(event.target)) {
+          cancelEditJob();
+        }
+      }
+      // For task edits
+      if (editingTaskId && taskRowRefs.current[editingTaskId]) {
+        if (!taskRowRefs.current[editingTaskId].contains(event.target)) {
+          cancelEditTask();
+        }
+      }
+    };
+
+    // Use 'click' instead of 'mousedown' - click only fires when no drag occurred
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
+
+  // Cancel editing on Escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (editingAdminId) cancelEditAdmin();
+        if (editingEmployeeId) cancelEditEmployee();
+        if (editingBranchId) cancelEditBranch();
+        if (editingJobId) cancelEditJob();
+        if (editingTaskId) cancelEditTask();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [editingAdminId, editingEmployeeId, editingBranchId, editingJobId, editingTaskId]);
 
   const fetchEmployeesForFilter = async () => {
     try {
@@ -953,32 +1049,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // RESET FORM DATA WHEN MODAL OPENS
-  const openCreateAdminModal = () => {
-    setFormData({});
-    setShowCreateAdminModal(true);
-  };
-
-  const openCreateEmployeeModal = () => {
-    setFormData({});
-    setShowCreateEmployeeModal(true);
-  };
-
-  const openCreateBranchModal = () => {
-    setFormData({});
-    setShowCreateBranchModal(true);
-  };
-
-  const openCreateJobModal = () => {
-    setFormData({});
-    setShowCreateJobModal(true);
-  };
-
-  const openCreateTaskModal = () => {
-    setFormData({});
-    setShowCreateTaskModal(true);
-  };
-
   const handleCreateAdmin = async (e) => {
     e.preventDefault();
     
@@ -1505,6 +1575,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
+  // Helper functions for select interactions
+  const handleSelectMouseDown = () => {
+    isSelectInteractingRef.current = true;
+  };
+
+  const handleSelectBlur = () => {
+    setTimeout(() => {
+      isSelectInteractingRef.current = false;
+    }, 100);
+  };
+
   const sendChatMessage = async (message = null) => {
     const userMessageText = message || chatInput;
     if (!userMessageText.trim()) return;
@@ -1788,14 +1869,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <p style={{...styles.welcomeText, fontSize: isSmall ? '11px' : '12px'}}><strong>{stats.pendingApplications}</strong> {lang.pendingRequests} | <strong>{stats.totalTasks}</strong> {lang.activeTasks}</p>
               <div style={{...styles.quickActions, flexDirection: isSmall ? 'column' : 'row'}}>
                 <button onClick={() => handleTabChange('tasks')} style={{...styles.quickActionBtn, minWidth: '44px', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.createTask}</button>
-                <button onClick={openCreateEmployeeModal} style={{...styles.quickActionBtn, minWidth: '44px', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.addStaff}</button>
+                <button onClick={() => setShowCreateEmployeeModal(true)} style={{...styles.quickActionBtn, minWidth: '44px', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.addStaff}</button>
                 <button onClick={() => handleTabChange('applications')} style={{...styles.quickActionBtn, minWidth: '44px', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.manage}</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ADMINS TABLE */}
         {activeTab === 'admins' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -1805,7 +1885,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   if (!canAddAdmin()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
-                    openCreateAdminModal();
+                    setShowCreateAdminModal(true);
                   }
                 }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddAdmin() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
@@ -1826,7 +1906,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 </thead>
                 <tbody>
                   {admins.map(admin => (
-                    <tr key={admin._id} style={styles.tableRow}>
+                    <tr
+                      key={admin._id}
+                      ref={editingAdminId === admin._id ? el => adminRowRefs.current[admin._id] = el : null}
+                      style={styles.tableRow}
+                    >
                       <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingAdminId === admin._id ? (
                           <input
@@ -1859,7 +1943,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                               <span key={b._id} style={styles.branchTag}>{b.name}</span>
                             ))}
                             {(admin.assignedBranches || []).length > 2 && <span>+{(admin.assignedBranches || []).length - 2}</span>}
-                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={{...styles.assignBranchButton}}>{lang.manage}</button>
+                            <button onClick={() => { setSelectedAdminForBranch(admin); setShowBranchAssignmentModal(true); }} style={styles.assignBranchButton}>{lang.manage}</button>
                           </div>
                         </td>
                       )}
@@ -1869,6 +1953,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             value={editAdminData.isActive !== undefined ? editAdminData.isActive : admin.isActive}
                             onChange={(e) => setEditAdminData({...editAdminData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
@@ -1901,7 +1987,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* EMPLOYEES TABLE */}
         {activeTab === 'employees' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -1911,7 +1996,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   if (!canAddEmployee()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
-                    openCreateEmployeeModal();
+                    setShowCreateEmployeeModal(true);
                   }
                 }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddEmployee() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
@@ -1919,23 +2004,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 + {lang.addStaff}
               </button>
             </div>
-            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+            <input type="text" placeholder={lang.search} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.searchInput, fontSize: isSmall ? '11px' : '12px', minHeight: '44px'}} />
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '500px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>Email</th>
-                    {!isSmall && <th style={styles.th}>Job Role</th>}
-                    {!isSmall && <th style={styles.th}>Branch</th>}
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Email</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Job Role</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEmployees.map(emp => (
-                    <tr key={emp._id} style={styles.tableRow}>
-                      <td style={{...styles.td, color: 'white'}}>
+                    <tr
+                      key={emp._id}
+                      ref={editingEmployeeId === emp._id ? el => employeeRowRefs.current[emp._id] = el : null}
+                      style={styles.tableRow}
+                    >
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
                           <input
                             type="text"
@@ -1948,7 +2037,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           emp.name
                         )}
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingEmployeeId === emp._id ? (
                           <input
                             type="email"
@@ -1960,25 +2049,27 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           isSmall ? emp.email?.substring(0, 15) + (emp.email?.length > 15 ? '...' : '') : emp.email
                         )}
                       </td>
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{emp.branch?.name || '-'}</td>}
-                      <td style={styles.td}>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.jobDescription?.name || '-'}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{emp.branch?.name || '-'}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <select
                             value={editEmployeeData.isActive !== undefined ? editEmployeeData.isActive : emp.isActive}
                             onChange={(e) => setEditEmployeeData({...editEmployeeData, isActive: e.target.value === 'true'})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
                           </select>
                         ) : (
-                          <span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444'}}>
+                          <span style={{...styles.statusBadge, background: emp.isActive ? '#10b981' : '#ef4444', fontSize: isSmall ? '8px' : '9px'}}>
                             {emp.isActive ? 'Active' : 'Inactive'}
                           </span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingEmployeeId === emp._id ? (
                           <div style={styles.actionButtons}>
                             <button onClick={() => saveEditEmployee(emp._id)} style={styles.saveButton}>💾</button>
@@ -1995,12 +2086,10 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+              </table>            </div>
           </div>
         )}
 
-        {/* BRANCHES TABLE */}
         {activeTab === 'branches' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
@@ -2010,7 +2099,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   if (!canAddBranch()) {
                     showToast(lang.limitWarning, 'error');
                   } else {
-                    openCreateBranchModal();
+                    setShowCreateBranchModal(true);
                   }
                 }} 
                 style={{...styles.addButton, width: isSmall ? '100%' : 'auto', opacity: !canAddBranch() ? 0.5 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
@@ -2022,17 +2111,21 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>City</th>
-                    <th style={styles.th}>Staff</th>
-                    <th style={styles.th}>Admins</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Name</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>City</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Staff</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Admins</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {branches.map(branch => (
-                    <tr key={branch._id} style={styles.tableRow}>
-                      <td style={{...styles.td, color: 'white'}}>
+                    <tr
+                      key={branch._id}
+                      ref={editingBranchId === branch._id ? el => branchRowRefs.current[branch._id] = el : null}
+                      style={styles.tableRow}
+                    >
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
                           <input
                             type="text"
@@ -2045,7 +2138,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           branch.name
                         )}
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingBranchId === branch._id ? (
                           <input
                             type="text"
@@ -2057,9 +2150,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           branch.address?.city || '-'
                         )}
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
-                      <td style={{...styles.td, color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.branch?._id === branch._id).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{admins.filter(a => a.assignedBranches?.some(b => b._id === branch._id)).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingBranchId === branch._id ? (
                           <div style={styles.actionButtons}>
                             <button onClick={() => saveEditBranch(branch._id)} style={styles.saveButton}>💾</button>
@@ -2080,27 +2173,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* JOBS TABLE */}
         {activeTab === 'jobs' && (
           <div>
             <div style={{...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.roleManagement}</h2>
-              <button onClick={openCreateJobModal} style={{...styles.addButton, width: isSmall ? '100%' : 'auto', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.addRole}</button>
+              <button onClick={() => setShowCreateJobModal(true)} style={{...styles.addButton, width: isSmall ? '100%' : 'auto', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.addRole}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '400px' : '600px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Role</th>
-                    <th style={styles.th}>Description</th>
-                    <th style={styles.th}>Staff</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Role</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Description</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Staff</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {jobDescriptions.map(job => (
-                    <tr key={job._id} style={styles.tableRow}>
-                      <td style={{...styles.td, color: 'white'}}>
+                    <tr
+                      key={job._id}
+                      ref={editingJobId === job._id ? el => jobRowRefs.current[job._id] = el : null}
+                      style={styles.tableRow}
+                    >
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
                           <input
                             type="text"
@@ -2113,7 +2209,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           job.name
                         )}
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingJobId === job._id ? (
                           <textarea
                             value={editJobData.description || job.description || ''}
@@ -2125,8 +2221,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           job.description || '-'
                         )}
                        </td>
-                      <td style={{...styles.td, color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{employees.filter(e => e.jobDescription?._id === job._id).length}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingJobId === job._id ? (
                           <div style={styles.actionButtons}>
                             <button onClick={() => saveEditJob(job._id)} style={styles.saveButton}>💾</button>
@@ -2138,7 +2234,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             <button onClick={() => confirmDelete('job', job._id, job.name)} style={styles.deleteButton}>🗑️</button>
                           </div>
                         )}
-                       </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2147,30 +2243,33 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* TASKS TABLE */}
         {activeTab === 'tasks' && (
           <div>
             <div style={{...styles.taskHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center'}}>
               <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.taskManagement}</h2>
-              <button onClick={openCreateTaskModal} style={{...styles.createTaskButton, width: isSmall ? '100%' : 'auto', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.createTask}</button>
+              <button onClick={() => setShowCreateTaskModal(true)} style={{...styles.createTaskButton, width: isSmall ? '100%' : 'auto', minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>+ {lang.createTask}</button>
             </div>
             <div style={styles.tableContainer}>
               <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Title</th>
-                    <th style={styles.th}>Date</th>
-                    {!isSmall && <th style={styles.th}>Time</th>}
-                    {!isSmall && <th style={styles.th}>Role</th>}
-                    {!isSmall && <th style={styles.th}>Branch</th>}
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Title</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Role</th>}
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Branch</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tasks.map(task => (
-                    <tr key={task._id} style={styles.tableRow}>
-                      <td style={{...styles.td, color: 'white'}}>
+                    <tr
+                      key={task._id}
+                      ref={editingTaskId === task._id ? el => taskRowRefs.current[task._id] = el : null}
+                      style={styles.tableRow}
+                    >
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
                           <input
                             type="text"
@@ -2183,7 +2282,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           isSmall ? task.title?.substring(0, 15) + (task.title?.length > 15 ? '...' : '') : task.title
                         )}
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>
                         {editingTaskId === task._id ? (
                           <input
                             type="date"
@@ -2195,27 +2294,29 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                           new Date(task.date).toLocaleDateString()
                         )}
                       </td>
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{task.startTime} - {task.endTime}</td>}
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{task.branch?.name || '-'}</td>}
-                      <td style={styles.td}>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.startTime} - {task.endTime}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.jobDescription?.name || '-'}</td>}
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{task.branch?.name || '-'}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <select
                             value={editTaskData.status || task.status}
                             onChange={(e) => setEditTaskData({...editTaskData, status: e.target.value})}
                             style={styles.inlineSelect}
+                            onMouseDown={handleSelectMouseDown}
+                            onBlur={handleSelectBlur}
                           >
                             <option value="open">Open</option>
                             <option value="closed">Closed</option>
                             <option value="in-progress">In Progress</option>
                           </select>
                         ) : (
-                          <span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b'}}>
+                          <span style={{...styles.statusBadge, background: task.status === 'open' ? '#10b981' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'}}>
                             {task.status}
                           </span>
                         )}
                       </td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {editingTaskId === task._id ? (
                           <div style={styles.actionButtons}>
                             <button onClick={() => saveEditTask(task._id)} style={styles.saveButton}>💾</button>
@@ -2236,7 +2337,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* APPLICATIONS TAB */}
         {activeTab === 'applications' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>All Applications</h2>
@@ -2244,32 +2344,32 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               <table style={{...styles.table, minWidth: isSmall ? '600px' : '800px'}}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
-                    <th style={styles.th}>Employee</th>
-                    <th style={styles.th}>Task</th>
-                    <th style={styles.th}>Date</th>
-                    {!isSmall && <th style={styles.th}>Time</th>}
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Applied Date</th>
-                    <th style={styles.th}>Actions</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Employee</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Task</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Date</th>
+                    {!isSmall && <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Time</th>}
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Status</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Applied Date</th>
+                    <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px', padding: isSmall ? '6px 4px' : '10px 8px'}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {applications.map(app => (
                     <tr key={app._id} style={styles.tableRow}>
-                      <td style={{...styles.td, color: 'white'}}>{app.employee?.name}</td>
-                      <td style={{...styles.td, color: 'white'}}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
-                      <td style={{...styles.td, color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
-                      {!isSmall && <td style={{...styles.td, color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.employee?.name}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
+                      {!isSmall && <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{app.task?.startTime} - {app.task?.endTime}</td>}
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         <span style={{...styles.statusBadge, background: 
                           app.status === 'approved' ? '#10b981' : 
-                          app.status === 'rejected' ? '#ef4444' : '#f59e0b'
+                          app.status === 'rejected' ? '#ef4444' : '#f59e0b', fontSize: isSmall ? '8px' : '9px'
                         }}>
                           {app.status}
                         </span>
                       </td>
-                      <td style={{...styles.td, color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
-                      <td style={styles.td}>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px', color: 'white'}}>{new Date(app.appliedAt).toLocaleDateString()}</td>
+                      <td style={{...styles.td, fontSize: isSmall ? '11px' : '12px', padding: isSmall ? '8px 4px' : '10px 8px'}}>
                         {app.status === 'pending' && (
                           <div style={styles.actionButtons}>
                             <button onClick={() => handleApproveApplication(app._id)} style={styles.approveButton}>✓</button>
@@ -2285,7 +2385,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* REPORTS TAB */}
         {activeTab === 'reports' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.reportManagement}</h2>
@@ -2398,7 +2497,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <button 
                   onClick={generateAttendanceReport} 
                   disabled={generatingReport}
-                  style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1}}
+                  style={{...styles.reportButton, opacity: generatingReport ? 0.7 : 1, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}
                 >
                   {generatingReport ? (
                     <><i className="fas fa-spinner fa-spin"></i> {language === 'en' ? 'Generating...' : 'Genererar...'}</>
@@ -2414,7 +2513,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Total hours worked summary' : 'Sammanfattning av arbetade timmar'}
                 </p>
-                <button onClick={generateAttendanceReport} style={styles.reportButton}>{lang.generateReport}</button>
+                <button onClick={generateAttendanceReport} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.generateReport}</button>
               </div>
               
               <div style={styles.reportCard}>
@@ -2423,7 +2522,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Export report as PDF' : 'Exportera rapport som PDF'}
                 </p>
-                <button onClick={exportToPDF} style={styles.reportButton}>{lang.exportPDF}</button>
+                <button onClick={exportToPDF} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportPDF}</button>
               </div>
               
               <div style={styles.reportCard}>
@@ -2432,7 +2531,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <p style={{color: 'rgba(255,255,255,0.6)', fontSize: '11px', marginBottom: '12px'}}>
                   {language === 'en' ? 'Export report as CSV' : 'Exportera rapport som CSV'}
                 </p>
-                <button onClick={exportToExcel} style={styles.reportButton}>{lang.exportExcel}</button>
+                <button onClick={exportToExcel} style={{...styles.reportButton, minHeight: '44px', padding: '12px 20px', fontSize: '14px'}}>{lang.exportExcel}</button>
               </div>
             </div>
             
@@ -2454,32 +2553,30 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
 
-        {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>{lang.settingsManagement}</h2>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Organization Logo</h3>
-              {logoPreview && <img src={logoPreview} alt="Logo" style={styles.logoPreview} />}
-              <input type="file" accept="image/*" onChange={handleLogoUpload} style={styles.fileInput} />
-              <button style={styles.uploadButton}>Upload Logo</button>
+              {logoPreview && <img src={logoPreview} alt="Logo" style={{...styles.logoPreview, width: isSmall ? '50px' : '60px', height: isSmall ? '50px' : '60px'}} />}
+              <input type="file" accept="image/*" onChange={handleLogoUpload} style={{...styles.fileInput, fontSize: isSmall ? '10px' : '11px', minHeight: '44px'}} />
+              <button style={{...styles.uploadButton, fontSize: isSmall ? '11px' : '12px', minHeight: '44px', padding: '12px 20px'}}>Upload Logo</button>
             </div>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>Subscription</h3>
               <p style={{color: 'white', fontSize: isSmall ? '13px' : '14px'}}>{lang.currentPlan}: {subscriptionData?.plan || 'Trial'}</p>
-              <a href="mailto:georgeglor@hotmail.com" style={styles.contactLink}>{lang.contactSales}</a>
-              <button style={styles.invoiceButton}>Invoices</button>
+              <a href="mailto:georgeglor@hotmail.com" style={{...styles.contactLink, fontSize: isSmall ? '11px' : '12px', minHeight: '44px', display: 'inline-flex', alignItems: 'center'}}>{lang.contactSales}</a>
+              <button style={{...styles.invoiceButton, fontSize: isSmall ? '11px' : '12px', minHeight: '44px', padding: '12px 20px'}}>Invoices</button>
             </div>
             <div style={styles.settingsCard}>
               <h3 style={{color: 'white', fontSize: isSmall ? '14px' : '16px'}}>{lang.auditLogs}</h3>
-              <button onClick={() => { fetchAuditLogsEnhanced(); setShowAuditModal(true); }} style={styles.viewButton}>
+              <button onClick={() => { fetchAuditLogsEnhanced(); setShowAuditModal(true); }} style={{...styles.viewButton, fontSize: isSmall ? '11px' : '12px', minHeight: '44px', padding: '12px 20px'}}>
                 <i className="fas fa-history"></i> {lang.viewAudit}
               </button>
             </div>
           </div>
         )}
 
-        {/* PREMIUM FEATURES TAB */}
         {activeTab === 'premium' && (
           <div>
             <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
@@ -2509,7 +2606,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                   {hasRoomAccess ? (
                     <button 
                       onClick={() => onNavigate('room-assignment')} 
-                      style={styles.premiumButton}
+                      style={{...styles.premiumButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                     >
                       ⭐ {lang.accessRoomAssignment}
                     </button>
@@ -2517,14 +2614,14 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                     <>
                       <button 
                         onClick={() => showToast(lang.limitWarning, 'info')} 
-                        style={{...styles.upgradeButton, opacity: 0.6, cursor: 'not-allowed'}}
+                        style={{...styles.upgradeButton, opacity: 0.6, cursor: 'not-allowed', minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                         disabled
                       >
                         🔒 {lang.accessRoomAssignment} - {lang.upgradeRequired}
                       </button>
                       <button 
                         onClick={() => window.open('mailto:sales@taskbridge.com')} 
-                        style={styles.upgradeButton}
+                        style={{...styles.upgradeButton, minHeight: '48px', padding: '12px 24px', fontSize: '14px'}}
                       >
                         💎 Upgrade to Premium
                       </button>
@@ -2539,8 +2636,6 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
           </div>
         )}
       </div>
-
-      {/* ========== MODALS ========== */}
 
       {showAuditModal && (
         <div style={styles.modalOverlay} onClick={() => setShowAuditModal(false)}>
@@ -2560,17 +2655,17 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <table style={{...styles.table, minWidth: isMobile ? '500px' : '700px'}}>
                   <thead>
                     <tr style={styles.tableHeaderRow}>
-                      <th style={styles.th}>{lang.action}</th>
-                      <th style={styles.th}>{lang.entityType}</th>
-                      <th style={styles.th}>{lang.user}</th>
-                      <th style={styles.th}>{lang.timestamp}</th>
-                      <th style={styles.th}>{lang.changes}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.action}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.entityType}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.user}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.timestamp}</th>
+                      <th style={{...styles.th, fontSize: isSmall ? '10px' : '12px'}}>{lang.changes}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditLogs.map(log => (
                       <tr key={log._id} style={styles.tableRow}>
-                        <td style={{...styles.td, color: 'white'}}>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
                           <span style={{
                             ...styles.statusBadge,
                             background: log.action === 'create' ? '#10b981' : 
@@ -2580,11 +2675,13 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                             {log.action}
                           </span>
                         </td>
-                        <td style={{...styles.td, color: 'white'}}>{log.entityType}</td>
-                        <td style={{...styles.td, color: 'white'}}>{log.user?.name || 'System'}</td>
-                        <td style={{...styles.td, color: 'white'}}>{new Date(log.createdAt).toLocaleString()}</td>
-                        <td style={{...styles.td, color: 'white'}}>
-                          <pre style={{margin: 0, fontSize: '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.entityType}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>{log.user?.name || 'System'}</td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td style={{...styles.td, fontSize: isSmall ? '10px' : '12px', color: 'white'}}>
+                          <pre style={{margin: 0, fontSize: isSmall ? '8px' : '10px', maxWidth: '200px', overflowX: 'auto', whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>
                             {JSON.stringify(log.changes, null, 2)}
                           </pre>
                         </td>
@@ -2595,325 +2692,170 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               </div>
             )}
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowAuditModal(false)} style={styles.cancelButton}>{lang.close}</button>
+              <button onClick={() => setShowAuditModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>{lang.close}</button>
             </div>
           </div>
         </div>
       )}
       
-      {/* CREATE ADMIN MODAL - FIXED */}
       {showCreateAdminModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateAdminModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addAdmin}</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateAdminModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addAdmin}</h2>
             <form onSubmit={handleCreateAdmin}>
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={formData.name || ''} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={formData.email || ''} 
-                onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <input 
-                type="password" 
-                placeholder="Temporary Password" 
-                value={formData.password || ''} 
-                onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <select 
-                value={formData.branch || ''} 
-                onChange={(e) => setFormData({...formData, branch: e.target.value})} 
-                style={styles.select}
-              >
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}}>
                 <option value="">Select Branch (Optional)</option>
                 {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
               </select>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateAdminModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Create</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* CREATE EMPLOYEE MODAL - FIXED */}
       {showCreateEmployeeModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateEmployeeModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addStaff}</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateEmployeeModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addStaff}</h2>
             <form onSubmit={handleCreateEmployee}>
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={formData.name || ''} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={formData.email || ''} 
-                onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <input 
-                type="password" 
-                placeholder="Temporary Password" 
-                value={formData.password || ''} 
-                onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <select 
-                value={formData.jobDescription || ''} 
-                onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} 
-                style={styles.select} 
-                required
-              >
+              <input type="text" placeholder="Full Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <input type="email" placeholder="Email Address" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <input type="password" placeholder="Temporary Password" value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required>
                 <option value="">Select Job Role</option>
                 {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
               </select>
-              <select 
-                value={formData.branch || ''} 
-                onChange={(e) => setFormData({...formData, branch: e.target.value})} 
-                style={styles.select} 
-                required
-              >
+              <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required>
                 <option value="">Select Branch</option>
                 {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
               </select>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateEmployeeModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Create</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* CREATE BRANCH MODAL - FIXED */}
       {showCreateBranchModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateBranchModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addBranch}</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateBranchModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addBranch}</h2>
             <form onSubmit={handleCreateBranch}>
-              <input 
-                type="text" 
-                placeholder="Branch Name" 
-                value={formData.name || ''} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <input 
-                type="text" 
-                placeholder="City" 
-                value={formData.city || ''} 
-                onChange={(e) => setFormData({...formData, city: e.target.value})} 
-                style={styles.input} 
-              />
+              <input type="text" placeholder="Branch Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <input type="text" placeholder="City" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateBranchModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateBranchModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Create</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* CREATE JOB MODAL - FIXED */}
       {showCreateJobModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateJobModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.addRole}</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateJobModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.addRole}</h2>
             <form onSubmit={handleCreateJob}>
-              <input 
-                type="text" 
-                placeholder="Role Name" 
-                value={formData.name || ''} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                style={styles.input} 
-                required 
-              />
-              <textarea 
-                placeholder="Description" 
-                value={formData.description || ''} 
-                onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                style={styles.textarea} 
-                rows="2" 
-              />
+              <input type="text" placeholder="Role Name" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
+              <textarea placeholder="Description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={{...styles.textarea, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '80px'}} rows="2" />
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateJobModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>Create</button>
+                <button type="button" onClick={() => setShowCreateJobModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Create</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* CREATE TASK MODAL - FIXED */}
       {showCreateTaskModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCreateTaskModal(false)}>
-          <div style={{...styles.modalLarge, width: isMobile ? '95%' : '600px', maxWidth: '600px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>{lang.createTask}</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowCreateTaskModal)}>
+          <div style={{...styles.modalLarge, width: isMobile ? '95%' : (isTablet ? '90%' : '600px'), maxWidth: isMobile ? '400px' : '600px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>{lang.createTask}</h2>
             <form onSubmit={handleCreateTask}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Task Title *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Morning Shift" 
-                  value={formData.title || ''} 
-                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                  style={styles.input} 
-                  required 
-                />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Task Title *</label>
+                <input type="text" placeholder="e.g., Morning Shift" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Description</label>
-                <textarea 
-                  placeholder="Describe the task..." 
-                  value={formData.description || ''} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                  style={styles.textarea} 
-                  rows="2" 
-                />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Description</label>
+                <textarea placeholder="Describe the task..." value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} style={{...styles.textarea, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '80px'}} rows="2" />
               </div>
-              <div style={{...styles.formRow, gridTemplateColumns: isSmall ? '1fr' : 'repeat(3, 1fr)'}}>
+              <div style={{...styles.formRow, gridTemplateColumns: isSmall ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))'}}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Date *</label>
-                  <input 
-                    type="date" 
-                    value={formData.date || ''} 
-                    onChange={(e) => setFormData({...formData, date: e.target.value})} 
-                    style={styles.input} 
-                    required 
-                  />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Date *</label>
+                  <input type="date" value={formData.date || ''} onChange={(e) => setFormData({...formData, date: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Start Time *</label>
-                  <input 
-                    type="time" 
-                    value={formData.startTime || ''} 
-                    onChange={(e) => setFormData({...formData, startTime: e.target.value})} 
-                    style={styles.input} 
-                    required 
-                  />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Start Time *</label>
+                  <input type="time" value={formData.startTime || ''} onChange={(e) => setFormData({...formData, startTime: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>End Time *</label>
-                  <input 
-                    type="time" 
-                    value={formData.endTime || ''} 
-                    onChange={(e) => setFormData({...formData, endTime: e.target.value})} 
-                    style={styles.input} 
-                    required 
-                  />
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>End Time *</label>
+                  <input type="time" value={formData.endTime || ''} onChange={(e) => setFormData({...formData, endTime: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required />
                 </div>
               </div>
               <div style={{...styles.formRow, gridTemplateColumns: isSmall ? '1fr' : 'repeat(2, 1fr)'}}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Job Role *</label>
-                  <select 
-                    value={formData.jobDescription || ''} 
-                    onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} 
-                    style={styles.select} 
-                    required
-                  >
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Job Role *</label>
+                  <select value={formData.jobDescription || ''} onChange={(e) => setFormData({...formData, jobDescription: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required>
                     <option value="">Select Role</option>
                     {jobDescriptions.map(j => <option key={j._id} value={j._id}>{j.name}</option>)}
                   </select>
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Branch *</label>
-                  <select 
-                    value={formData.branch || ''} 
-                    onChange={(e) => setFormData({...formData, branch: e.target.value})} 
-                    style={styles.select} 
-                    required
-                  >
+                  <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Branch *</label>
+                  <select value={formData.branch || ''} onChange={(e) => setFormData({...formData, branch: e.target.value})} style={{...styles.select, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} required>
                     <option value="">Select Branch</option>
                     {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
                   </select>
                 </div>
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Max Employees</label>
-                <input 
-                  type="number" 
-                  placeholder="1" 
-                  value={formData.maxEmployees || 1} 
-                  onChange={(e) => setFormData({...formData, maxEmployees: parseInt(e.target.value)})} 
-                  style={styles.input} 
-                  min="1" 
-                />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Max Employees</label>
+                <input type="number" placeholder="1" value={formData.maxEmployees || 1} onChange={(e) => setFormData({...formData, maxEmployees: parseInt(e.target.value)})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} min="1" />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Room 101" 
-                  value={formData.location || ''} 
-                  onChange={(e) => setFormData({...formData, location: e.target.value})} 
-                  style={styles.input} 
-                />
+                <label style={{...styles.label, fontSize: isSmall ? '11px' : '12px'}}>Location</label>
+                <input type="text" placeholder="e.g., Room 101" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
               </div>
               <div style={styles.modalButtons}>
-                <button type="button" onClick={() => setShowCreateTaskModal(false)} style={styles.cancelButton}>Cancel</button>
-                <button type="submit" style={styles.submitButton}>{lang.createTask}</button>
+                <button type="button" onClick={() => setShowCreateTaskModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+                <button type="submit" style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>{lang.createTask}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* RESET PASSWORD MODAL */}
       {showResetPasswordModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowResetPasswordModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Reset Password</h2>
-            <p style={{color: 'white'}}>Reset password for <strong>{selectedUser?.name}</strong> ({selectedUser?.email})</p>
-            <input 
-              type="password" 
-              placeholder="New Password" 
-              value={resetPasswordData.newPassword} 
-              onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} 
-              style={styles.input} 
-            />
-            <input 
-              type="password" 
-              placeholder="Confirm Password" 
-              value={resetPasswordData.confirmPassword} 
-              onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} 
-              style={styles.input} 
-            />
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowResetPasswordModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Reset Password</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Reset password for <strong>{selectedUser?.name}</strong> ({selectedUser?.email})</p>
+            <input type="password" placeholder="New Password" value={resetPasswordData.newPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <input type="password" placeholder="Confirm Password" value={resetPasswordData.confirmPassword} onChange={(e) => setResetPasswordData({...resetPasswordData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
             <div style={styles.modalButtons}>
-              <button type="button" onClick={() => setShowResetPasswordModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleResetUserPassword} style={styles.submitButton}>Reset Password</button>
+              <button type="button" onClick={() => setShowResetPasswordModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+              <button onClick={handleResetUserPassword} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Reset Password</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* BRANCH ASSIGNMENT MODAL */}
       {showBranchAssignmentModal && (
         <div style={styles.modalOverlay} onClick={() => setShowBranchAssignmentModal(false)}>
-          <div style={{...styles.modalLarge, width: isMobile ? '95%' : '500px', maxWidth: '500px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Manage Branches for {selectedAdminForBranch?.name}</h2>
-            <p style={{color: 'white'}}>Select branches this admin can manage:</p>
+          <div style={{...styles.modalLarge, width: isMobile ? '95%' : (isTablet ? '90%' : '500px'), maxWidth: isMobile ? '350px' : '500px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Manage Branches for {selectedAdminForBranch?.name}</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Select branches this admin can manage:</p>
             <div style={styles.branchListContainer}>
               {branches.map(branch => (
                 <div key={branch._id} style={styles.branchCheckboxItem}>
@@ -2936,108 +2878,69 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               ))}
             </div>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowBranchAssignmentModal(false)} style={styles.cancelButton}>Close</button>
+              <button onClick={() => setShowBranchAssignmentModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* CHANGE EMAIL MODAL */}
       {showChangeEmailModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowChangeEmailModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Change Email</h2>
-            <p style={{color: 'white'}}>Current email: <strong>{user?.email}</strong></p>
-            <input 
-              type="email" 
-              placeholder="New Email" 
-              value={changeEmailData.newEmail} 
-              onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} 
-              style={styles.input} 
-            />
-            <input 
-              type="email" 
-              placeholder="Confirm New Email" 
-              value={changeEmailData.confirmEmail} 
-              onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} 
-              style={styles.input} 
-            />
-            <input 
-              type="password" 
-              placeholder="Current Password" 
-              value={changeEmailData.password} 
-              onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} 
-              style={styles.input} 
-            />
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowChangeEmailModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Change Email</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Current email: <strong>{user?.email}</strong></p>
+            <input type="email" placeholder="New Email" value={changeEmailData.newEmail} onChange={(e) => setChangeEmailData({...changeEmailData, newEmail: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <input type="email" placeholder="Confirm New Email" value={changeEmailData.confirmEmail} onChange={(e) => setChangeEmailData({...changeEmailData, confirmEmail: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <input type="password" placeholder="Current Password" value={changeEmailData.password} onChange={(e) => setChangeEmailData({...changeEmailData, password: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
             <div style={styles.modalButtons}>
-              <button type="button" onClick={() => setShowChangeEmailModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleChangeEmail} style={styles.submitButton}>Change Email</button>
+              <button type="button" onClick={() => setShowChangeEmailModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+              <button onClick={handleChangeEmail} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Change Email</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROFILE MODAL */}
       {showProfileModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Profile Settings</h2>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowProfileModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Profile Settings</h2>
             <div style={styles.profileInfo}>
               <p><strong style={{color: '#00d1ff'}}>Name:</strong> <span style={{color: 'white'}}>{user?.name}</span></p>
               <p><strong style={{color: '#00d1ff'}}>Email:</strong> <span style={{color: 'white'}}>{user?.email}</span></p>
               <p><strong style={{color: '#00d1ff'}}>Role:</strong> <span style={{color: 'white'}}>Super Admin</span></p>
               <p><strong style={{color: '#00d1ff'}}>Organization:</strong> <span style={{color: 'white'}}>{user?.organization?.name}</span></p>
             </div>
-            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={styles.changeEmailButton}>Change Email</button>
-            <h3 style={styles.subTitle}>Change Password</h3>
-            <input 
-              type="password" 
-              placeholder="Current Password" 
-              value={profileData.currentPassword} 
-              onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} 
-              style={styles.input} 
-            />
-            <input 
-              type="password" 
-              placeholder="New Password" 
-              value={profileData.newPassword} 
-              onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} 
-              style={styles.input} 
-            />
-            <input 
-              type="password" 
-              placeholder="Confirm New Password" 
-              value={profileData.confirmPassword} 
-              onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} 
-              style={styles.input} 
-            />
-            <button onClick={handleUpdateProfile} style={styles.submitButton}>Update Password</button>
+            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={{...styles.changeEmailButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Change Email</button>
+            <h3 style={{...styles.subTitle, fontSize: isSmall ? '13px' : '16px'}}>Change Password</h3>
+            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={(e) => setProfileData({...profileData, currentPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={(e) => setProfileData({...profileData, confirmPassword: e.target.value})} style={{...styles.input, fontSize: isSmall ? '11px' : '13px', color: 'white', minHeight: '44px'}} />
+            <button onClick={handleUpdateProfile} style={{...styles.submitButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Update Password</button>
             <div style={styles.dangerZone}>
-              <h3 style={{ color: '#ef4444' }}>Danger Zone</h3>
-              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={styles.deleteAccountButton}>Delete My Account</button>
-              <p style={styles.warningText}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
+              <h3 style={{ color: '#ef4444', fontSize: isSmall ? '13px' : '16px' }}>Danger Zone</h3>
+              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{...styles.deleteAccountButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Delete My Account</button>
+              <p style={{...styles.warningText, fontSize: isSmall ? '10px' : '11px'}}>⚠️ This will delete YOUR account only. Other admins can continue managing.</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* DELETE ACCOUNT MODAL */}
       {showDeleteAccountModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowDeleteAccountModal(false)}>
-          <div style={{...styles.modal, width: isMobile ? '95%' : '450px', maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Delete Your Account</h2>
-            <p style={{color: 'white'}}>Are you sure you want to delete your account?</p>
-            <p style={{ color: '#ef4444' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
-            <p style={{color: 'white'}}>Other admins can continue managing the organization.</p>
+        <div style={styles.modalOverlay} onClick={handleModalClose(setShowDeleteAccountModal)}>
+          <div style={{...styles.modal, width: isMobile ? '95%' : (isTablet ? '90%' : '450px'), maxWidth: isMobile ? '350px' : '450px'}} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{...styles.modalTitle, fontSize: isSmall ? '16px' : '20px'}}>Delete Your Account</h2>
+            <p style={{color: 'white', fontSize: isSmall ? '12px' : '14px'}}>Are you sure you want to delete your account?</p>
+            <p style={{ color: '#ef4444', fontSize: isSmall ? '11px' : '13px' }}>⚠️ This action cannot be undone. Your personal data will be removed.</p>
+            <p style={{color: 'white', fontSize: isSmall ? '11px' : '13px'}}>Other admins can continue managing the organization.</p>
             <div style={styles.modalButtons}>
-              <button onClick={() => setShowDeleteAccountModal(false)} style={styles.cancelButton}>Cancel</button>
-              <button onClick={handleDeleteAccount} style={styles.confirmDeleteButton}>Delete My Account</button>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={{...styles.cancelButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Cancel</button>
+              <button onClick={handleDeleteAccount} style={{...styles.confirmDeleteButton, fontSize: isSmall ? '11px' : '13px', minHeight: '44px'}}>Delete My Account</button>
             </div>
           </div>
         </div>
       )}
 
-      <button style={styles.chatButton} onClick={() => setShowChat(!showChat)}>
+      <button style={{...styles.chatButton, width: isSmall ? '48px' : '50px', height: isSmall ? '48px' : '50px', fontSize: isSmall ? '18px' : '20px', minWidth: '44px', minHeight: '44px'}} onClick={() => setShowChat(!showChat)}>
         <i className="fas fa-robot"></i>
       </button>
 
@@ -3045,7 +2948,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
         <div style={{...styles.chatModal, width: isMobile ? '90vw' : '400px', maxWidth: '90vw', height: isMobile ? '70vh' : '580px', bottom: isMobile ? '75px' : '85px', right: isMobile ? '5vw' : '25px'}}>
           <div style={styles.chatHeader}>
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-            <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
+            <button onClick={() => setShowChat(false)} style={{...styles.chatClose, minWidth: '36px', minHeight: '36px'}}>✕</button>
           </div>
           
           <div style={styles.chatMessages}>
@@ -3054,7 +2957,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <div style={{...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%'}}>
                   {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
                   <div style={{ whiteSpace: 'pre-line', wordWrap: 'break-word', fontSize: isSmall ? '12px' : '13px', lineHeight: '1.5' }}>{msg.text}</div>
-                  <div style={styles.messageTime}>{msg.time}</div>
+                  <div style={{...styles.messageTime, fontSize: isSmall ? '9px' : '10px'}}>{msg.time}</div>
                 </div>
               </div>
             ))}
@@ -3075,7 +2978,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <button
                   key={idx}
                   onClick={() => sendChatMessage(q)}
-                  style={styles.quickQuestionButton}
+                  style={{...styles.quickQuestionButton, minHeight: '36px', padding: '8px 14px', fontSize: '11px'}}
                 >
                   {q}
                 </button>
@@ -3090,18 +2993,22 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              style={styles.chatInput}
+              style={{...styles.chatInput, minHeight: '44px'}}
             />
-            <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+            <button onClick={() => sendChatMessage()} style={{...styles.chatSend, minWidth: '44px', minHeight: '44px'}}>
               <i className="fas fa-paper-plane"></i>
             </button>
           </div>
         </div>
       )}
     </div>
+
   );
 }
 
+
+
+// ==================== STYLES ====================
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
   toast: { position: 'fixed', bottom: '20px', right: '20px', color: 'white', padding: '12px 20px', borderRadius: '8px', zIndex: 2000, fontSize: '14px', animation: 'fadeInOut 3s ease', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
