@@ -122,9 +122,13 @@ function App() {
   };
 
   const handleLogin = (userData) => {
-    console.log('✅ Login successful, user:', userData);
-    setUser(userData);
-    // ✅ Redirect based on role immediately
+  console.log('✅ Login successful, user:', userData);
+  
+  // ✅ Set user first
+  setUser(userData);
+  
+  // ✅ Add a small delay before redirecting to ensure all states are updated
+  setTimeout(() => {
     if (userData.role === 'master') {
       setCurrentPage('master');
     } else if (userData.role === 'superadmin') {
@@ -136,7 +140,8 @@ function App() {
     } else {
       setCurrentPage('dashboard');
     }
-  };
+  }, 100);
+};
 
   const handleLogout = () => {
     console.log('Logging out');

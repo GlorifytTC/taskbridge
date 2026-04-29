@@ -841,7 +841,26 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       else { const data = await response.json(); showToast(data.message || 'Failed to delete branch', 'error'); }
     } catch (error) { showToast('Error deleting branch', 'error'); }
   };
-
+// Add this useEffect right after your state declarations
+useEffect(() => {
+  // Wait for token to be available
+  const token = localStorage.getItem('token');
+  console.log('🔄 SuperAdminDashboard mounted, token exists:', !!token);
+  
+  if (!token) {
+    console.error('❌ No token in SuperAdminDashboard, redirecting to login');
+    onLogout();
+    return;
+  }
+  
+  // Small delay to ensure everything is ready
+  const timer = setTimeout(() => {
+    fetchDashboardData(true);
+    fetchSubscriptionData();
+  }, 500);
+  
+  return () => clearTimeout(timer);
+}, []); // Empty dependency array - runs once on mount
   const handleDeleteJob = async (jobId, jobName) => {
     const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
     if (employeesWithJob > 0) { showToast(language === 'en' ? `Cannot delete "${jobName}" - ${employeesWithJob} employee(s) have this role.` : `Kan inte radera "${jobName}" - ${employeesWithJob} anställd(a) har denna roll.`, 'error'); return; }
