@@ -622,7 +622,6 @@ exports.selfSignup = async (req, res) => {
     
     // Validate required fields
     if (!name || !email || !password) {
-      console.log('❌ Missing required fields');
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide name, email and password.' 
@@ -630,7 +629,6 @@ exports.selfSignup = async (req, res) => {
     }
     
     if (password.length < 6) {
-      console.log('❌ Password too short');
       return res.status(400).json({ 
         success: false, 
         message: 'Password must be at least 6 characters long.' 
@@ -640,7 +638,6 @@ exports.selfSignup = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      console.log('❌ User already exists:', email);
       return res.status(400).json({ 
         success: false, 
         message: 'An account with this email already exists. Please login instead.' 
@@ -652,7 +649,6 @@ exports.selfSignup = async (req, res) => {
     let orgNameCounter = 1;
     let originalOrgName = orgName;
     
-    // Check if organization name exists and make it unique
     while (await Organization.findOne({ name: orgName })) {
       orgName = `${originalOrgName} (${orgNameCounter})`;
       orgNameCounter++;
@@ -690,17 +686,6 @@ exports.selfSignup = async (req, res) => {
       isActive: true
     });
     
-    // Create default job description
-    let defaultJob = await JobDescription.findOne({ organization: organization._id });
-    if (!defaultJob) {
-      defaultJob = await JobDescription.create({
-        name: 'General Staff',
-        description: 'General staff position',
-        organization: organization._id,
-        isActive: true
-      });
-    }
-    
     // Generate verification token
     const crypto = require('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -710,7 +695,7 @@ exports.selfSignup = async (req, res) => {
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user as superadmin
+    // ✅ STEP 1: Create user FIRST (without jobDescription)
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -718,7 +703,7 @@ exports.selfSignup = async (req, res) => {
       role: 'superadmin',
       organization: organization._id,
       branch: defaultBranch._id,
-      jobDescription: defaultJob._id,
+      jobDescription: null,  // Temporarily null
       isActive: true,
       isAccountSetup: true,
       emailVerified: false,
@@ -735,6 +720,22 @@ exports.selfSignup = async (req, res) => {
     });
     
     console.log('✅ User created:', user.email);
+    
+    // ✅ STEP 2: Create job description with the user as creator
+    let defaultJob = await JobDescription.findOne({ organization: organization._id });
+    if (!defaultJob) {
+      defaultJob = await JobDescription.create({
+        name: 'General Staff',
+        description: 'General staff position',
+        organization: organization._id,
+        createdBy: user._id,  // Now user exists
+        isActive: true
+      });
+    }
+    
+    // ✅ STEP 3: Update user with job description
+    user.jobDescription = defaultJob._id;
+    await user.save();
     
     // Create subscription record
     const Subscription = require('../models/Subscription');
@@ -767,7 +768,6 @@ exports.selfSignup = async (req, res) => {
       console.log('✅ Verification email sent');
     } catch (emailError) {
       console.error('⚠️ Failed to send verification email:', emailError.message);
-      // Don't fail the signup if email fails - user can request resend
     }
     
     console.log('✅ Self-signup successful:', email);
@@ -782,7 +782,7 @@ exports.selfSignup = async (req, res) => {
   } catch (error) {
     console.error('Self-signup error:', error);
     
-    // Handle duplicate key errors with user-friendly messages
+    // Handle duplicate key errors
     if (error.code === 11000) {
       if (error.keyPattern?.email) {
         return res.status(400).json({ 
@@ -796,10 +796,6 @@ exports.selfSignup = async (req, res) => {
           message: 'Organization name already taken. Please choose a different company name.' 
         });
       }
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Duplicate entry. Please check your information and try again.' 
-      });
     }
     
     // Handle validation errors
