@@ -48,24 +48,26 @@ const Login = ({ onBack, onLogin }) => {
     console.log('📦 Response data:', data);
 
     if (response.ok && data.success && data.token) {
-      // ✅ Clean the token - remove any spaces or quotes
-      const cleanToken = data.token.trim();
-      console.log('✅ Token received (first 20 chars):', cleanToken.substring(0, 20) + '...');
-      
-      // ✅ Store token
-      localStorage.setItem('token', cleanToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // ✅ Verify storage worked
-      const verifyToken = localStorage.getItem('token');
-      console.log('✅ Token verified in storage:', verifyToken ? 'Yes (length: ' + verifyToken.length + ')' : 'No');
-      
-      if (!verifyToken || verifyToken === 'null') {
-        console.error('❌ Token storage failed!');
-        setError('Login failed. Please try again.');
-        setLoading(false);
-        return;
-      }
+  console.log('✅ RAW token from server:', data.token);
+  console.log('✅ Token length:', data.token.length);
+  console.log('✅ Token starts with:', data.token.substring(0, 20));
+  
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  
+  // ✅ IMMEDIATELY verify it was saved
+  const savedToken = localStorage.getItem('token');
+  console.log('✅ Saved token verification:', savedToken ? 'Saved (length: ' + savedToken.length + ')' : 'FAILED TO SAVE!');
+  
+  if (!savedToken) {
+    console.error('❌ CRITICAL: Token not saved to localStorage!');
+    setError('Login failed. Please try again.');
+    setLoading(false);
+    return;
+  }
+  
+  onLogin(data.user);
+}
       
       // ✅ Small delay to ensure storage is complete
       setTimeout(() => {
