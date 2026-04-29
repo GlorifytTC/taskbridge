@@ -617,9 +617,12 @@ exports.selfSignup = async (req, res) => {
     } = req.body;
     
     console.log('📝 Self-signup attempt:', email);
+    console.log('   Name:', name);
+    console.log('   Company:', companyName);
     
     // Validate required fields
     if (!name || !email || !password) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide name, email and password.' 
@@ -627,6 +630,7 @@ exports.selfSignup = async (req, res) => {
     }
     
     if (password.length < 6) {
+      console.log('❌ Password too short');
       return res.status(400).json({ 
         success: false, 
         message: 'Password must be at least 6 characters long.' 
@@ -636,21 +640,25 @@ exports.selfSignup = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
+      console.log('❌ User already exists:', email);
       return res.status(400).json({ 
         success: false, 
         message: 'An account with this email already exists. Please login instead.' 
       });
     }
     
-    // Check if organization name is already taken
-    const orgName = companyName || `${name}'s Organization`;
-    const existingOrg = await Organization.findOne({ name: orgName });
-    if (existingOrg) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Organization name "${orgName}" is already taken. Please choose a different company name.` 
-      });
+    // Generate unique organization name if needed
+    let orgName = companyName || `${name}'s Organization`;
+    let orgNameCounter = 1;
+    let originalOrgName = orgName;
+    
+    // Check if organization name exists and make it unique
+    while (await Organization.findOne({ name: orgName })) {
+      orgName = `${originalOrgName} (${orgNameCounter})`;
+      orgNameCounter++;
     }
+    
+    console.log('📝 Using organization name:', orgName);
     
     // Create organization (14-day trial)
     const trialEndDate = new Date();
@@ -672,6 +680,8 @@ exports.selfSignup = async (req, res) => {
         dateFormat: 'YYYY-MM-DD'
       }
     });
+    
+    console.log('✅ Organization created:', organization.name);
     
     // Create default branch
     const defaultBranch = await Branch.create({
@@ -719,10 +729,12 @@ exports.selfSignup = async (req, res) => {
       companyName: companyName || '',
       companySize: companySize || '1-10',
       phoneNumber: phoneNumber || '',
-      signupIP: req.ip,
-      signupUserAgent: req.headers['user-agent'],
+      signupIP: req.ip || req.connection.remoteAddress,
+      signupUserAgent: req.headers['user-agent'] || 'unknown',
       paymentStatus: 'trial'
     });
+    
+    console.log('✅ User created:', user.email);
     
     // Create subscription record
     const Subscription = require('../models/Subscription');
@@ -747,10 +759,16 @@ exports.selfSignup = async (req, res) => {
       }
     });
     
-    // Send verification email
-    const { sendVerificationEmail } = require('../utils/emailService');
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    await sendVerificationEmail(user, verificationUrl);
+    // Send verification email (try-catch so signup still works if email fails)
+    try {
+      const { sendVerificationEmail } = require('../utils/emailService');
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+      await sendVerificationEmail(user, verificationUrl);
+      console.log('✅ Verification email sent');
+    } catch (emailError) {
+      console.error('⚠️ Failed to send verification email:', emailError.message);
+      // Don't fail the signup if email fails - user can request resend
+    }
     
     console.log('✅ Self-signup successful:', email);
     
@@ -766,21 +784,30 @@ exports.selfSignup = async (req, res) => {
     
     // Handle duplicate key errors with user-friendly messages
     if (error.code === 11000) {
-      if (error.keyPattern?.name) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'This organization name is already taken. Please choose a different company name.' 
-        });
-      }
       if (error.keyPattern?.email) {
         return res.status(400).json({ 
           success: false, 
           message: 'This email is already registered. Please login instead.' 
         });
       }
+      if (error.keyPattern?.name) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Organization name already taken. Please choose a different company name.' 
+        });
+      }
       return res.status(400).json({ 
         success: false, 
         message: 'Duplicate entry. Please check your information and try again.' 
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        success: false, 
+        message: messages.join('. ') 
       });
     }
     
