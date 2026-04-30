@@ -20,13 +20,19 @@ router.get('/plans', getPlans);
 
 // Subscription management
 router.route('/')
-  .get(getSubscription)
-  .put(authorize('superadmin', 'master'), changePlan);
+  .get(getSubscription);
 
-router.put('/cancel', authorize('superadmin', 'master'), cancelSubscription);
-router.put('/renew', authorize('superadmin', 'master'), renewSubscription);
+// ✅ PUT for changing plan (needs organization ID)
+router.put('/:id/plan', authorize('superadmin', 'master'), changePlan);
+
+// ✅ POST for cancelling (with organization ID)
+router.post('/:id/cancel', authorize('superadmin', 'master'), cancelSubscription);
+
+// ✅ POST for renewing (with organization ID)
+router.post('/:id/renew', authorize('superadmin', 'master'), renewSubscription);
+
+// Get invoices for current user's organization
 router.get('/invoices', getInvoices);
-
 
 // Limit check endpoints
 router.get('/can-add-employee', canAddEmployee);

@@ -264,22 +264,59 @@ exports.changePlan = async (req, res) => {
 };
 
 // @desc    Cancel subscription (stop auto-renew)
-// @route   PUT /api/organizations/:id/cancel-subscription
+// @route   POST /api/subscriptions/cancel
+// @access  Private/SuperAdmin/Master
 exports.cancelSubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({ organization: req.params.id });
+    const subscription = await Subscription.findOne({ 
+      organization: req.user.organization 
+    });
+    
     if (!subscription) {
-      return res.status(404).json({ message: 'Subscription not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Subscription not found' 
+      });
     }
     
-    await subscription.cancel();
+    // Cancel the subscription
+    subscription.autoRenew = false;
+    subscription.cancelledAt = new Date();
+    subscription.status = 'cancelled';
+    await subscription.save();
+    
+    // Also update organization
+    await Organization.findByIdAndUpdate(req.user.organization, {
+      'subscription.status': 'cancelled'
+    });
+    
+    // Create audit log
+    await AuditLog.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      action: 'cancel',
+      entityType: 'subscription',
+      entityId: subscription._id,
+      changes: { 
+        cancelledAt: new Date(),
+        plan: subscription.plan,
+        endDate: subscription.endDate
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
     
     res.json({ 
       success: true, 
-      message: 'Subscription cancelled. Will not renew after end date.' 
+      message: 'Subscription cancelled. You will have access until ' + subscription.endDate.toLocaleDateString()
     });
+    
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Cancel subscription error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error: ' + error.message 
+    });
   }
 };
 
