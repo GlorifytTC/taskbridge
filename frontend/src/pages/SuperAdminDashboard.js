@@ -1714,7 +1714,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {applications.map(app => (
                     <tr key={app._id} style={styles.tableRow}>
-                      <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.employee?.name}</tr>
+                      <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.employee?.name}</td>
                       <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
                       <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
                       {!isSmall && <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.task?.startTime} - {app.task?.endTime}</td>}
