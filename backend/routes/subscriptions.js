@@ -26,7 +26,9 @@ router.route('/')
 router.put('/cancel', authorize('superadmin', 'master'), cancelSubscription);
 router.put('/renew', authorize('superadmin', 'master'), renewSubscription);
 router.get('/invoices', getInvoices);
-
+// Add these routes
+router.post('/create-payment-intent', authorize('superadmin', 'master'), createPaymentIntent);
+router.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 // Limit check endpoints
 router.get('/can-add-employee', canAddEmployee);
 router.get('/can-add-branch', canAddBranch);

@@ -525,6 +525,64 @@ exports.resendVerificationEmail = async (user) => {
   return await exports.sendVerificationEmail(user, verificationUrl);
 };
 
+// Send invoice email with PDF attachment
+exports.sendInvoiceEmail = async (user, invoice, pdfPath) => {
+  const subject = `Invoice ${invoice.invoiceNumber} from TaskBridge`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #00f5ff, #00d1ff); padding: 24px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">📄 Invoice #${invoice.invoiceNumber}</h1>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello <strong>${user.name}</strong>,</p>
+        
+        <p style="color: #334155;">Thank you for your payment! Your invoice is attached to this email.</p>
+        
+        <div style="background: #e2e8f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 4px 0; color: #0f172a;"><strong>Date:</strong> ${new Date(invoice.createdAt).toLocaleDateString()}</p>
+          <p style="margin: 4px 0; color: #0f172a;"><strong>Plan:</strong> ${invoice.description}</p>
+          <p style="margin: 4px 0; color: #0f172a;"><strong>Amount:</strong> ${invoice.amount} SEK</p>
+          <p style="margin: 4px 0; color: #0f172a;"><strong>VAT (25%):</strong> ${invoice.vat?.amount || 0} SEK</p>
+          <p style="margin: 4px 0; color: #0f172a;"><strong>Total:</strong> ${invoice.totalAmount} SEK</p>
+        </div>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${process.env.FRONTEND_URL}/billing" 
+             style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            View Billing Dashboard →
+          </a>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #94a3b8; font-size: 11px; text-align: center;">
+          TaskBridge - Smart Workforce Management<br>
+          VAT Number: SE12345678901
+        </p>
+      </div>
+    </div>
+  `;
+  
+  const fs = require('fs');
+  const invoiceAttachment = fs.readFileSync(pdfPath);
+  
+  await exports.sendEmail({
+    to: user.email,
+    subject,
+    html,
+    attachments: [{
+      filename: `invoice-${invoice.invoiceNumber}.pdf`,
+      content: invoiceAttachment,
+      contentType: 'application/pdf'
+    }]
+  });
+  
+  // Clean up
+  fs.unlinkSync(pdfPath);
+};
+
 // Send login notification (optional - for new device logins)
 exports.sendLoginNotification = async (user, ipAddress, userAgent, isNewDevice = true) => {
   if (!isNewDevice) return; // Only send for new devices
@@ -574,7 +632,6 @@ exports.sendLoginNotification = async (user, ipAddress, userAgent, isNewDevice =
   await exports.sendEmail({ to: user.email, subject, html });
 };
 
-// Send subscription expiration email
 // Send subscription expiration email
 exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
   const subject = `⚠️ Subscription Expiration Notice - ${daysLeft} days left`;

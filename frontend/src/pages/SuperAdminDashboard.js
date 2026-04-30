@@ -7,7 +7,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
@@ -54,6 +54,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
   const [showBranchAssignmentModal, setShowBranchAssignmentModal] = useState(false);
   const [selectedAdminForBranch, setSelectedAdminForBranch] = useState(null);
   const [language, setLanguage] = useState(() => {
@@ -79,6 +81,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const quickQuestions = {
     en: [
@@ -108,7 +111,11 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     itemId: null,
     type: ''
   });
-
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState(1);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [editingAdminId, setEditingAdminId] = useState(null);
   const [editAdminData, setEditAdminData] = useState({});
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
@@ -193,7 +200,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []); // Empty deps — uses refs so never stale
+  }, []);
 
   const fetchEmployeesForFilter = async () => {
     try {
@@ -346,7 +353,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       changes: 'Changes', limitWarning: 'You have reached the limit for this feature. Please upgrade your plan.',
       upgradeRequired: 'Upgrade Required', premiumFeatures: 'Premium Features',
       roomAssignmentDesc: 'Advanced room and shift assignment system. Automatically match groups to available rooms and workers based on skills, capacity, and availability.',
-      accessRoomAssignment: 'Access Room Assignment'
+      accessRoomAssignment: 'Access Room Assignment',
+      billing: 'Billing'
     },
     sv: {
       dashboard: 'Instrumentpanel', admins: 'Administratörer', staff: 'Personal',
@@ -376,7 +384,8 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       limitWarning: 'Du har nått gränsen för denna funktion. Uppgradera din plan.',
       upgradeRequired: 'Uppgradering krävs', premiumFeatures: 'Premiumfunktioner',
       roomAssignmentDesc: 'Avancerat system för rums- och skifttilldelning.',
-      accessRoomAssignment: 'Öppna Rumsplacering'
+      accessRoomAssignment: 'Öppna Rumsplacering',
+      billing: 'Fakturering'
     }
   };
 
@@ -541,6 +550,139 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       showToast(language === 'en' ? 'Error changing email' : 'Fel vid e-poständring', 'error');
     }
   };
+  
+  // Check if subscription is active - BLOCK ACCESS IF EXPIRED
+  const checkSubscriptionAccess = useCallback(() => {
+    if (!subscriptionData) return true;
+    
+    const isExpired = subscriptionData.status === 'expired' || 
+                      subscriptionData.status === 'paused' ||
+                      (subscriptionData.endDate && new Date(subscriptionData.endDate) < new Date());
+    const isActive = subscriptionData.status === 'active' || subscriptionData.status === 'trial';
+    
+    if (isExpired && !isActive) {
+      setSubscriptionBlocked(true);
+      return false;
+    }
+    setSubscriptionBlocked(false);
+    return true;
+  }, [subscriptionData]);
+
+  // Fetch invoices
+  const fetchInvoices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions/invoices', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) setInvoices(data.data || []);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    }
+  };
+
+  // Change subscription plan
+  const handleChangeSubscriptionPlan = async () => {
+    if (!selectedPlan) {
+      showToast('Please select a plan', 'error');
+      return;
+    }
+    
+    setPaymentLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions/plan', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          duration: selectedDuration
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast(`Plan changed to ${selectedPlan.toUpperCase()}!`, 'success');
+        setShowPaymentModal(false);
+        setSelectedPlan(null);
+        fetchSubscriptionData();
+        fetchDashboardData(false);
+      } else {
+        showToast(data.message || 'Failed to change plan', 'error');
+      }
+    } catch (error) {
+      console.error('Error changing plan:', error);
+      showToast('Error changing plan', 'error');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Cancel subscription at end of period
+  const handleCancelSubscription = async () => {
+    setCancellingSubscription(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast('Subscription will be cancelled at the end of current period', 'success');
+        setShowCancelModal(false);
+        fetchSubscriptionData();
+      } else {
+        showToast(data.message || 'Failed to cancel subscription', 'error');
+      }
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      showToast('Error cancelling subscription', 'error');
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
+
+  // Calculate total with VAT (25%)
+  const calculateTotalWithVAT = (plan, duration) => {
+    const planPrices = {
+      basic: 399, standard: 799, pro: 1299,
+      business: 2499, enterprise: 4999, corporate: 9999
+    };
+    let total = (planPrices[plan] || 0) * duration;
+    if (duration >= 3) total = total * 0.95;
+    if (duration >= 6) total = total * 0.9;
+    if (duration >= 12) total = total * 0.85;
+    return Math.round(total);
+  };
+
+  const calculateVAT = (plan, duration) => {
+    return Math.round(calculateTotalWithVAT(plan, duration) * 0.25);
+  };
+
+  // Check subscription status periodically
+  useEffect(() => {
+    if (subscriptionData) {
+      checkSubscriptionAccess();
+    }
+  }, [subscriptionData, checkSubscriptionAccess]);
+
+  // Fetch invoices when needed
+  useEffect(() => {
+    if (activeTab === 'billing') {
+      fetchInvoices();
+    }
+  }, [activeTab]);
 
   // Edit helpers
   const startEditAdmin = (admin) => {
@@ -841,26 +983,26 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       else { const data = await response.json(); showToast(data.message || 'Failed to delete branch', 'error'); }
     } catch (error) { showToast('Error deleting branch', 'error'); }
   };
-// Add this useEffect right after your state declarations
-useEffect(() => {
-  // Wait for token to be available
-  const token = localStorage.getItem('token');
-  console.log('🔄 SuperAdminDashboard mounted, token exists:', !!token);
   
-  if (!token) {
-    console.error('❌ No token in SuperAdminDashboard, redirecting to login');
-    onLogout();
-    return;
-  }
+  // Mount effect
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('🔄 SuperAdminDashboard mounted, token exists:', !!token);
+    
+    if (!token) {
+      console.error('❌ No token in SuperAdminDashboard, redirecting to login');
+      onLogout();
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      fetchDashboardData(true);
+      fetchSubscriptionData();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
-  // Small delay to ensure everything is ready
-  const timer = setTimeout(() => {
-    fetchDashboardData(true);
-    fetchSubscriptionData();
-  }, 500);
-  
-  return () => clearTimeout(timer);
-}, []); // Empty dependency array - runs once on mount
   const handleDeleteJob = async (jobId, jobName) => {
     const employeesWithJob = employees.filter(e => e.jobDescription?._id === jobId).length;
     if (employeesWithJob > 0) { showToast(language === 'en' ? `Cannot delete "${jobName}" - ${employeesWithJob} employee(s) have this role.` : `Kan inte radera "${jobName}" - ${employeesWithJob} anställd(a) har denna roll.`, 'error'); return; }
@@ -908,10 +1050,60 @@ useEffect(() => {
   const handleDeleteAccount = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.ok) { localStorage.removeItem('token'); onLogout(); }
-      else { const data = await response.json(); showToast(data.message || 'Failed to delete account', 'error'); }
-    } catch (error) { showToast('Failed to delete account', 'error'); }
+      
+      // Check if user has active subscription with remaining days
+      if (subscriptionData && subscriptionData.daysRemaining > 0 && subscriptionData.status === 'active') {
+        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/schedule-deletion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ 
+            scheduledDate: subscriptionData.endDate,
+            reason: 'User requested deletion at subscription end'
+          })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+          showToast(`Account scheduled for deletion on ${new Date(subscriptionData.endDate).toLocaleDateString()}. You can cancel this request until then.`, 'info');
+          setShowDeleteAccountModal(false);
+        } else {
+          showToast(data.message || 'Failed to schedule deletion', 'error');
+        }
+      } else {
+        const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/account', { 
+          method: 'DELETE', 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        if (response.ok) { 
+          localStorage.removeItem('token'); 
+          onLogout(); 
+        } else { 
+          const data = await response.json(); 
+          showToast(data.message || 'Failed to delete account', 'error'); 
+        }
+      }
+    } catch (error) { 
+      showToast('Failed to delete account', 'error'); 
+    }
+  };
+
+  const handleCancelDeletionRequest = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/auth/cancel-deletion', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        showToast('Deletion request cancelled. Your account will remain active.', 'success');
+        fetchDashboardData(false);
+      } else {
+        showToast('Failed to cancel deletion request', 'error');
+      }
+    } catch (error) {
+      showToast('Error cancelling deletion request', 'error');
+    }
   };
 
   const handleLogout = () => { localStorage.removeItem('token'); if (onLogout) onLogout(); };
@@ -941,22 +1133,28 @@ useEffect(() => {
         response = language === 'en' ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter details and click **Create**" : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i och klicka **Skapa**";
       } else if (input.includes('subscription') || input.includes('plan')) {
         response = language === 'en' ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}` : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}`;
+      } else if (input.includes('branch') || input.includes('create branch') || input.includes('avdelning')) {
+        response = language === 'en' ? "🏢 **To create a branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter branch name and city\n4. Click **Create**" : "🏢 **För att skapa en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i avdelningsnamn och stad\n4. Klicka på **Skapa**";
+      } else if (input.includes('report') || input.includes('generate report') || input.includes('rapport')) {
+        response = language === 'en' ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Select your filters (branch, role, employee, date range)\n3. Click **Generate Report**\n4. Export as PDF or Excel if needed" : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Välj dina filter (avdelning, roll, anställd, datumintervall)\n3. Klicka på **Generera rapport**\n4. Exportera som PDF eller Excel vid behov";
+      } else if (input.includes('reset password') || input.includes('lösenord')) {
+        response = language === 'en' ? "🔑 **To reset a user's password:**\n\n1. Go to **Admins** or **Staff** tab\n2. Find the user\n3. Click the **🔑** button next to their name\n4. Enter and confirm the new password\n5. Click **Reset Password**" : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Administratörer** eller **Personal**\n2. Hitta användaren\n3. Klicka på **🔑** knappen bredvid deras namn\n4. Ange och bekräfta det nya lösenordet\n5. Klicka på **Återställ lösenord**";
+      } else if (input.includes('change plan') || input.includes('subscription plan') || input.includes('uppgradera')) {
+        response = language === 'en' ? "💰 **To change subscription plan:**\n\n1. Click on the **Billing** tab\n2. View available plans (Basic to Corporate)\n3. Click **Upgrade to [Plan Name]**\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment" : "💰 **För att ändra prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer (Basic till Corporate)\n3. Klicka på **Uppgradera till [Plan-namn]**\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning";
+      } else if (input.includes('cancel') || input.includes('avbryt')) {
+        response = language === 'en' ? "❌ **To cancel subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n4. You'll keep access until the end of your billing period" : "❌ **För att avbryta prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n4. Du behåller åtkomst till slutet av faktureringsperioden";
       } else {
-        response = language === 'en' ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with creating tasks, adding employees, managing branches, generating reports, and more!\n\n**Try clicking one of the quick questions below!**" : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med att skapa uppgifter, lägga till anställda, hantera avdelningar och mer!\n\n**Prova att klicka på en av snabbfrågorna nedan!**";
+        response = language === 'en' ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n• Creating tasks\n• Adding employees\n• Managing branches\n• Generating reports\n• Resetting passwords\n• Changing subscription plans\n• Cancelling subscriptions\n\n**Try clicking one of the quick questions below!**" : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n• Skapa uppgifter\n• Lägga till anställda\n• Hantera avdelningar\n• Generera rapporter\n• Återställa lösenord\n• Ändra prenumerationsplaner\n• Avbryta prenumerationer\n\n**Prova att klicka på en av snabbfrågorna nedan!**";
       }
       setChatMessages(prev => [...prev, { text: response, sender: 'ai', time: new Date().toLocaleTimeString() }]);
       setIsAiTyping(false);
     }, 800);
   };
 
-  // Modal overlay mousedown — record whether press started inside modal content
   const handleOverlayMouseDown = (e) => {
-    // If mousedown target is not the overlay itself, it started inside the modal
     mouseDownInsideModal.current = e.target !== e.currentTarget;
   };
 
-  // Only close if BOTH mousedown AND mouseup (click) happened on the overlay
-  // This prevents closing when user drags text selection out of the modal
   const handleModalClose = (setter) => (e) => {
     if (e.target === e.currentTarget && !mouseDownInsideModal.current) {
       setter(false);
@@ -1115,6 +1313,7 @@ useEffect(() => {
           { key: 'applications', label: lang.requests },
           { key: 'reports', label: lang.reports },
           { key: 'settings', label: lang.settings },
+          { key: 'billing', label: lang.billing },
         ].map(tab => (
           <button
             key={tab.key}
@@ -1133,7 +1332,7 @@ useEffect(() => {
       </div>
 
       <div style={{ ...styles.content, padding: isSmall ? '12px' : '16px' }}>
-
+        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <div>
             <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px' }}>{lang.welcome}, {user?.name}!</h2>
@@ -1150,7 +1349,30 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ==================== ADMINS TABLE ==================== */}
+        {/* Cancel Subscription Modal */}
+        {showCancelModal && (
+          <div style={styles.modalOverlay} onClick={() => setShowCancelModal(false)}>
+            <div style={styles.modal} onClick={e => e.stopPropagation()}>
+              <h2 style={styles.modalTitle}>Cancel Subscription</h2>
+              <p style={{ color: 'white', marginBottom: '16px' }}>
+                Are you sure you want to cancel your subscription?
+              </p>
+              <p style={{ color: '#f59e0b', marginBottom: '16px', fontSize: '14px' }}>
+                ⚠️ You will continue to have access until {subscriptionData?.endDate ? new Date(subscriptionData.endDate).toLocaleDateString() : 'the end of your billing period'}
+              </p>
+              <div style={styles.modalButtons}>
+                <button onClick={() => setShowCancelModal(false)} style={styles.cancelButton}>
+                  Keep Subscription
+                </button>
+                <button onClick={handleCancelSubscription} style={styles.confirmDeleteButton}>
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admins Table */}
         {activeTab === 'admins' && (
           <div>
             <div style={{ ...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center' }}>
@@ -1222,7 +1444,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ==================== EMPLOYEES TABLE ==================== */}
+        {/* Employees Table */}
         {activeTab === 'employees' && (
           <div>
             <div style={{ ...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center' }}>
@@ -1291,7 +1513,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ==================== BRANCHES TABLE ==================== */}
+        {/* Branches Table */}
         {activeTab === 'branches' && (
           <div>
             <div style={{ ...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center' }}>
@@ -1350,7 +1572,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ==================== JOBS TABLE ==================== */}
+        {/* Jobs Table */}
         {activeTab === 'jobs' && (
           <div>
             <div style={{ ...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center' }}>
@@ -1404,7 +1626,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ==================== TASKS TABLE ==================== */}
+        {/* Tasks Table */}
         {activeTab === 'tasks' && (
           <div>
             <div style={{ ...styles.sectionHeader, flexDirection: isSmall ? 'column' : 'row', alignItems: isSmall ? 'stretch' : 'center' }}>
@@ -1472,6 +1694,7 @@ useEffect(() => {
           </div>
         )}
 
+        {/* Applications Tab */}
         {activeTab === 'applications' && (
           <div>
             <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px' }}>All Applications</h2>
@@ -1491,7 +1714,7 @@ useEffect(() => {
                 <tbody>
                   {applications.map(app => (
                     <tr key={app._id} style={styles.tableRow}>
-                      <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.employee?.name}</td>
+                      <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.employee?.name}</tr>
                       <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{isSmall ? app.task?.title?.substring(0, 15) + (app.task?.title?.length > 15 ? '...' : '') : app.task?.title}</td>
                       <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.task?.date ? new Date(app.task.date).toLocaleDateString() : '-'}</td>
                       {!isSmall && <td style={{ ...styles.td, fontSize: isSmall ? '11px' : '12px', color: 'white' }}>{app.task?.startTime} - {app.task?.endTime}</td>}
@@ -1515,6 +1738,7 @@ useEffect(() => {
           </div>
         )}
 
+        {/* Reports Tab */}
         {activeTab === 'reports' && (
           <div>
             <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px' }}>{lang.reportManagement}</h2>
@@ -1592,6 +1816,7 @@ useEffect(() => {
           </div>
         )}
 
+        {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div>
             <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px' }}>{lang.settingsManagement}</h2>
@@ -1614,6 +1839,138 @@ useEffect(() => {
           </div>
         )}
 
+        {/* Billing Tab */}
+        {activeTab === 'billing' && (
+          <div>
+            <h2 style={{...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px'}}>
+              💳 Billing & Subscription
+            </h2>
+            
+            {/* Current Subscription Card */}
+            <div style={styles.currentSubscriptionCard}>
+              <h3 style={styles.cardTitle}>Current Plan</h3>
+              <div style={styles.currentPlanInfo}>
+                <div>
+                  <span style={styles.planNameBadge}>
+                    {subscriptionData?.plan?.toUpperCase() || 'TRIAL'}
+                  </span>
+                  <span style={styles.planPriceDisplay}>
+                    {subscriptionData?.price?.monthlyPrice || 0} SEK/month
+                  </span>
+                </div>
+                <div style={styles.planDetailsGrid}>
+                  <div>📅 Days left: <strong>{subscriptionData?.daysRemaining || 0}</strong></div>
+                  <div>👥 Employees: <strong>{usageData.employees?.current || 0}/{subscriptionData?.features?.maxEmployees || 10}</strong></div>
+                  <div>🏢 Branches: <strong>{usageData.branches?.current || 0}/{subscriptionData?.features?.maxBranches || 2}</strong></div>
+                  <div>📧 Emails/month: <strong>{usageData.emails?.current || 0}/{subscriptionData?.features?.maxEmailsPerMonth || 50}</strong></div>
+                </div>
+                {subscriptionData?.autoRenew && (
+                  <div style={styles.autoRenewBadge}>✅ Auto-renewal enabled</div>
+                )}
+                {subscriptionData?.status === 'expired' && (
+                  <div style={styles.expiredWarning}>⚠️ Your subscription has expired! Please upgrade to continue using TaskBridge.</div>
+                )}
+                
+                {/* Cancel Subscription Button - FIXED POSITION */}
+                {subscriptionData?.status === 'active' && (
+                  <button 
+                    onClick={() => setShowCancelModal(true)} 
+                    style={styles.cancelSubscriptionButton}
+                    disabled={cancellingSubscription}
+                  >
+                    {cancellingSubscription ? 'Processing...' : '❌ Cancel Subscription'}
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Available Plans */}
+            <h3 style={{...styles.sectionTitle, fontSize: '18px', marginTop: '24px'}}>📊 Available Plans</h3>
+            <div style={styles.plansGrid}>
+              {[
+                { id: 'basic', name: 'Basic', price: 399, employees: 25, branches: 3, emails: 200, admins: 2, color: '#6b7280' },
+                { id: 'standard', name: 'Standard', price: 799, employees: 50, branches: 5, emails: 400, admins: 3, color: '#10b981' },
+                { id: 'pro', name: 'Pro', price: 1299, employees: 100, branches: 8, emails: 700, admins: 5, color: '#3b82f6' },
+                { id: 'business', name: 'Business', price: 2499, employees: 250, branches: 15, emails: 2000, admins: 10, color: '#f59e0b' },
+                { id: 'enterprise', name: 'Enterprise', price: 4999, employees: 500, branches: 30, emails: 5000, admins: 20, color: '#ec4899' },
+                { id: 'corporate', name: 'Corporate', price: 9999, employees: 1000, branches: 60, emails: 12000, admins: 50, color: '#8b5cf6' }
+              ].map(plan => (
+                <div key={plan.id} style={{...styles.planCard, borderTop: `4px solid ${plan.color}`}}>
+                  <h4 style={styles.planCardTitle}>{plan.name}</h4>
+                  <div style={styles.planCardPrice}>{plan.price}<span>SEK/month</span></div>
+                  <ul style={styles.planCardFeatures}>
+                    <li>👥 Up to {plan.employees} employees</li>
+                    <li>🏢 Up to {plan.branches} branches</li>
+                    <li>📧 {plan.emails} emails/month</li>
+                    <li>👔 Up to {plan.admins} admins</li>
+                  </ul>
+                  <button 
+                    onClick={() => {
+                      setSelectedPlan(plan.id);
+                      setSelectedDuration(1);
+                      setShowPaymentModal(true);
+                    }}
+                    style={styles.upgradePlanButton}
+                    disabled={subscriptionData?.plan === plan.id}
+                  >
+                    {subscriptionData?.plan === plan.id ? '✓ Current Plan' : `Upgrade to ${plan.name}`}
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            {/* Invoice History */}
+            {invoices.length > 0 && (
+              <div style={styles.invoiceSection}>
+                <h3 style={{...styles.sectionTitle, fontSize: '18px'}}>📄 Invoice History</h3>
+                <div style={styles.tableContainer}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr style={styles.tableHeaderRow}>
+                        <th>Invoice #</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>VAT (25%)</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map(inv => (
+                        <tr key={inv._id} style={styles.tableRow}>
+                          <td style={styles.td}>{inv.invoiceNumber}</td>
+                          <td style={styles.td}>{new Date(inv.createdAt).toLocaleDateString()}</td>
+                          <td style={styles.td}>{inv.amount} SEK</td>
+                          <td style={styles.td}>{inv.vat?.amount || 0} SEK</td>
+                          <td style={styles.td}><strong>{inv.totalAmount} SEK</strong></td>
+                          <td style={styles.td}><span style={styles.paidBadge}>✓ Paid</span></td>
+                          <td style={styles.td}>
+                            <button style={styles.downloadInvoiceButton} onClick={() => window.open(inv.pdfUrl)}>
+                              📄 PDF
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* Contact Sales */}
+            <div style={styles.contactSalesCard}>
+              <i className="fas fa-headset"></i>
+              <div>
+                <h4>Need a custom plan?</h4>
+                <p>Contact our sales team for enterprise pricing and custom features</p>
+              </div>
+              <a href="mailto:sales@taskbridge.com" style={styles.contactSalesLink}>Contact Sales →</a>
+            </div>
+          </div>
+        )}
+
+        {/* Premium Tab */}
         {activeTab === 'premium' && (
           <div>
             <h2 style={{ ...styles.sectionTitle, fontSize: isSmall ? '14px' : '16px' }}>⭐ {lang.premiumFeatures}</h2>
@@ -1640,6 +1997,79 @@ useEffect(() => {
           </div>
         )}
       </div>
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentModal && selectedPlan && (
+        <div style={styles.modalOverlay} onClick={() => setShowPaymentModal(false)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Confirm Plan Change</h2>
+            
+            <div style={styles.paymentSummaryCard}>
+              <p><strong>📋 Plan:</strong> {selectedPlan?.toUpperCase()}</p>
+              <p><strong>⏱️ Duration:</strong> {selectedDuration} month(s)</p>
+              <div style={styles.priceBreakdown}>
+                <p>Subtotal: {calculateTotalWithVAT(selectedPlan, selectedDuration)} SEK</p>
+                <p>VAT (25%): {calculateVAT(selectedPlan, selectedDuration)} SEK</p>
+                <p style={styles.totalAmount}>Total: {calculateTotalWithVAT(selectedPlan, selectedDuration) + calculateVAT(selectedPlan, selectedDuration)} SEK</p>
+              </div>
+              
+              <div style={styles.durationSelector}>
+                <label>Select Duration:</label>
+                <div style={styles.durationButtons}>
+                  {[1, 3, 6, 12].map(d => (
+                    <button 
+                      key={d}
+                      onClick={() => setSelectedDuration(d)}
+                      style={{
+                        ...styles.durationButton,
+                        background: selectedDuration === d ? '#00d1ff' : 'rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      {d} {d === 1 ? 'month' : 'months'}
+                      {d >= 3 && <span style={styles.discountBadge}>-{d === 3 ? 5 : d === 6 ? 10 : 15}%</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowPaymentModal(false)} style={styles.cancelButton}>
+                Cancel
+              </button>
+              <button 
+                onClick={handleChangeSubscriptionPlan} 
+                style={styles.confirmPaymentButton}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? 'Processing...' : 'Confirm & Pay'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBSCRIPTION BLOCKED OVERLAY */}
+      {subscriptionBlocked && (
+        <div style={styles.subscriptionBlockedOverlay}>
+          <div style={styles.subscriptionBlockedModal}>
+            <i className="fas fa-lock" style={{ fontSize: '64px', color: '#ef4444', marginBottom: '20px' }}></i>
+            <h2 style={{ color: 'white', marginBottom: '16px' }}>Subscription Required</h2>
+            <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '24px', textAlign: 'center' }}>
+              Your subscription has {subscriptionData?.status === 'expired' ? 'expired' : 'been paused'}.<br />
+              Please upgrade your plan to continue using TaskBridge features.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+              <button onClick={() => handleTabChange('billing')} style={styles.upgradeNowButton}>
+                💳 Upgrade Now
+              </button>
+              <button onClick={handleLogout} style={styles.logoutButton}>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ==================== MODALS ==================== */}
       {showAuditModal && (
@@ -1873,6 +2303,12 @@ useEffect(() => {
             <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={e => setProfileData(p => ({ ...p, newPassword: e.target.value }))} style={{ ...styles.input, color: 'white', minHeight: '44px' }} />
             <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={e => setProfileData(p => ({ ...p, confirmPassword: e.target.value }))} style={{ ...styles.input, color: 'white', minHeight: '44px' }} />
             <button onClick={handleUpdateProfile} style={{ ...styles.submitButton, minHeight: '44px' }}>Update Password</button>
+            
+            {/* Cancel Deletion Request Button */}
+            <button onClick={handleCancelDeletionRequest} style={{ ...styles.cancelButton, marginTop: '12px', width: '100%' }}>
+              Cancel Deletion Request
+            </button>
+            
             <div style={styles.dangerZone}>
               <h3 style={{ color: '#ef4444' }}>Danger Zone</h3>
               <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{ ...styles.deleteAccountButton, minHeight: '44px' }}>Delete My Account</button>
@@ -2095,6 +2531,241 @@ const styles = {
   premiumActions: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' },
   premiumButton: { padding: '10px 20px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' },
   upgradeButton: { padding: '10px 20px', background: 'rgba(255,255,255,0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#f59e0b', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' },
+  currentSubscriptionCard: {
+    background: 'rgba(0,209,255,0.1)',
+    borderRadius: '16px',
+    padding: '20px',
+    marginBottom: '24px',
+    border: '1px solid rgba(0,209,255,0.2)'
+  },
+  cardTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#00d1ff',
+    marginBottom: '16px'
+  },
+  currentPlanInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  planNameBadge: {
+    background: '#00d1ff',
+    padding: '4px 12px',
+    borderRadius: '20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: 'white',
+    display: 'inline-block',
+    marginRight: '12px'
+  },
+  planPriceDisplay: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: '#10b981'
+  },
+  planDetailsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gap: '12px',
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.8)'
+  },
+  autoRenewBadge: {
+    background: 'rgba(16,185,129,0.2)',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    fontSize: '12px',
+    color: '#10b981',
+    display: 'inline-block',
+    width: 'fit-content'
+  },
+  expiredWarning: {
+    background: 'rgba(239,68,68,0.2)',
+    padding: '12px',
+    borderRadius: '8px',
+    color: '#f87171',
+    fontSize: '14px',
+    border: '1px solid #ef4444'
+  },
+  plansGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '20px',
+    marginBottom: '32px'
+  },
+  planCard: {
+    background: 'rgba(255,255,255,0.05)',
+    borderRadius: '16px',
+    padding: '20px',
+    border: '1px solid rgba(255,255,255,0.1)',
+    transition: 'transform 0.2s'
+  },
+  planCardTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: '8px'
+  },
+  planCardPrice: {
+    fontSize: '28px',
+    fontWeight: 'bold',
+    color: '#00d1ff',
+    marginBottom: '16px'
+  },
+  planCardFeatures: {
+    listStyle: 'none',
+    padding: 0,
+    marginBottom: '20px',
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.7)'
+  },
+  upgradePlanButton: {
+    width: '100%',
+    padding: '10px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  invoiceSection: {
+    marginTop: '24px'
+  },
+  paidBadge: {
+    background: '#10b981',
+    padding: '4px 8px',
+    borderRadius: '20px',
+    fontSize: '11px',
+    color: 'white'
+  },
+  downloadInvoiceButton: {
+    background: '#3b82f6',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '11px'
+  },
+  contactSalesCard: {
+    background: 'rgba(245,158,11,0.1)',
+    borderRadius: '16px',
+    padding: '20px',
+    marginTop: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '16px',
+    border: '1px solid rgba(245,158,11,0.3)'
+  },
+  contactSalesLink: {
+    background: '#f59e0b',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    color: 'white',
+    textDecoration: 'none',
+    fontWeight: '500'
+  },
+  paymentSummaryCard: {
+    background: 'rgba(255,255,255,0.05)',
+    borderRadius: '12px',
+    padding: '20px',
+    marginBottom: '20px'
+  },
+  priceBreakdown: {
+    marginTop: '12px',
+    paddingTop: '12px',
+    borderTop: '1px solid rgba(255,255,255,0.1)'
+  },
+  totalAmount: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#10b981',
+    marginTop: '8px'
+  },
+  durationSelector: {
+    marginTop: '16px'
+  },
+  durationButtons: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '8px',
+    flexWrap: 'wrap'
+  },
+  durationButton: {
+    padding: '8px 16px',
+    background: 'rgba(255,255,255,0.1)',
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '12px',
+    position: 'relative'
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: '-8px',
+    right: '-8px',
+    background: '#10b981',
+    padding: '2px 4px',
+    borderRadius: '4px',
+    fontSize: '8px'
+  },
+  confirmPaymentButton: {
+    flex: 1,
+    padding: '12px',
+    background: 'linear-gradient(135deg, #10b981, #059669)',
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  subscriptionBlockedOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.95)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    backdropFilter: 'blur(10px)'
+  },
+  subscriptionBlockedModal: {
+    background: '#1e293b',
+    borderRadius: '24px',
+    padding: '40px',
+    textAlign: 'center',
+    maxWidth: '450px',
+    width: '90%',
+    border: '1px solid rgba(239,68,68,0.3)'
+  },
+  upgradeNowButton: {
+    padding: '12px 24px',
+    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    cursor: 'pointer',
+    fontWeight: '500'
+  },
+  cancelSubscriptionButton: {
+    marginTop: '12px',
+    padding: '10px 16px',
+    background: 'rgba(239,68,68,0.2)',
+    border: '1px solid #ef4444',
+    borderRadius: '8px',
+    color: '#ef4444',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500'
+  }
 };
 
 export default SuperAdminDashboard;
