@@ -7,7 +7,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [previousTab, setPreviousTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showDeleteAccountModal, setShowDeleteAccountModal] useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
