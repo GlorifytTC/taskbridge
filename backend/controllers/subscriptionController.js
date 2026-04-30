@@ -115,7 +115,52 @@ exports.getSubscription = async (req, res) => {
     res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
+// @desc    Create Stripe payment intent
+// @route   POST /api/subscriptions/create-payment-intent
+// @access  Private/SuperAdmin/Master
+exports.createPaymentIntent = async (req, res) => {
+  try {
+    const { plan, duration } = req.body;
+    
+    // Plan prices in SEK (including VAT)
+    const PLAN_PRICES = {
+      basic: 399,
+      standard: 799,
+      pro: 1299,
+      business: 2499,
+      enterprise: 4999,
+      corporate: 9999
+    };
+    
+    const amount = PLAN_PRICES[plan] * duration;
+    const vatAmount = amount * 0.25;
+    const totalAmount = amount + vatAmount;
+    
+    // For now, return mock data (replace with actual Stripe later)
+    res.json({
+      success: true,
+      clientSecret: 'mock_secret_' + Date.now(),
+      amount: totalAmount,
+      vatAmount: vatAmount
+    });
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
 
+// @desc    Stripe webhook handler
+// @route   POST /api/subscriptions/webhook
+// @access  Public
+exports.stripeWebhook = async (req, res) => {
+  try {
+    // For now, just acknowledge receipt
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 // @desc    Get all available plans
 // @route   GET /api/subscriptions/plans
 // @access  Private
