@@ -264,12 +264,15 @@ exports.changePlan = async (req, res) => {
 };
 
 // @desc    Cancel subscription (stop auto-renew)
-// @route   POST /api/subscriptions/cancel
+// @route   POST /api/subscriptions/:id/cancel
 // @access  Private/SuperAdmin/Master
 exports.cancelSubscription = async (req, res) => {
   try {
+    const organizationId = req.params.id;
+    
+    // Find subscription by organization ID
     const subscription = await Subscription.findOne({ 
-      organization: req.user.organization 
+      organization: organizationId 
     });
     
     if (!subscription) {
@@ -286,14 +289,14 @@ exports.cancelSubscription = async (req, res) => {
     await subscription.save();
     
     // Also update organization
-    await Organization.findByIdAndUpdate(req.user.organization, {
+    await Organization.findByIdAndUpdate(organizationId, {
       'subscription.status': 'cancelled'
     });
     
     // Create audit log
     await AuditLog.create({
       user: req.user.id,
-      organization: req.user.organization,
+      organization: organizationId,
       action: 'cancel',
       entityType: 'subscription',
       entityId: subscription._id,
@@ -308,7 +311,7 @@ exports.cancelSubscription = async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: 'Subscription cancelled. You will have access until ' + subscription.endDate.toLocaleDateString()
+      message: `Subscription cancelled. Access until ${subscription.endDate.toLocaleDateString()}`
     });
     
   } catch (error) {

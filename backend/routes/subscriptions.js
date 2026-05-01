@@ -18,17 +18,16 @@ router.use(protect);
 // Public plans (authenticated but any role)
 router.get('/plans', getPlans);
 
-// Subscription management
-router.route('/')
-  .get(getSubscription);
+// Get current user's subscription
+router.get('/', getSubscription);
 
-// ✅ PUT for changing plan (needs organization ID)
+// Change plan (requires organization ID)
 router.put('/:id/plan', authorize('superadmin', 'master'), changePlan);
 
-// ✅ POST for cancelling (with organization ID)
+// Cancel subscription (requires organization ID)
 router.post('/:id/cancel', authorize('superadmin', 'master'), cancelSubscription);
 
-// ✅ POST for renewing (with organization ID)
+// Renew subscription (requires organization ID)
 router.post('/:id/renew', authorize('superadmin', 'master'), renewSubscription);
 
 // Get invoices for current user's organization
