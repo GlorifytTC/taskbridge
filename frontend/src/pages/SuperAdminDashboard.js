@@ -681,11 +681,14 @@ const handleChangePlan = async (plan, duration) => {
     const token = localStorage.getItem('token');
     const orgId = user?.organization?._id;
     
+    console.log('Organization ID:', orgId);
+    
     if (!orgId) {
       showToast('Organization ID not found', 'error');
       return;
     }
     
+    // ✅ FIX: Include the orgId in the URL
     const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/subscriptions/${orgId}/plan`, {
       method: 'PUT',
       headers: {
