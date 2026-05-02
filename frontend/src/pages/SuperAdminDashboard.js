@@ -674,46 +674,49 @@ const handleCancelSubscription = async () => {
   const calculateVAT = (plan, duration) => {
     return Math.round(calculateTotalWithVAT(plan, duration) * 0.25);
   };
-const handleChangePlan = async (plan, duration) => {
+const handleChangePlan = async () => {
+  if (!selectedOrg) {
+    showToast('No organization selected', 'error');
+    return;
+  }
+  
   try {
     const token = localStorage.getItem('token');
-    const orgId = user?.organization?._id;
     
-    console.log('Organization ID:', orgId);
-    console.log('Selected plan:', plan);
-    console.log('Duration:', duration);
+    console.log('🔄 Changing plan for organization:', selectedOrg._id);
+    console.log('📋 New plan:', selectedPlan);
+    console.log('⏱️ Duration:', selectedDuration);
     
-    if (!orgId) {
-      showToast('Organization ID not found', 'error');
-      return;
-    }
-    
-    // ✅ FIX: Use the CORRECT endpoint with orgId
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
+    // ✅ CORRECT ENDPOINT - using organization ID
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/plan`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ plan, duration })
+      body: JSON.stringify({ 
+        plan: selectedPlan, 
+        duration: selectedDuration 
+      })
     });
     
-    // Debug response
-    console.log('Response status:', response.status);
+    console.log('📡 Response status:', response.status);
     
     const data = await response.json();
-    console.log('Response data:', data);
+    console.log('📦 Response data:', data);
     
     if (response.ok) {
-      showToast(`Plan changed to ${plan} successfully!`, 'success');
-      fetchSubscriptionData();
+      showToast(language === 'en' ? `Plan changed to ${selectedPlan} successfully!` : `Plan ändrad till ${selectedPlan} framgångsrikt!`, 'success');
       setShowPlanModal(false);
+      setSelectedOrg(null);
+      fetchDashboardData();
+      fetchSubscriptionData();
     } else {
-      showToast(data.message || 'Failed to change plan', 'error');
+      showToast(data.message || (language === 'en' ? 'Failed to change plan' : 'Kunde inte ändra plan'), 'error');
     }
   } catch (error) {
-    console.error('Error changing plan:', error);
-    showToast('Error changing plan', 'error');
+    console.error('❌ Error changing plan:', error);
+    showToast(language === 'en' ? 'Error changing plan' : 'Fel vid planändring', 'error');
   }
 };
   // Check subscription status periodically

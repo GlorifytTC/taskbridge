@@ -1066,8 +1066,10 @@ const MasterDashboard = ({ onLogout, onNavigate }) => {
             
             <div style={styles.modalButtons}>
               <button onClick={() => setShowPlanModal(false)} style={styles.cancelButton}>{lang.cancel}</button>
-              <button onClick={handleChangePlan} style={styles.submitButton}>{lang.changeTo} {getPlanDisplayName(selectedPlan)}</button>
-            </div>
+              <button onClick={handleChangePlan} style={styles.submitButton}>
+                {lang.changeTo} {getPlanDisplayName(selectedPlan)}
+              </button>           
+               </div>
           </div>
         </div>
       )}
