@@ -346,33 +346,42 @@ const MasterDashboard = ({ onLogout, onNavigate }) => {
     }
   };
 
-  const handleChangePlan = async () => {
-    if (!selectedOrg) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/plan`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          plan: selectedPlan, 
-          duration: selectedDuration 
-        })
-      });
-      
-      if (response.ok) {
-        showToastMessage(`${lang.changeTo} ${selectedPlan}`, 'success');
-        setShowPlanModal(false);
-        setSelectedOrg(null);
-        fetchDashboardData();
-      }
-    } catch (error) {
-      console.error('Error changing plan:', error);
-      showToastMessage('Error changing plan', 'error');
+  const handleChangePlan = async (plan, duration) => {
+  try {
+    const token = localStorage.getItem('token');
+    const orgId = user?.organization?._id;
+    
+    console.log('Organization ID:', orgId);
+    
+    if (!orgId) {
+      showToast('Organization ID not found', 'error');
+      return;
     }
-  };
+    
+    // ✅ FIX: Include the orgId in the URL
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/subscriptions/${orgId}/plan`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ plan, duration })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToast(`Plan changed to ${plan} successfully!`, 'success');
+      fetchSubscriptionData();
+      setShowPlanModal(false);
+    } else {
+      showToast(data.message || 'Failed to change plan', 'error');
+    }
+  } catch (error) {
+    console.error('Error changing plan:', error);
+    showToast('Error changing plan', 'error');
+  }
+};
 
   const fetchOrganizationUsers = async (orgId) => {
     try {
