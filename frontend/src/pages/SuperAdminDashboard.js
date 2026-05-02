@@ -582,46 +582,61 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // Change subscription plan
-  const handleChangeSubscriptionPlan = async () => {
-    if (!selectedPlan) {
-      showToast('Please select a plan', 'error');
+  // Change subscription plan - FIXED VERSION
+const handleChangeSubscriptionPlan = async () => {
+  if (!selectedPlan) {
+    showToast('Please select a plan', 'error');
+    return;
+  }
+  
+  setPaymentLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const orgId = user?.organization?._id;
+    
+    console.log('🔄 Changing plan for organization:', orgId);
+    console.log('📋 Plan:', selectedPlan);
+    console.log('⏱️ Duration:', selectedDuration);
+    
+    if (!orgId) {
+      showToast('Organization ID not found', 'error');
+      setPaymentLoading(false);
       return;
     }
     
-    setPaymentLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions/plan', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          duration: selectedDuration
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        showToast(`Plan changed to ${selectedPlan.toUpperCase()}!`, 'success');
-        setShowPaymentModal(false);
-        setSelectedPlan(null);
-        fetchSubscriptionData();
-        fetchDashboardData(false);
-      } else {
-        showToast(data.message || 'Failed to change plan', 'error');
-      }
-    } catch (error) {
-      console.error('Error changing plan:', error);
-      showToast('Error changing plan', 'error');
-    } finally {
-      setPaymentLoading(false);
+    // ✅ CORRECT ENDPOINT: Use organization ID
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        plan: selectedPlan,
+        duration: selectedDuration
+      })
+    });
+    
+    console.log('📡 Response status:', response.status);
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showToast(`Plan changed to ${selectedPlan.toUpperCase()} successfully!`, 'success');
+      setShowPaymentModal(false);
+      setSelectedPlan(null);
+      fetchSubscriptionData();
+      fetchDashboardData(false);
+    } else {
+      showToast(data.message || 'Failed to change plan', 'error');
     }
-  };
+  } catch (error) {
+    console.error('Error changing plan:', error);
+    showToast('Error changing plan: ' + error.message, 'error');
+  } finally {
+    setPaymentLoading(false);
+  }
+};
 
   // Cancel subscription at end of period
 const handleCancelSubscription = async () => {
@@ -682,13 +697,14 @@ const handleChangePlan = async () => {
   
   try {
     const token = localStorage.getItem('token');
+    const orgId = selectedOrg._id;
     
-    console.log('🔄 Changing plan for organization:', selectedOrg._id);
+    console.log('🔄 Changing plan for organization:', orgId);
     console.log('📋 New plan:', selectedPlan);
     console.log('⏱️ Duration:', selectedDuration);
     
-    // ✅ CORRECT ENDPOINT - using organization ID
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${selectedOrg._id}/plan`, {
+    // ✅ CORRECT ENDPOINT
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
