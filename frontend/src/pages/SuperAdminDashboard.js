@@ -680,14 +680,16 @@ const handleChangePlan = async (plan, duration) => {
     const orgId = user?.organization?._id;
     
     console.log('Organization ID:', orgId);
+    console.log('Selected plan:', plan);
+    console.log('Duration:', duration);
     
     if (!orgId) {
       showToast('Organization ID not found', 'error');
       return;
     }
     
-    // ✅ FIX: Include the orgId in the URL
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/subscriptions/${orgId}/plan`, {
+    // ✅ FIX: Use the CORRECT endpoint with orgId
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -696,7 +698,11 @@ const handleChangePlan = async (plan, duration) => {
       body: JSON.stringify({ plan, duration })
     });
     
+    // Debug response
+    console.log('Response status:', response.status);
+    
     const data = await response.json();
+    console.log('Response data:', data);
     
     if (response.ok) {
       showToast(`Plan changed to ${plan} successfully!`, 'success');
