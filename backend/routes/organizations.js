@@ -20,6 +20,7 @@ const {
 router.use(protect);
 router.use(authorize('master'));
 router.get('/email-quota', protect, getEmailQuotaStatus);
+router.put('/:id/cancel-subscription', protect, authorize('master'), cancelSubscription);
 
 // GET and POST for organizations
 router.route('/')

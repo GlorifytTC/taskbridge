@@ -625,19 +625,20 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
 
   // Cancel subscription at end of period
 const handleCancelSubscription = async () => {
-  setCancellingSubscription(true);
+  if (!confirm('Are you sure you want to cancel your subscription? You will lose access after your billing period ends.')) return;
+  
   try {
     const token = localStorage.getItem('token');
     const orgId = user?.organization?._id;
     
     if (!orgId) {
       showToast('Organization ID not found', 'error');
-      setCancellingSubscription(false);
       return;
     }
     
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/subscriptions/${orgId}/cancel`, {
-      method: 'POST',
+    // ✅ Use the organization route, NOT subscription route
+    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/cancel-subscription`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -647,17 +648,14 @@ const handleCancelSubscription = async () => {
     const data = await response.json();
     
     if (response.ok) {
-      showToast('Subscription will be cancelled at the end of current period', 'success');
-      setShowCancelModal(false);
-      fetchSubscriptionData();
+      showToast(data.message || 'Subscription cancelled successfully', 'success');
+      fetchSubscriptionData(); // Refresh subscription data
     } else {
       showToast(data.message || 'Failed to cancel subscription', 'error');
     }
   } catch (error) {
     console.error('Error cancelling subscription:', error);
     showToast('Error cancelling subscription', 'error');
-  } finally {
-    setCancellingSubscription(false);
   }
 };
   // Calculate total with VAT (25%)

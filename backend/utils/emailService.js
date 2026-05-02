@@ -631,7 +631,52 @@ exports.sendLoginNotification = async (user, ipAddress, userAgent, isNewDevice =
   
   await exports.sendEmail({ to: user.email, subject, html });
 };
-
+// Send subscription cancellation confirmation email
+exports.sendSubscriptionCancelledEmail = async (organization, plan, endDate) => {
+  const subject = `📋 Subscription Cancelled - ${organization.name}`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 24px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">📋 Subscription Cancelled</h1>
+      </div>
+      
+      <div style="padding: 24px;">
+        <p style="font-size: 16px; color: #1e293b;">Hello <strong>${organization.name} Administrator</strong>,</p>
+        
+        <p style="color: #334155;">Your TaskBridge subscription has been cancelled as requested.</p>
+        
+        <div style="background: #e2e8f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 4px 0; color: #0f172a;"><strong>📊 Plan:</strong> ${plan?.toUpperCase() || 'TRIAL'}</p>
+          <p style="margin: 4px 0; color: #0f172a;"><strong>📅 Access until:</strong> ${new Date(endDate).toLocaleDateString()}</p>
+        </div>
+        
+        <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 0; color: #92400e; font-size: 14px;">
+            💡 You will have full access until <strong>${new Date(endDate).toLocaleDateString()}</strong>. 
+            After this date, your account will be downgraded to read-only mode.
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${process.env.FRONTEND_URL}/billing" 
+             style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #00f5ff, #00d1ff); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            View Billing Details →
+          </a>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #cbd5e1;" />
+        
+        <p style="color: #94a3b8; font-size: 11px; text-align: center;">
+          TaskBridge - Smart Workforce Management<br>
+          Didn't request this cancellation? Contact support immediately.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  await exports.sendEmail({ to: organization.email, subject, html });
+};
 // Send subscription expiration email
 exports.sendSubscriptionExpirationEmail = async (organization, daysLeft) => {
   const subject = `⚠️ Subscription Expiration Notice - ${daysLeft} days left`;
