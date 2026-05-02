@@ -215,7 +215,31 @@ exports.changePlan = async (req, res) => {
     });
   }
 };
-
+// @desc    Change own organization subscription plan (for superadmin)
+// @route   PUT /api/organizations/my/plan
+// @access  Private/SuperAdmin
+exports.changeMyOrganizationPlan = async (req, res) => {
+  try {
+    const { plan, duration = 1 } = req.body;
+    const organizationId = req.user.organization; // From the logged-in user
+    
+    if (!organizationId) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    const organization = await Organization.findById(organizationId);
+    
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    // Rest of your plan change logic...
+    // (same as changePlan function but using organizationId from user)
+    
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 // ============ ADD THESE NEW FUNCTIONS BELOW ============
 

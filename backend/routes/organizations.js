@@ -16,28 +16,50 @@ const {
   createOrganizationUser
 } = require('../controllers/organizationController');
 
-// All routes require authentication and master role
+// ✅ PROTECT ALL ROUTES FIRST (authentication required for all)
 router.use(protect);
-router.use(authorize('master'));
-router.get('/email-quota', protect, getEmailQuotaStatus);
 
 // GET and POST for organizations
 router.route('/')
-  .post(createOrganization)
-  .get(getOrganizations);
+  .post(authorize('master'), createOrganization)  // Only master can create
+  .get(authorize('master', 'superadmin'), getOrganizations);  // Master and SuperAdmin can view
+
+// ✅ SuperAdmin can change their own organization's plan
+router.put('/my/plan', authorize('superadmin'), async (req, res) => {
+  try {
+    const { plan, duration = 1 } = req.body;
+    const organizationId = req.user.organization;
+    
+    if (!organizationId) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    const organization = await Organization.findById(organizationId);
+    
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found' });
+    }
+    
+    // Call the existing changePlan logic
+    req.params.id = organizationId;
+    return changePlan(req, res);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+});
 
 // IMPORTANT: Specific routes MUST come before the generic :id route
-router.get('/:id/users', getOrganizationUsers);
-router.post('/:id/users', createOrganizationUser);
-router.put('/:id/pause', pauseOrganization);
-router.put('/:id/resume', resumeOrganization);
-router.put('/:id/extend', extendSubscription);
-router.put('/:id/plan', changePlan); 
+router.get('/:id/users', authorize('master', 'superadmin'), getOrganizationUsers);
+router.post('/:id/users', authorize('master'), createOrganizationUser);
+router.put('/:id/pause', authorize('master'), pauseOrganization);
+router.put('/:id/resume', authorize('master'), resumeOrganization);
+router.put('/:id/extend', authorize('master'), extendSubscription);
+router.put('/:id/plan', authorize('master', 'superadmin'), changePlan);
 
 // Generic :id route - MUST BE LAST
 router.route('/:id')
-  .get(getOrganization)
-  .put(updateOrganization)
-  .delete(deleteOrganization);
+  .get(authorize('master', 'superadmin'), getOrganization)
+  .put(authorize('master'), updateOrganization)
+  .delete(authorize('master'), deleteOrganization);
 
 module.exports = router;
