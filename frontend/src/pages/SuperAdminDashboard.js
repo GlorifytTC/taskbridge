@@ -90,7 +90,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       "🏢 How to create a branch?",
       "📊 How to generate reports?",
       "🔑 How to reset a user's password?",
-      "💰 How to change subscription plan?"
+      "💰 How to change subscription plan?",
+      "🏠 How to use Room Management?"
+
     ],
     sv: [
       "📋 Hur skapar jag en ny uppgift?",
@@ -98,7 +100,9 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       "🏢 Hur skapar jag en avdelning?",
       "📊 Hur genererar jag rapporter?",
       "🔑 Hur återställer jag lösenord?",
-      "💰 Hur ändrar jag prenumerationsplan?"
+      "💰 Hur ändrar jag prenumerationsplan?",
+      "🏠 Hur använder jag Rumsplacering?"
+
     ]
   };
 
@@ -1209,9 +1213,16 @@ const handleChangePlan = async () => {
         response = language === 'en' ? "💰 **To change subscription plan:**\n\n1. Click on the **Billing** tab\n2. View available plans (Basic to Corporate)\n3. Click **Upgrade to [Plan Name]**\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment" : "💰 **För att ändra prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer (Basic till Corporate)\n3. Klicka på **Uppgradera till [Plan-namn]**\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning";
       } else if (input.includes('cancel') || input.includes('avbryt')) {
         response = language === 'en' ? "❌ **To cancel subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n4. You'll keep access until the end of your billing period" : "❌ **För att avbryta prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n4. Du behåller åtkomst till slutet av faktureringsperioden";
-      } else {
+      } 
+        else if (input.includes('room management') || input.includes('room assignment') || input.includes('rumsplacering')) {
+          response = language === 'en' 
+            ? "🏠 **Room Management System**\n\nThis feature is available on **Business, Enterprise, and Corporate** plans.\n\n**To access Room Management:**\n1. Go to the **Premium** tab\n2. Click **Access Room Assignment**\n3. Create rooms with capacity and equipment\n4. Assign workers with skills\n5. The system automatically matches workers to suitable rooms\n\n**Features:**\n• 📋 Bulk room creation\n• 👥 Worker skill assignment\n• 🎯 Smart matching algorithm\n• 🗺️ Visual room map\n• 📊 Printable reports\n• 🔄 Shift management\n\n**Upgrade to access this feature!**"
+            : "🏠 **Rumsplaceringssystem**\n\nDenna funktion är tillgänglig på **Business, Enterprise och Corporate**-planer.\n\n**För att använda Rumsplacering:**\n1. Gå till fliken **Premium**\n2. Klicka på **Öppna Rumsplacering**\n3. Skapa rum med kapacitet och utrustning\n4. Tilldela arbetare med kompetens\n5. Systemet matchar automatiskt arbetare till lämpliga rum\n\n**Funktioner:**\n• 📋 Skapa rum i bulk\n• 👥 Kompetenstilldelning\n• 🎯 Smart matchning\n• 🗺️ Visuell karta\n• 📊 Utskrivbara rapporter\n• 🔄 Skiftshantering\n\n**Uppgradera för att använda denna funktion!**";
+        }
+        else {
         response = language === 'en' ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n• Creating tasks\n• Adding employees\n• Managing branches\n• Generating reports\n• Resetting passwords\n• Changing subscription plans\n• Cancelling subscriptions\n\n**Try clicking one of the quick questions below!**" : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n• Skapa uppgifter\n• Lägga till anställda\n• Hantera avdelningar\n• Generera rapporter\n• Återställa lösenord\n• Ändra prenumerationsplaner\n• Avbryta prenumerationer\n\n**Prova att klicka på en av snabbfrågorna nedan!**";
       }
+      
       setChatMessages(prev => [...prev, { text: response, sender: 'ai', time: new Date().toLocaleTimeString() }]);
       setIsAiTyping(false);
     }, 800);
@@ -2575,18 +2586,22 @@ const styles = {
   quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap' },
-  chatButton: { position: 'fixed', bottom: '20px', right: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
-  chatModal: { position: 'fixed', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001 },
-  chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white' },
-  chatClose: { background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px', padding: '4px 8px', borderRadius: '8px' },
-  chatMessages: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '180px' },
-  chatMessage: { display: 'flex' },
-  messageBubble: { padding: '10px 14px', borderRadius: '16px', color: 'white', lineHeight: '1.5', wordWrap: 'break-word', whiteSpace: 'pre-wrap' },
-  messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right' },
-  typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', width: 'fit-content' },
-  chatInputContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)' },
-  chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
-  chatSend: { padding: '8px 16px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 4px 15px rgba(0,209,255,0.3)', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.05)' } },
+  chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '380px', maxWidth: 'calc(100vw - 40px)', height: '580px', maxHeight: 'calc(100vh - 120px)', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' },
+  chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white', flexShrink: 0 },
+  chatClose: { background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '16px', padding: '8px 12px', transition: 'background 0.2s', '&:hover': { background: 'rgba(239,68,68,0.3)' } },
+  chatMessages: { flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '0', msOverflowStyle: 'none', scrollbarWidth: 'thin' },
+  chatMessage: { display: 'flex', marginBottom: '4px' },
+  messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '18px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' },
+  messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right', letterSpacing: '0.3px' },
+  typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '18px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content', color: 'rgba(255,255,255,0.7)' },
+  quickQuestionsContainer: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', flexShrink: 0 },
+  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
+  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '8px 14px', color: '#00d1ff', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', '&:hover': { background: 'rgba(0,209,255,0.2)', transform: 'translateY(-1px)' } },
+  chatInputContainer: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)', flexShrink: 0 },
+  chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px', '&:focus': { borderColor: '#00d1ff' } },
+  chatSend: { padding: '8px 18px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } },
   premiumCard: { background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05))', borderRadius: '16px', padding: '24px', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '20px' },
   premiumIcon: { width: '60px', height: '60px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: 'white' },
   premiumContent: { flex: 1, minWidth: '250px' },
@@ -2597,241 +2612,37 @@ const styles = {
   premiumActions: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' },
   premiumButton: { padding: '10px 20px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' },
   upgradeButton: { padding: '10px 20px', background: 'rgba(255,255,255,0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#f59e0b', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' },
-  currentSubscriptionCard: {
-    background: 'rgba(0,209,255,0.1)',
-    borderRadius: '16px',
-    padding: '20px',
-    marginBottom: '24px',
-    border: '1px solid rgba(0,209,255,0.2)'
-  },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#00d1ff',
-    marginBottom: '16px'
-  },
-  currentPlanInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px'
-  },
-  planNameBadge: {
-    background: '#00d1ff',
-    padding: '4px 12px',
-    borderRadius: '20px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: 'white',
-    display: 'inline-block',
-    marginRight: '12px'
-  },
-  planPriceDisplay: {
-    fontSize: '20px',
-    fontWeight: 'bold',
-    color: '#10b981'
-  },
-  planDetailsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-    gap: '12px',
-    fontSize: '13px',
-    color: 'rgba(255,255,255,0.8)'
-  },
-  autoRenewBadge: {
-    background: 'rgba(16,185,129,0.2)',
-    padding: '6px 12px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    color: '#10b981',
-    display: 'inline-block',
-    width: 'fit-content'
-  },
-  expiredWarning: {
-    background: 'rgba(239,68,68,0.2)',
-    padding: '12px',
-    borderRadius: '8px',
-    color: '#f87171',
-    fontSize: '14px',
-    border: '1px solid #ef4444'
-  },
-  plansGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-    marginBottom: '32px'
-  },
-  planCard: {
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '16px',
-    padding: '20px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    transition: 'transform 0.2s'
-  },
-  planCardTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: '8px'
-  },
-  planCardPrice: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#00d1ff',
-    marginBottom: '16px'
-  },
-  planCardFeatures: {
-    listStyle: 'none',
-    padding: 0,
-    marginBottom: '20px',
-    fontSize: '12px',
-    color: 'rgba(255,255,255,0.7)'
-  },
-  upgradePlanButton: {
-    width: '100%',
-    padding: '10px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '8px',
-    color: 'white',
-    cursor: 'pointer',
-    fontWeight: '500'
-  },
-  invoiceSection: {
-    marginTop: '24px'
-  },
-  paidBadge: {
-    background: '#10b981',
-    padding: '4px 8px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    color: 'white'
-  },
-  downloadInvoiceButton: {
-    background: '#3b82f6',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '6px 10px',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '11px'
-  },
-  contactSalesCard: {
-    background: 'rgba(245,158,11,0.1)',
-    borderRadius: '16px',
-    padding: '20px',
-    marginTop: '24px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: '16px',
-    border: '1px solid rgba(245,158,11,0.3)'
-  },
-  contactSalesLink: {
-    background: '#f59e0b',
-    padding: '10px 20px',
-    borderRadius: '8px',
-    color: 'white',
-    textDecoration: 'none',
-    fontWeight: '500'
-  },
-  paymentSummaryCard: {
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '12px',
-    padding: '20px',
-    marginBottom: '20px'
-  },
-  priceBreakdown: {
-    marginTop: '12px',
-    paddingTop: '12px',
-    borderTop: '1px solid rgba(255,255,255,0.1)'
-  },
-  totalAmount: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#10b981',
-    marginTop: '8px'
-  },
-  durationSelector: {
-    marginTop: '16px'
-  },
-  durationButtons: {
-    display: 'flex',
-    gap: '10px',
-    marginTop: '8px',
-    flexWrap: 'wrap'
-  },
-  durationButton: {
-    padding: '8px 16px',
-    background: 'rgba(255,255,255,0.1)',
-    border: 'none',
-    borderRadius: '8px',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '12px',
-    position: 'relative'
-  },
-  discountBadge: {
-    position: 'absolute',
-    top: '-8px',
-    right: '-8px',
-    background: '#10b981',
-    padding: '2px 4px',
-    borderRadius: '4px',
-    fontSize: '8px'
-  },
-  confirmPaymentButton: {
-    flex: 1,
-    padding: '12px',
-    background: 'linear-gradient(135deg, #10b981, #059669)',
-    border: 'none',
-    borderRadius: '8px',
-    color: 'white',
-    cursor: 'pointer',
-    fontWeight: '500'
-  },
-  subscriptionBlockedOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0,0,0,0.95)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    backdropFilter: 'blur(10px)'
-  },
-  subscriptionBlockedModal: {
-    background: '#1e293b',
-    borderRadius: '24px',
-    padding: '40px',
-    textAlign: 'center',
-    maxWidth: '450px',
-    width: '90%',
-    border: '1px solid rgba(239,68,68,0.3)'
-  },
-  upgradeNowButton: {
-    padding: '12px 24px',
-    background: 'linear-gradient(135deg, #00f5ff, #00d1ff)',
-    border: 'none',
-    borderRadius: '8px',
-    color: 'white',
-    cursor: 'pointer',
-    fontWeight: '500'
-  },
-  cancelSubscriptionButton: {
-    marginTop: '12px',
-    padding: '10px 16px',
-    background: 'rgba(239,68,68,0.2)',
-    border: '1px solid #ef4444',
-    borderRadius: '8px',
-    color: '#ef4444',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500'
-  }
+  currentSubscriptionCard: { background: 'rgba(0,209,255,0.1)', borderRadius: '16px', padding: '20px', marginBottom: '24px', border: '1px solid rgba(0,209,255,0.2)' },
+  cardTitle: { fontSize: '18px', fontWeight: '600', color: '#00d1ff', marginBottom: '16px' },
+  currentPlanInfo: { display: 'flex', flexDirection: 'column', gap: '16px' },
+  planNameBadge: { background: '#00d1ff', padding: '4px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: '600', color: 'white', display: 'inline-block', marginRight: '12px' },
+  planPriceDisplay: { fontSize: '20px', fontWeight: 'bold', color: '#10b981' },
+  planDetailsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', fontSize: '13px', color: 'rgba(255,255,255,0.8)' },
+  autoRenewBadge: { background: 'rgba(16,185,129,0.2)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', color: '#10b981', display: 'inline-block', width: 'fit-content' },
+  expiredWarning: { background: 'rgba(239,68,68,0.2)', padding: '12px', borderRadius: '8px', color: '#f87171', fontSize: '14px', border: '1px solid #ef4444' },
+  plansGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' },
+  planCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.2s' },
+  planCardTitle: { fontSize: '18px', fontWeight: '600', color: 'white', marginBottom: '8px' },
+  planCardPrice: { fontSize: '28px', fontWeight: 'bold', color: '#00d1ff', marginBottom: '16px' },
+  planCardFeatures: { listStyle: 'none', padding: 0, marginBottom: '20px', fontSize: '12px', color: 'rgba(255,255,255,0.7)' },
+  upgradePlanButton: { width: '100%', padding: '10px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
+  invoiceSection: { marginTop: '24px' },
+  paidBadge: { background: '#10b981', padding: '4px 8px', borderRadius: '20px', fontSize: '11px', color: 'white' },
+  downloadInvoiceButton: { background: '#3b82f6', border: 'none', borderRadius: '6px', padding: '6px 10px', color: 'white', cursor: 'pointer', fontSize: '11px' },
+  contactSalesCard: { background: 'rgba(245,158,11,0.1)', borderRadius: '16px', padding: '20px', marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', border: '1px solid rgba(245,158,11,0.3)' },
+  contactSalesLink: { background: '#f59e0b', padding: '10px 20px', borderRadius: '8px', color: 'white', textDecoration: 'none', fontWeight: '500' },
+  paymentSummaryCard: { background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', marginBottom: '20px' },
+  priceBreakdown: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' },
+  totalAmount: { fontSize: '18px', fontWeight: 'bold', color: '#10b981', marginTop: '8px' },
+  durationSelector: { marginTop: '16px' },
+  durationButtons: { display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' },
+  durationButton: { padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px', position: 'relative' },
+  discountBadge: { position: 'absolute', top: '-8px', right: '-8px', background: '#10b981', padding: '2px 4px', borderRadius: '4px', fontSize: '8px' },
+  confirmPaymentButton: { flex: 1, padding: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
+  subscriptionBlockedOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(10px)' },
+  subscriptionBlockedModal: { background: '#1e293b', borderRadius: '24px', padding: '40px', textAlign: 'center', maxWidth: '450px', width: '90%', border: '1px solid rgba(239,68,68,0.3)' },
+  upgradeNowButton: { padding: '12px 24px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
+  cancelSubscriptionButton: { marginTop: '12px', padding: '10px 16px', background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 };
 
 export default SuperAdminDashboard;
