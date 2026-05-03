@@ -479,14 +479,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
     fetchSubscriptionData();
     const savedLogo = localStorage.getItem('organizationLogo');
     if (savedLogo) setLogoPreview(savedLogo);
-    setChatMessages([{
-      text: language === 'en'
-        ? "👋 Hello! I'm your TaskBridge AI Assistant. How can I help you today?\n\nTry clicking one of the quick questions below!"
-        : "👋 Hej! Jag är din TaskBridge AI-assistent. Hur kan jag hjälpa dig idag?\n\nProva att klicka på en av snabbfrågorna nedan!",
-      sender: 'ai',
-      time: new Date().toLocaleTimeString(),
-      showQuickQuestions: true
-    }]);
+    
     const interval = setInterval(() => {
       fetchDashboardData(false);
       fetchSubscriptionData();
