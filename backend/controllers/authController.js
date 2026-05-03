@@ -962,37 +962,40 @@ exports.resendVerification = async (req, res) => {
 };
 
 // @desc    Cancel subscription (stops at end of billing period)
-// @route   POST /api/auth/cancel-subscription
-// @access  Private
+// @route   PUT /api/organizations/:id/cancel-subscription
+// @access  Private/SuperAdmin/Master
 exports.cancelSubscription = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const organizationId = req.params.id;
     
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    console.log('📝 Cancelling subscription for organization:', organizationId);
+    
+    const organization = await Organization.findById(organizationId);
+    
+    if (!organization) {
+      return res.status(404).json({ success: false, message: 'Organization not found' });
     }
     
-    user.cancelAtPeriodEnd = true;
-    user.paymentStatus = 'cancelled';
-    await user.save();
-    
-    // Also update organization subscription
-    const organization = await Organization.findById(user.organization);
-    if (organization) {
+    // Update organization subscription status
+    if (organization.subscription) {
       organization.subscription.status = 'cancelled';
+      organization.subscription.autoRenew = false;
       await organization.save();
     }
     
+    // Update Subscription model
     const Subscription = require('../models/Subscription');
     await Subscription.findOneAndUpdate(
-      { organization: user.organization },
+      { organization: organization._id },
       { status: 'cancelled', autoRenew: false }
     );
+    
+    console.log('✅ Subscription cancelled for:', organization.name);
     
     res.json({
       success: true,
       message: 'Subscription cancelled. You will have access until the end of your billing period.',
-      endDate: organization?.subscription?.endDate
+      endDate: organization.subscription?.endDate
     });
     
   } catch (error) {

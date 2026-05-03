@@ -646,12 +646,7 @@ const handleCancelSubscription = async () => {
     const token = localStorage.getItem('token');
     const orgId = user?.organization?._id;
     
-    if (!orgId) {
-      showToast('Organization ID not found', 'error');
-      return;
-    }
-    
-    // ✅ Use the organization route, NOT subscription route
+    // ✅ Use the correct endpoint
     const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/cancel-subscription`, {
       method: 'PUT',
       headers: {
@@ -664,7 +659,8 @@ const handleCancelSubscription = async () => {
     
     if (response.ok) {
       showToast(data.message || 'Subscription cancelled successfully', 'success');
-      fetchSubscriptionData(); // Refresh subscription data
+      fetchSubscriptionData();
+      setShowCancelModal(false);
     } else {
       showToast(data.message || 'Failed to cancel subscription', 'error');
     }
