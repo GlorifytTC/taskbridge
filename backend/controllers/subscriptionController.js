@@ -50,7 +50,7 @@ exports.getSubscription = async (req, res) => {
         endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         trialEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         price: { amount: 0, currency: 'SEK', vat: { rate: 25, amount: 0 } },
-        features: PLAN_FEATURES.trial
+        features: Subscription.PLAN_FEATURES.trial
       });
     }
     
@@ -76,24 +76,25 @@ exports.getSubscription = async (req, res) => {
       organization: req.user.organization 
     });
     
-    const planFeatures = PLAN_FEATURES[subscription.plan] || PLAN_FEATURES.trial;
+    // ✅ FIX: Use Subscription.PLAN_FEATURES (the static property)
+    const planFeatures = Subscription.PLAN_FEATURES[subscription.plan] || Subscription.PLAN_FEATURES.trial;
     
     // Calculate usage percentages
     const usage = {
       employees: {
         current: employeeCount,
         limit: planFeatures.maxEmployees,
-        percentage: planFeatures.maxEmployees === Infinity ? 0 : (employeeCount / planFeatures.maxEmployees) * 100
+        percentage: planFeatures.maxEmployees === Infinity ? 0 : Math.min(100, (employeeCount / planFeatures.maxEmployees) * 100)
       },
       branches: {
         current: branchCount,
         limit: planFeatures.maxBranches,
-        percentage: planFeatures.maxBranches === Infinity ? 0 : (branchCount / planFeatures.maxBranches) * 100
+        percentage: planFeatures.maxBranches === Infinity ? 0 : Math.min(100, (branchCount / planFeatures.maxBranches) * 100)
       },
       admins: {
         current: adminCount,
         limit: planFeatures.maxAdmins,
-        percentage: planFeatures.maxAdmins === Infinity ? 0 : (adminCount / planFeatures.maxAdmins) * 100
+        percentage: planFeatures.maxAdmins === Infinity ? 0 : Math.min(100, (adminCount / planFeatures.maxAdmins) * 100)
       },
       tasks: { current: taskCount, limit: null, percentage: 0 }
     };
@@ -107,7 +108,18 @@ exports.getSubscription = async (req, res) => {
         usage,
         daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
         isExpired: daysRemaining <= 0,
-        planFeatures
+        planFeatures: {
+          maxEmployees: planFeatures.maxEmployees,
+          maxBranches: planFeatures.maxBranches,
+          maxEmailsPerMonth: planFeatures.maxEmailsPerMonth,
+          maxAdmins: planFeatures.maxAdmins,
+          reportLevel: planFeatures.reportLevel,
+          exportReports: planFeatures.exportReports,
+          customReports: planFeatures.customReports,
+          apiAccess: planFeatures.apiAccess,
+          prioritySupport: planFeatures.prioritySupport,
+          dedicatedSupport: planFeatures.dedicatedSupport
+        }
       }
     });
   } catch (error) {
@@ -115,6 +127,7 @@ exports.getSubscription = async (req, res) => {
     res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
+
 // @desc    Create Stripe payment intent
 // @route   POST /api/subscriptions/create-payment-intent
 // @access  Private/SuperAdmin/Master

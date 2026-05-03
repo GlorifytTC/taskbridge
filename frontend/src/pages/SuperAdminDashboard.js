@@ -400,68 +400,71 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   };
 
   const fetchDashboardData = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const usersData = await usersRes.json();
-      const branchesData = await branchesRes.json();
-      const tasksData = await tasksRes.json();
-      const appsData = await appsRes.json();
-      const jobsData = await jobsRes.json();
-      const allUsers = usersData.data || [];
-      const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
-      const filteredEmployees = allUsers.filter(u => u.role === 'employee');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const allTasks = tasksData.data || [];
-      const filteredTasks = allTasks.filter(task => {
-        const taskDate = new Date(task.date);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate >= today;
-      });
-      setAdmins(filteredAdmins);
-      setEmployees(filteredEmployees);
-      setBranches(branchesData.data || []);
-      setTasks(filteredTasks);
-      setApplications(appsData.data || []);
-      setJobDescriptions(jobsData.data || []);
-      setStats({
-        totalAdmins: filteredAdmins.length,
-        totalEmployees: filteredEmployees.length,
-        totalTasks: filteredTasks.length,
-        totalBranches: branchesData.data?.length || 0,
-        pendingApplications: appsData.data?.length || 0,
-        totalJobDescriptions: jobsData.data?.length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+  if (showLoading) setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const [usersRes, branchesRes, tasksRes, appsRes, jobsRes] = await Promise.all([
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/users', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/branches', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/applications/pending', { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch('https://taskbridge-production-9d91.up.railway.app/api/job-descriptions', { headers: { 'Authorization': `Bearer ${token}` } })
+    ]);
+    const usersData = await usersRes.json();
+    const branchesData = await branchesRes.json();
+    const tasksData = await tasksRes.json();
+    const appsData = await appsRes.json();
+    const jobsData = await jobsRes.json();
+    const allUsers = usersData.data || [];
+    const filteredAdmins = allUsers.filter(u => u.role === 'admin' && u.email !== user?.email);
+    const filteredEmployees = allUsers.filter(u => u.role === 'employee');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const allTasks = tasksData.data || [];
+    const filteredTasks = allTasks.filter(task => {
+      const taskDate = new Date(task.date);
+      taskDate.setHours(0, 0, 0, 0);
+      return taskDate >= today;
+    });
+    
+    setAdmins(filteredAdmins);
+    setEmployees(filteredEmployees);
+    setBranches(branchesData.data || []);
+    setTasks(filteredTasks);
+    setApplications(appsData.data || []);
+    setJobDescriptions(jobsData.data || []);
+    setStats({
+      totalAdmins: filteredAdmins.length,
+      totalEmployees: filteredEmployees.length,
+      totalTasks: filteredTasks.length,
+      totalBranches: branchesData.data?.length || 0,
+      pendingApplications: appsData.data?.length || 0,
+      totalJobDescriptions: jobsData.data?.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    if (showLoading) setLoading(false);
+  }
+};
 
   const fetchSubscriptionData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSubscriptionData(data.data);
-        if (data.data.usage) setUsageData(data.data.usage);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://taskbridge-production-9d91.up.railway.app/api/subscriptions', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      setSubscriptionData(data.data);
+      if (data.data.usage) {
+        setUsageData(data.data.usage);
       }
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching subscription:', error);
+  }
+};
 
   useEffect(() => {
     if (subscriptionData) checkRoomAccess();
@@ -604,7 +607,6 @@ const handleChangeSubscriptionPlan = async () => {
       return;
     }
     
-    // ✅ CORRECT ENDPOINT: Use organization ID
     const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
       method: 'PUT',
       headers: {
@@ -625,8 +627,11 @@ const handleChangeSubscriptionPlan = async () => {
       showToast(`Plan changed to ${selectedPlan.toUpperCase()} successfully!`, 'success');
       setShowPaymentModal(false);
       setSelectedPlan(null);
-      fetchSubscriptionData();
-      fetchDashboardData(false);
+      
+      // ✅ CRITICAL FIX: Refresh subscription and dashboard data
+      await fetchSubscriptionData();
+      await fetchDashboardData(false);
+      
     } else {
       showToast(data.message || 'Failed to change plan', 'error');
     }
