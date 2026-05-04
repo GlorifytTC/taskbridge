@@ -19,7 +19,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [changeEmailData, setChangeEmailData] = useState({ newEmail: '', confirmEmail: '', password: '' });
   const [logoPreview, setLogoPreview] = useState(null);
-  const [showQuickQuestions, setShowQuickQuestions] = useState(false);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const [hasRoomAccess, setHasRoomAccess] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -2460,66 +2460,74 @@ const handleCancelSubscription = async () => {
       </button>
 
       {showChat && (
-        <div style={{ ...styles.chatModal, width: isMobile ? '90vw' : '400px', height: isMobile ? '70vh' : '580px', bottom: isMobile ? '75px' : '85px', right: isMobile ? '5vw' : '25px' }}>
-          <div style={styles.chatHeader}>
-            <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
-            <button onClick={() => setShowChat(false)} style={{ ...styles.chatClose, minHeight: '36px' }}>✕</button>
-          </div>
-          
-          <div style={styles.chatMessages}>
-            {chatMessages.map((msg, i) => (
-              <div key={i} style={{ ...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
-                <div style={{ ...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%' }}>
-                  {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
-                  <div style={{ whiteSpace: 'pre-line', wordWrap: 'break-word', fontSize: isSmall ? '12px' : '13px', lineHeight: '1.5' }}>{msg.text}</div>
-                  <div style={styles.messageTime}>{msg.time}</div>
-                </div>
-              </div>
-            ))}
-            {isAiTyping && (
-              <div style={styles.typingIndicator}>
-                <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
-                {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
-              </div>
-            )}
-          </div>
-
-          {/* Quick Questions - Only show when enabled */}
-          {showQuickQuestions && (
-            <div style={styles.quickQuestionsContainer}>
-              <div style={styles.quickQuestionsHeader}>
-                <i className="fas fa-lightbulb"></i> 
-                {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
-              </div>
-              <div style={styles.quickQuestionsGrid}>
-                {quickQuestions[language].map((q, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => sendChatMessage(q)} 
-                    style={{ ...styles.quickQuestionButton, minHeight: '36px' }}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={styles.chatInputContainer}>
-            <input 
-              type="text" 
-              placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."} 
-              value={chatInput} 
-              onChange={e => setChatInput(e.target.value)} 
-              onKeyPress={e => e.key === 'Enter' && sendChatMessage()} 
-              style={{ ...styles.chatInput, minHeight: '44px' }} 
-            />
-            <button onClick={() => sendChatMessage()} style={{ ...styles.chatSend, minHeight: '44px' }}>
-              <i className="fas fa-paper-plane"></i>
-            </button>
-          </div>
+  <div style={{ ...styles.chatModal, width: isMobile ? '90vw' : '400px', height: isMobile ? '70vh' : '580px', bottom: isMobile ? '75px' : '85px', right: isMobile ? '5vw' : '25px' }}>
+    <div style={styles.chatHeader}>
+      <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
+      <button onClick={() => setShowChat(false)} style={styles.chatClose}>✕</button>
+    </div>
+    
+    <div style={styles.chatMessages}>
+      {chatMessages.length === 0 && (
+        <div style={styles.welcomeChatMessage}>
+          <i className="fas fa-robot" style={{ fontSize: '32px', color: '#00d1ff', marginBottom: '10px' }}></i>
+          <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+            {language === 'en' ? 'Hello! How can I help you today?' : 'Hej! Hur kan jag hjälpa dig idag?'}
+          </p>
         </div>
       )}
+      {chatMessages.map((msg, i) => (
+        <div key={i} style={{ ...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
+          <div style={{ ...styles.messageBubble, background: msg.sender === 'user' ? '#00d1ff' : '#1e293b', maxWidth: '85%' }}>
+            {msg.sender === 'ai' && <i className="fas fa-robot" style={{ fontSize: '12px', marginRight: '6px', color: '#00d1ff' }}></i>}
+            <div style={{ whiteSpace: 'pre-line', wordWrap: 'break-word', fontSize: isSmall ? '12px' : '13px', lineHeight: '1.5' }}>{msg.text}</div>
+            <div style={styles.messageTime}>{msg.time}</div>
+          </div>
+        </div>
+      ))}
+      {isAiTyping && (
+        <div style={styles.typingIndicator}>
+          <i className="fas fa-robot" style={{ fontSize: '11px', marginRight: '6px' }}></i>
+          {language === 'en' ? 'AI is thinking...' : 'AI tänker...'}
+        </div>
+      )}
+    </div>
+
+    {/* Quick Questions - Only show when enabled */}
+    {showQuickQuestions && chatMessages.length === 0 && (
+      <div style={styles.quickQuestionsContainer}>
+        <div style={styles.quickQuestionsHeader}>
+          <i className="fas fa-lightbulb"></i> 
+          {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+        </div>
+        <div style={styles.quickQuestionsGrid}>
+          {quickQuestions[language].map((q, idx) => (
+            <button 
+              key={idx} 
+              onClick={() => sendChatMessage(q)} 
+              style={styles.quickQuestionButton}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <div style={styles.chatInputContainer}>
+      <input 
+        type="text" 
+        placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."} 
+        value={chatInput} 
+        onChange={e => setChatInput(e.target.value)} 
+        onKeyPress={e => e.key === 'Enter' && sendChatMessage()} 
+        style={styles.chatInput}
+      />
+      <button onClick={() => sendChatMessage()} style={styles.chatSend}>
+        <i className="fas fa-paper-plane" style={{ fontSize: '16px' }}></i>
+      </button>
+    </div>
+  </div>
+)}
 
     </div>  
   );       
@@ -2660,15 +2668,16 @@ const styles = {
   chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 4px 15px rgba(0,209,255,0.3)' },
   chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '380px', maxWidth: 'calc(100vw - 40px)', height: '580px', maxHeight: 'calc(100vh - 120px)', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' },
   chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white', flexShrink: 0 },
-  chatClose: { background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '16px', padding: '8px 12px' },
-  chatMessages: { flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '0', msOverflowStyle: 'none', scrollbarWidth: 'thin' },
+  chatClose: { background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '16px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatMessages: { flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '0' },
+  welcomeChatMessage: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '20px', textAlign: 'center' },
   chatMessage: { display: 'flex', marginBottom: '4px' },
   messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '18px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right', letterSpacing: '0.3px' },
   typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '18px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content', color: 'rgba(255,255,255,0.7)' },
   chatInputContainer: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)', flexShrink: 0 },
   chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
-  chatSend: { padding: '8px 18px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatSend: { width: '40px', height: '40px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   premiumCard: { background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05))', borderRadius: '16px', padding: '24px', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '20px' },
   premiumIcon: { width: '60px', height: '60px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: 'white' },
   premiumContent: { flex: 1, minWidth: '250px' },
@@ -2711,5 +2720,4 @@ const styles = {
   upgradeNowButton: { padding: '12px 24px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
   cancelSubscriptionButton: { marginTop: '12px', padding: '10px 16px', background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 };
-
 export default SuperAdminDashboard;
