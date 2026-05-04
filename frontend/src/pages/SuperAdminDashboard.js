@@ -642,6 +642,36 @@ const handleChangeSubscriptionPlan = async () => {
   }
 };
 
+// Get current plan price from subscription data
+const getCurrentPlanPrice = () => {
+  // First try to get price from subscription object
+  if (subscriptionData?.price?.amount) {
+    return subscriptionData.price.amount;
+  }
+  
+  // If not, calculate from plan name using backend prices
+  const planPrices = {
+    trial: 0,
+    basic: 399,
+    standard: 799,
+    pro: 1299,
+    business: 2499,
+    enterprise: 4999,
+    corporate: 9999
+  };
+  
+  const planName = subscriptionData?.plan?.toLowerCase();
+  let price = planPrices[planName] || 0;
+  
+  // Apply duration discount if available
+  const duration = subscriptionData?.duration || 1;
+  if (duration >= 3) price = price * 0.95;
+  if (duration >= 6) price = price * 0.9;
+  if (duration >= 12) price = price * 0.85;
+  
+  return Math.round(price);
+};
+
   // Cancel subscription at end of period
 const handleCancelSubscription = async () => {
   if (!confirm('Are you sure you want to cancel your subscription? You will lose access after your billing period ends.')) return;
