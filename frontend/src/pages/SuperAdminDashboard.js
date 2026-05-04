@@ -19,6 +19,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [changeEmailData, setChangeEmailData] = useState({ newEmail: '', confirmEmail: '', password: '' });
   const [logoPreview, setLogoPreview] = useState(null);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const [hasRoomAccess, setHasRoomAccess] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -687,52 +688,7 @@ const handleCancelSubscription = async () => {
   const calculateVAT = (plan, duration) => {
     return Math.round(calculateTotalWithVAT(plan, duration) * 0.25);
   };
-const handleChangePlan = async () => {
-  if (!selectedOrg) {
-    showToast('No organization selected', 'error');
-    return;
-  }
-  
-  try {
-    const token = localStorage.getItem('token');
-    const orgId = selectedOrg._id;
-    
-    console.log('🔄 Changing plan for organization:', orgId);
-    console.log('📋 New plan:', selectedPlan);
-    console.log('⏱️ Duration:', selectedDuration);
-    
-    // ✅ CORRECT ENDPOINT
-    const response = await fetch(`https://taskbridge-production-9d91.up.railway.app/api/organizations/${orgId}/plan`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ 
-        plan: selectedPlan, 
-        duration: selectedDuration 
-      })
-    });
-    
-    console.log('📡 Response status:', response.status);
-    
-    const data = await response.json();
-    console.log('📦 Response data:', data);
-    
-    if (response.ok) {
-      showToast(language === 'en' ? `Plan changed to ${selectedPlan} successfully!` : `Plan ändrad till ${selectedPlan} framgångsrikt!`, 'success');
-      setShowPlanModal(false);
-      setSelectedOrg(null);
-      fetchDashboardData();
-      fetchSubscriptionData();
-    } else {
-      showToast(data.message || (language === 'en' ? 'Failed to change plan' : 'Kunde inte ändra plan'), 'error');
-    }
-  } catch (error) {
-    console.error('❌ Error changing plan:', error);
-    showToast(language === 'en' ? 'Error changing plan' : 'Fel vid planändring', 'error');
-  }
-};
+
   // Check subscription status periodically
   useEffect(() => {
     if (subscriptionData) {
@@ -1181,45 +1137,93 @@ const handleChangePlan = async () => {
   };
 
   const sendChatMessage = async (message = null) => {
-    const userMessageText = message || chatInput;
-    if (!userMessageText.trim()) return;
-    const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
-    setChatMessages([...chatMessages, userMessage]);
-    setChatInput('');
-    setIsAiTyping(true);
-    setTimeout(() => {
-      const input = userMessageText.toLowerCase();
-      let response = "";
-      if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
-        response = language === 'en' ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details\n4. Click **Create**" : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna\n4. Klicka på **Skapa**";
-      } else if (input.includes('add employee') || input.includes('new employee')) {
-        response = language === 'en' ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter details and click **Create**" : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Fyll i och klicka **Skapa**";
-      } else if (input.includes('subscription') || input.includes('plan')) {
-        response = language === 'en' ? `💰 **Current Plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Days remaining:** ${subscriptionData?.daysRemaining || 0}` : `💰 **Nuvarande plan:** ${subscriptionData?.plan?.toUpperCase() || 'TRIAL'}\n📅 **Dagar kvar:** ${subscriptionData?.daysRemaining || 0}`;
-      } else if (input.includes('branch') || input.includes('create branch') || input.includes('avdelning')) {
-        response = language === 'en' ? "🏢 **To create a branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter branch name and city\n4. Click **Create**" : "🏢 **För att skapa en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i avdelningsnamn och stad\n4. Klicka på **Skapa**";
-      } else if (input.includes('report') || input.includes('generate report') || input.includes('rapport')) {
-        response = language === 'en' ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Select your filters (branch, role, employee, date range)\n3. Click **Generate Report**\n4. Export as PDF or Excel if needed" : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Välj dina filter (avdelning, roll, anställd, datumintervall)\n3. Klicka på **Generera rapport**\n4. Exportera som PDF eller Excel vid behov";
-      } else if (input.includes('reset password') || input.includes('lösenord')) {
-        response = language === 'en' ? "🔑 **To reset a user's password:**\n\n1. Go to **Admins** or **Staff** tab\n2. Find the user\n3. Click the **🔑** button next to their name\n4. Enter and confirm the new password\n5. Click **Reset Password**" : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Administratörer** eller **Personal**\n2. Hitta användaren\n3. Klicka på **🔑** knappen bredvid deras namn\n4. Ange och bekräfta det nya lösenordet\n5. Klicka på **Återställ lösenord**";
-      } else if (input.includes('change plan') || input.includes('subscription plan') || input.includes('uppgradera')) {
-        response = language === 'en' ? "💰 **To change subscription plan:**\n\n1. Click on the **Billing** tab\n2. View available plans (Basic to Corporate)\n3. Click **Upgrade to [Plan Name]**\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment" : "💰 **För att ändra prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer (Basic till Corporate)\n3. Klicka på **Uppgradera till [Plan-namn]**\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning";
-      } else if (input.includes('cancel') || input.includes('avbryt')) {
-        response = language === 'en' ? "❌ **To cancel subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n4. You'll keep access until the end of your billing period" : "❌ **För att avbryta prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n4. Du behåller åtkomst till slutet av faktureringsperioden";
-      } 
-        else if (input.includes('room management') || input.includes('room assignment') || input.includes('rumsplacering')) {
-          response = language === 'en' 
-            ? "🏠 **Room Management System**\n\nThis feature is available on **Business, Enterprise, and Corporate** plans.\n\n**To access Room Management:**\n1. Go to the **Premium** tab\n2. Click **Access Room Assignment**\n3. Create rooms with capacity and equipment\n4. Assign workers with skills\n5. The system automatically matches workers to suitable rooms\n\n**Features:**\n• 📋 Bulk room creation\n• 👥 Worker skill assignment\n• 🎯 Smart matching algorithm\n• 🗺️ Visual room map\n• 📊 Printable reports\n• 🔄 Shift management\n\n**Upgrade to access this feature!**"
-            : "🏠 **Rumsplaceringssystem**\n\nDenna funktion är tillgänglig på **Business, Enterprise och Corporate**-planer.\n\n**För att använda Rumsplacering:**\n1. Gå till fliken **Premium**\n2. Klicka på **Öppna Rumsplacering**\n3. Skapa rum med kapacitet och utrustning\n4. Tilldela arbetare med kompetens\n5. Systemet matchar automatiskt arbetare till lämpliga rum\n\n**Funktioner:**\n• 📋 Skapa rum i bulk\n• 👥 Kompetenstilldelning\n• 🎯 Smart matchning\n• 🗺️ Visuell karta\n• 📊 Utskrivbara rapporter\n• 🔄 Skiftshantering\n\n**Uppgradera för att använda denna funktion!**";
-        }
-        else {
-        response = language === 'en' ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n• Creating tasks\n• Adding employees\n• Managing branches\n• Generating reports\n• Resetting passwords\n• Changing subscription plans\n• Cancelling subscriptions\n\n**Try clicking one of the quick questions below!**" : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n• Skapa uppgifter\n• Lägga till anställda\n• Hantera avdelningar\n• Generera rapporter\n• Återställa lösenord\n• Ändra prenumerationsplaner\n• Avbryta prenumerationer\n\n**Prova att klicka på en av snabbfrågorna nedan!**";
-      }
-      
-      setChatMessages(prev => [...prev, { text: response, sender: 'ai', time: new Date().toLocaleTimeString() }]);
-      setIsAiTyping(false);
-    }, 800);
-  };
+  const userMessageText = message || chatInput;
+  if (!userMessageText.trim()) return;
+  
+  // Hide quick questions when user sends a message
+  setShowQuickQuestions(false);
+  
+  const userMessage = { text: userMessageText, sender: 'user', time: new Date().toLocaleTimeString() };
+  setChatMessages(prev => [...prev, userMessage]);
+  setChatInput('');
+  setIsAiTyping(true);
+  
+  setTimeout(() => {
+    const input = userMessageText.toLowerCase();
+    let response = "";
+    let showQuestionsAgain = false;
+    
+    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
+      response = language === 'en' 
+        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details (title, date, time, job role)\n4. Set max employees\n5. Click **Create**\n\nWould you like help with anything else?"
+        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna (titel, datum, tid, jobbroll)\n4. Ange max antal anställda\n5. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    } 
+    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd')) {
+      response = language === 'en'
+        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter name, email, temporary password\n4. Select job role and branch\n5. Click **Create**\n\nWould you like help with anything else?"
+        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Ange namn, e-post, tillfälligt lösenord\n4. Välj jobbroll och avdelning\n5. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('room management') || input.includes('room assignment') || input.includes('rumsplacering') || input.includes('premium')) {
+      response = language === 'en'
+        ? "🏠 **Room Management System**\n\nThis feature is available on **Business, Enterprise, and Corporate** plans.\n\n**To access Room Management:**\n1. Go to the **Premium** tab\n2. Click **Access Room Assignment**\n3. Create rooms with capacity and equipment\n4. Assign workers with skills\n5. The system automatically matches workers to suitable rooms\n\n**Features:**\n• 📋 Bulk room creation\n• 👥 Worker skill assignment\n• 🎯 Smart matching algorithm\n• 🗺️ Visual room map\n• 📊 Printable reports\n• 🔄 Shift management\n\n**Upgrade to access this feature!**\n\nWould you like help with anything else?"
+        : "🏠 **Rumsplaceringssystem**\n\nDenna funktion är tillgänglig på **Business, Enterprise och Corporate**-planer.\n\n**För att använda Rumsplacering:**\n1. Gå till fliken **Premium**\n2. Klicka på **Öppna Rumsplacering**\n3. Skapa rum med kapacitet och utrustning\n4. Tilldela arbetare med kompetens\n5. Systemet matchar automatiskt arbetare till lämpliga rum\n\n**Funktioner:**\n• 📋 Skapa rum i bulk\n• 👥 Kompetenstilldelning\n• 🎯 Smart matchning\n• 🗺️ Visuell karta\n• 📊 Utskrivbara rapporter\n• 🔄 Skiftshantering\n\n**Uppgradera för att använda denna funktion!**\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('branch') || input.includes('create branch') || input.includes('avdelning')) {
+      response = language === 'en'
+        ? "🏢 **To create a branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter branch name and city\n4. Click **Create**\n\nWould you like help with anything else?"
+        : "🏢 **För att skapa en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i avdelningsnamn och stad\n4. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('report') || input.includes('generate report') || input.includes('rapport')) {
+      response = language === 'en'
+        ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Select your filters (branch, role, employee, date range)\n3. Click **Generate Report**\n4. Export as PDF or Excel if needed\n\nWould you like help with anything else?"
+        : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Välj dina filter (avdelning, roll, anställd, datumintervall)\n3. Klicka på **Generera rapport**\n4. Exportera som PDF eller Excel vid behov\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('reset password') || input.includes('lösenord')) {
+      response = language === 'en'
+        ? "🔑 **To reset a user's password:**\n\n1. Go to **Admins** or **Staff** tab\n2. Find the user\n3. Click the **🔑** button next to their name\n4. Enter and confirm the new password\n5. Click **Reset Password**\n\nWould you like help with anything else?"
+        : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Administratörer** eller **Personal**\n2. Hitta användaren\n3. Klicka på **🔑** knappen bredvid deras namn\n4. Ange och bekräfta det nya lösenordet\n5. Klicka på **Återställ lösenord**\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('change plan') || input.includes('subscription plan') || input.includes('uppgradera')) {
+      response = language === 'en'
+        ? "💰 **To change subscription plan:**\n\n1. Click on the **Billing** tab\n2. View available plans (Basic to Corporate)\n3. Click **Upgrade to [Plan Name]**\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment\n\nWould you like help with anything else?"
+        : "💰 **För att ändra prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer (Basic till Corporate)\n3. Klicka på **Uppgradera till [Plan-namn]**\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('cancel') || input.includes('avbryt')) {
+      response = language === 'en'
+        ? "❌ **To cancel subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n4. You'll keep access until the end of your billing period\n\nWould you like help with anything else?"
+        : "❌ **För att avbryta prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n4. Du behåller åtkomst till slutet av faktureringsperioden\n\nBehöver du hjälp med något annat?";
+      showQuestionsAgain = true;
+    }
+    else if (input.includes('yes') || input.includes('another') || input.includes('more help') || input.includes('ja') || input.includes('mer hjälp')) {
+      response = language === 'en'
+        ? "👍 **Great! Here are the quick questions again:**\n\nWhat would you like to learn about?"
+        : "👍 **Bra! Här är snabbfrågorna igen:**\n\nVad vill du lära dig om?";
+      showQuestionsAgain = true;
+    }
+    else {
+      response = language === 'en'
+        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n• Creating tasks\n• Adding employees\n• Managing branches\n• Generating reports\n• Resetting passwords\n• Changing subscription plans\n• Cancelling subscriptions\n• Room Management (Premium feature)\n\n**What would you like to learn about?**"
+        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n• Skapa uppgifter\n• Lägga till anställda\n• Hantera avdelningar\n• Generera rapporter\n• Återställa lösenord\n• Ändra prenumerationsplaner\n• Avbryta prenumerationer\n• Rumsplacering (Premium-funktion)\n\n**Vad vill du lära dig om?**";
+      showQuestionsAgain = true;
+    }
+    
+    setChatMessages(prev => [...prev, { text: response, sender: 'ai', time: new Date().toLocaleTimeString() }]);
+    
+    // Show quick questions again if the AI asked for more questions
+    if (showQuestionsAgain) {
+      setShowQuickQuestions(true);
+    }
+    
+    setIsAiTyping(false);
+  }, 800);
+};
 
   const handleOverlayMouseDown = (e) => {
     mouseDownInsideModal.current = e.target !== e.currentTarget;
@@ -1342,7 +1346,7 @@ const handleChangePlan = async () => {
         <div style={styles.subscriptionCard}>
           <div style={styles.subscriptionHeader}>
             <h3 style={styles.subscriptionTitle}>{lang.subscriptionOverview}</h3>
-            <a href="mailto:georgeglor@hotmail.com" style={styles.contactSalesButton}>{lang.contactSales}</a>
+            <a href="mailto: support@glorifytk.se" style={styles.contactSalesButton}>{lang.contactSales}</a>
           </div>
           <div style={styles.subscriptionContent}>
             <div style={styles.subscriptionPlan}>
@@ -2412,6 +2416,7 @@ const handleChangePlan = async () => {
             <span><i className="fas fa-robot" style={{ color: '#00d1ff' }}></i> TaskBridge AI Assistant</span>
             <button onClick={() => setShowChat(false)} style={{ ...styles.chatClose, minHeight: '36px' }}>✕</button>
           </div>
+          
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
               <div key={i} style={{ ...styles.chatMessage, justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -2429,23 +2434,47 @@ const handleChangePlan = async () => {
               </div>
             )}
           </div>
-          <div style={styles.quickQuestionsContainer}>
-            <div style={styles.quickQuestionsHeader}><i className="fas fa-lightbulb"></i> {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}</div>
-            <div style={styles.quickQuestionsGrid}>
-              {quickQuestions[language].map((q, idx) => (
-                <button key={idx} onClick={() => sendChatMessage(q)} style={{ ...styles.quickQuestionButton, minHeight: '36px' }}>{q}</button>
-              ))}
+
+          {/* Quick Questions - Only show when enabled */}
+          {showQuickQuestions && (
+            <div style={styles.quickQuestionsContainer}>
+              <div style={styles.quickQuestionsHeader}>
+                <i className="fas fa-lightbulb"></i> 
+                {language === 'en' ? 'Quick Questions' : 'Snabbfrågor'}
+              </div>
+              <div style={styles.quickQuestionsGrid}>
+                {quickQuestions[language].map((q, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => sendChatMessage(q)} 
+                    style={{ ...styles.quickQuestionButton, minHeight: '36px' }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
           <div style={styles.chatInputContainer}>
-            <input type="text" placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."} value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && sendChatMessage()} style={{ ...styles.chatInput, minHeight: '44px' }} />
-            <button onClick={() => sendChatMessage()} style={{ ...styles.chatSend, minHeight: '44px' }}><i className="fas fa-paper-plane"></i></button>
+            <input 
+              type="text" 
+              placeholder={language === 'en' ? "Ask me anything..." : "Fråga mig vad som helst..."} 
+              value={chatInput} 
+              onChange={e => setChatInput(e.target.value)} 
+              onKeyPress={e => e.key === 'Enter' && sendChatMessage()} 
+              style={{ ...styles.chatInput, minHeight: '44px' }} 
+            />
+            <button onClick={() => sendChatMessage()} style={{ ...styles.chatSend, minHeight: '44px' }}>
+              <i className="fas fa-paper-plane"></i>
+            </button>
           </div>
         </div>
       )}
-    </div>
-  );
-};
+
+    </div>  
+  ); 
+  }
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
@@ -2575,26 +2604,22 @@ const styles = {
   filterGroup: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '150px' },
   filterLabel: { color: 'rgba(255,255,255,0.7)', fontSize: '12px' },
   filterSelect: { padding: '8px 12px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '13px' },
-  quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' },
-  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' },
+  quickQuestionsContainer: { padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', flexShrink: 0, maxHeight: '140px', overflowY: 'auto' },
+  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
   quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '6px 12px', color: '#00d1ff', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap' },
-  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 4px 15px rgba(0,209,255,0.3)', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.05)' } },
+  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '8px 14px', color: '#00d1ff', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' },
+  chatButton: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', color: 'white', cursor: 'pointer', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 4px 15px rgba(0,209,255,0.3)' },
   chatModal: { position: 'fixed', bottom: '80px', right: '20px', width: '380px', maxWidth: 'calc(100vw - 40px)', height: '580px', maxHeight: 'calc(100vh - 120px)', background: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 1001, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' },
   chatHeader: { padding: '14px 16px', background: '#1e293b', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: '600', color: 'white', flexShrink: 0 },
-  chatClose: { background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '16px', padding: '8px 12px', transition: 'background 0.2s', '&:hover': { background: 'rgba(239,68,68,0.3)' } },
+  chatClose: { background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '16px', padding: '8px 12px' },
   chatMessages: { flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '0', msOverflowStyle: 'none', scrollbarWidth: 'thin' },
   chatMessage: { display: 'flex', marginBottom: '4px' },
   messageBubble: { maxWidth: '85%', padding: '10px 14px', borderRadius: '18px', color: 'white', fontSize: '13px', lineHeight: '1.5', wordWrap: 'break-word', whiteSpace: 'pre-wrap', overflowWrap: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' },
   messageTime: { fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginTop: '5px', textAlign: 'right', letterSpacing: '0.3px' },
   typingIndicator: { padding: '10px 14px', background: '#1e293b', borderRadius: '18px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content', color: 'rgba(255,255,255,0.7)' },
-  quickQuestionsContainer: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', flexShrink: 0 },
-  quickQuestionsHeader: { fontSize: '11px', color: '#00d1ff', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' },
-  quickQuestionsGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-  quickQuestionButton: { background: 'rgba(0,209,255,0.1)', border: '1px solid rgba(0,209,255,0.3)', borderRadius: '20px', padding: '8px 14px', color: '#00d1ff', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', '&:hover': { background: 'rgba(0,209,255,0.2)', transform: 'translateY(-1px)' } },
   chatInputContainer: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.2)', flexShrink: 0 },
-  chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px', '&:focus': { borderColor: '#00d1ff' } },
-  chatSend: { padding: '8px 18px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } },
+  chatInput: { flex: 1, padding: '10px 14px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', color: 'white', outline: 'none', fontSize: '13px' },
+  chatSend: { padding: '8px 18px', background: '#00d1ff', border: 'none', borderRadius: '25px', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   premiumCard: { background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05))', borderRadius: '16px', padding: '24px', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '20px' },
   premiumIcon: { width: '60px', height: '60px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: 'white' },
   premiumContent: { flex: 1, minWidth: '250px' },
@@ -2637,5 +2662,6 @@ const styles = {
   upgradeNowButton: { padding: '12px 24px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
   cancelSubscriptionButton: { marginTop: '12px', padding: '10px 16px', background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 };
+
 
 export default SuperAdminDashboard;
