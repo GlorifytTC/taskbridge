@@ -2410,6 +2410,55 @@ const handleCancelSubscription = async () => {
         <i className="fas fa-robot"></i>
       </button>
 
+            {showProfileModal && (
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowProfileModal)}>
+          <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Profile Settings</h2>
+            <div style={styles.profileInfo}>
+              <p><strong style={{ color: '#00d1ff' }}>Name:</strong> <span style={{ color: 'white' }}>{user?.name}</span></p>
+              <p><strong style={{ color: '#00d1ff' }}>Email:</strong> <span style={{ color: 'white' }}>{user?.email}</span></p>
+              <p><strong style={{ color: '#00d1ff' }}>Role:</strong> <span style={{ color: 'white' }}>Super Admin</span></p>
+              <p><strong style={{ color: '#00d1ff' }}>Organization:</strong> <span style={{ color: 'white' }}>{user?.organization?.name}</span></p>
+            </div>
+            <button onClick={() => { setShowProfileModal(false); setShowChangeEmailModal(true); }} style={{ ...styles.changeEmailButton, minHeight: '44px' }}>Change Email</button>
+            <h3 style={styles.subTitle}>Change Password</h3>
+            <input type="password" placeholder="Current Password" value={profileData.currentPassword} onChange={e => setProfileData(p => ({ ...p, currentPassword: e.target.value }))} style={{ ...styles.input, color: 'white', minHeight: '44px' }} />
+            <input type="password" placeholder="New Password" value={profileData.newPassword} onChange={e => setProfileData(p => ({ ...p, newPassword: e.target.value }))} style={{ ...styles.input, color: 'white', minHeight: '44px' }} />
+            <input type="password" placeholder="Confirm New Password" value={profileData.confirmPassword} onChange={e => setProfileData(p => ({ ...p, confirmPassword: e.target.value }))} style={{ ...styles.input, color: 'white', minHeight: '44px' }} />
+            <button onClick={handleUpdateProfile} style={{ ...styles.submitButton, minHeight: '44px' }}>Update Password</button>
+            
+            {/* Cancel Deletion Request Button */}
+            <button onClick={handleCancelDeletionRequest} style={{ ...styles.cancelButton, marginTop: '12px', width: '100%' }}>
+              Cancel Deletion Request
+            </button>
+            
+            <div style={styles.dangerZone}>
+              <h3 style={{ color: '#ef4444' }}>Danger Zone</h3>
+              <button onClick={() => { setShowProfileModal(false); setShowDeleteAccountModal(true); }} style={{ ...styles.deleteAccountButton, minHeight: '44px' }}>Delete My Account</button>
+              <p style={styles.warningText}>⚠️ This will delete YOUR account only.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteAccountModal && (
+        <div style={styles.modalOverlay} onMouseDown={handleOverlayMouseDown} onClick={handleModalClose(setShowDeleteAccountModal)}>
+          <div style={{ ...styles.modal, width: isMobile ? '95%' : '450px' }} onClick={e => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Delete Your Account</h2>
+            <p style={{ color: 'white' }}>Are you sure you want to delete your account?</p>
+            <p style={{ color: '#ef4444' }}>⚠️ This action cannot be undone.</p>
+            <div style={styles.modalButtons}>
+              <button onClick={() => setShowDeleteAccountModal(false)} style={{ ...styles.cancelButton, minHeight: '44px' }}>Cancel</button>
+              <button onClick={handleDeleteAccount} style={{ ...styles.confirmDeleteButton, minHeight: '44px' }}>Delete My Account</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button style={{ ...styles.chatButton, width: isSmall ? '48px' : '50px', height: isSmall ? '48px' : '50px' }} onClick={() => setShowChat(!showChat)}>
+        <i className="fas fa-robot"></i>
+      </button>
+
       {showChat && (
         <div style={{ ...styles.chatModal, width: isMobile ? '90vw' : '400px', height: isMobile ? '70vh' : '580px', bottom: isMobile ? '75px' : '85px', right: isMobile ? '5vw' : '25px' }}>
           <div style={styles.chatHeader}>
@@ -2473,8 +2522,8 @@ const handleCancelSubscription = async () => {
       )}
 
     </div>  
-  ); 
-  }
+  );       
+}
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', padding: '20px', fontFamily: 'Inter, sans-serif', position: 'relative' },
@@ -2662,6 +2711,5 @@ const styles = {
   upgradeNowButton: { padding: '12px 24px', background: 'linear-gradient(135deg, #00f5ff, #00d1ff)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: '500' },
   cancelSubscriptionButton: { marginTop: '12px', padding: '10px 16px', background: 'rgba(239,68,68,0.2)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }
 };
-
 
 export default SuperAdminDashboard;
