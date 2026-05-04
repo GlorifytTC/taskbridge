@@ -460,6 +460,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await response.json();
+    console.log('📊 Subscription data:', data);
     if (data.success) {
       setSubscriptionData(data.data);
       if (data.data.usage) {
@@ -2096,8 +2097,8 @@ const handleCancelSubscription = async () => {
                     {subscriptionData?.plan?.toUpperCase() || 'TRIAL'}
                   </span>
                   <span style={styles.planPriceDisplay}>
-                    {subscriptionData?.price?.monthlyPrice || 0} SEK/month
-                  </span>
+                      {getCurrentPlanPrice()} SEK/month
+                    </span>
                 </div>
                 <div style={styles.planDetailsGrid}>
                   <div>📅 Days left: <strong>{subscriptionData?.daysRemaining || 0}</strong></div>
