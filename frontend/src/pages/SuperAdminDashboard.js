@@ -19,7 +19,7 @@ const SuperAdminDashboard = ({ user, onLogout, onNavigate }) => {
   const [resetPasswordData, setResetPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [changeEmailData, setChangeEmailData] = useState({ newEmail: '', confirmEmail: '', password: '' });
   const [logoPreview, setLogoPreview] = useState(null);
-  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(false);
   const [hasRoomAccess, setHasRoomAccess] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
