@@ -1148,81 +1148,248 @@ const handleCancelSubscription = async () => {
   setChatInput('');
   setIsAiTyping(true);
   
+  // Simulate typing delay based on message complexity
+  const delay = Math.min(800 + userMessageText.length * 5, 2500);
+  
   setTimeout(() => {
-    const input = userMessageText.toLowerCase();
+    const input = userMessageText.toLowerCase().trim();
     let response = "";
     let showQuestionsAgain = false;
     
-    if (input.includes('create task') || input.includes('new task') || input.includes('skapa uppgift')) {
-      response = language === 'en' 
-        ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in the details (title, date, time, job role)\n4. Set max employees\n5. Click **Create**\n\nWould you like help with anything else?"
-        : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i detaljerna (titel, datum, tid, jobbroll)\n4. Ange max antal anställda\n5. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
-      showQuestionsAgain = true;
-    } 
-    else if (input.includes('add employee') || input.includes('new employee') || input.includes('lägg till anställd')) {
-      response = language === 'en'
-        ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter name, email, temporary password\n4. Select job role and branch\n5. Click **Create**\n\nWould you like help with anything else?"
-        : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Ange namn, e-post, tillfälligt lösenord\n4. Välj jobbroll och avdelning\n5. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
-      showQuestionsAgain = true;
-    }
-    else if (input.includes('room management') || input.includes('room assignment') || input.includes('rumsplacering') || input.includes('premium')) {
-      response = language === 'en'
-        ? "🏠 **Room Management System**\n\nThis feature is available on **Business, Enterprise, and Corporate** plans.\n\n**To access Room Management:**\n1. Go to the **Premium** tab\n2. Click **Access Room Assignment**\n3. Create rooms with capacity and equipment\n4. Assign workers with skills\n5. The system automatically matches workers to suitable rooms\n\n**Features:**\n• 📋 Bulk room creation\n• 👥 Worker skill assignment\n• 🎯 Smart matching algorithm\n• 🗺️ Visual room map\n• 📊 Printable reports\n• 🔄 Shift management\n\n**Upgrade to access this feature!**\n\nWould you like help with anything else?"
-        : "🏠 **Rumsplaceringssystem**\n\nDenna funktion är tillgänglig på **Business, Enterprise och Corporate**-planer.\n\n**För att använda Rumsplacering:**\n1. Gå till fliken **Premium**\n2. Klicka på **Öppna Rumsplacering**\n3. Skapa rum med kapacitet och utrustning\n4. Tilldela arbetare med kompetens\n5. Systemet matchar automatiskt arbetare till lämpliga rum\n\n**Funktioner:**\n• 📋 Skapa rum i bulk\n• 👥 Kompetenstilldelning\n• 🎯 Smart matchning\n• 🗺️ Visuell karta\n• 📊 Utskrivbara rapporter\n• 🔄 Skiftshantering\n\n**Uppgradera för att använda denna funktion!**\n\nBehöver du hjälp med något annat?";
-      showQuestionsAgain = true;
-    }
-    else if (input.includes('branch') || input.includes('create branch') || input.includes('avdelning')) {
-      response = language === 'en'
-        ? "🏢 **To create a branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter branch name and city\n4. Click **Create**\n\nWould you like help with anything else?"
-        : "🏢 **För att skapa en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Fyll i avdelningsnamn och stad\n4. Klicka på **Skapa**\n\nBehöver du hjälp med något annat?";
+    // ============ GREETINGS ============
+    if (input.match(/^(hi|hello|hey|good morning|good afternoon|good evening|hej|hallå)$/i)) {
+      const greetings = {
+        en: [
+          "👋 Hello! How can I help you with TaskBridge today?",
+          "Hey there! Ready to manage some tasks? What do you need?",
+          "Hi! I'm your TaskBridge assistant. Ask me anything about the platform!"
+        ],
+        sv: [
+          "👋 Hej! Hur kan jag hjälpa dig med TaskBridge idag?",
+          "Hej! Redo att hantera uppgifter? Vad behöver du?",
+          "Hej! Jag är din TaskBridge-assistent. Fråga mig vad som helst om plattformen!"
+        ]
+      };
+      response = greetings[language][Math.floor(Math.random() * greetings[language].length)];
       showQuestionsAgain = true;
     }
-    else if (input.includes('report') || input.includes('generate report') || input.includes('rapport')) {
-      response = language === 'en'
-        ? "📊 **To generate reports:**\n\n1. Go to the **Reports** tab\n2. Select your filters (branch, role, employee, date range)\n3. Click **Generate Report**\n4. Export as PDF or Excel if needed\n\nWould you like help with anything else?"
-        : "📊 **För att generera rapporter:**\n\n1. Gå till fliken **Rapporter**\n2. Välj dina filter (avdelning, roll, anställd, datumintervall)\n3. Klicka på **Generera rapport**\n4. Exportera som PDF eller Excel vid behov\n\nBehöver du hjälp med något annat?";
+    
+    // ============ THANK YOU ============
+    else if (input.match(/thank|thanks|tack|appreciate|good job/i)) {
+      const thanks = {
+        en: [
+          "You're very welcome! 😊 Anything else I can help you with?",
+          "Happy to help! Let me know if you need anything else.",
+          "My pleasure! Is there anything else you'd like to learn?"
+        ],
+        sv: [
+          "Varsågod! 😊 Finns det något annat jag kan hjälpa dig med?",
+          "Glad att kunna hjälpa! Låt mig veta om du behöver något annat.",
+          "Det var så lite! Finns det något annat du vill veta?"
+        ]
+      };
+      response = thanks[language][Math.floor(Math.random() * thanks[language].length)];
       showQuestionsAgain = true;
     }
-    else if (input.includes('reset password') || input.includes('lösenord')) {
-      response = language === 'en'
-        ? "🔑 **To reset a user's password:**\n\n1. Go to **Admins** or **Staff** tab\n2. Find the user\n3. Click the **🔑** button next to their name\n4. Enter and confirm the new password\n5. Click **Reset Password**\n\nWould you like help with anything else?"
-        : "🔑 **För att återställa en användares lösenord:**\n\n1. Gå till fliken **Administratörer** eller **Personal**\n2. Hitta användaren\n3. Klicka på **🔑** knappen bredvid deras namn\n4. Ange och bekräfta det nya lösenordet\n5. Klicka på **Återställ lösenord**\n\nBehöver du hjälp med något annat?";
+    
+    // ============ TASKS ============
+    else if (input.match(/task|uppgift|shift|skift|work schedule/i)) {
+      if (input.match(/create|new|make|add|skapa|ny/i)) {
+        response = language === 'en'
+          ? "📋 **To create a new task:**\n\n1. Go to the **Tasks** tab\n2. Click **Create Task**\n3. Fill in:\n   • Title (e.g., Morning Shift)\n   • Date and time\n   • Job role (select from existing roles)\n   • Branch location\n4. Set max number of employees needed\n5. Click **Create**\n\n💡 **Pro tip:** Tasks automatically close when max employees are assigned!"
+          : "📋 **För att skapa en ny uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på **Skapa uppgift**\n3. Fyll i:\n   • Titel (t.ex., Morgonskift)\n   • Datum och tid\n   • Jobbroll (välj från befintliga roller)\n   • Avdelning\n4. Ange max antal anställda som behövs\n5. Klicka på **Skapa**\n\n💡 **Pro-tips:** Uppgifter stängs automatiskt när max antal anställda är tilldelade!";
+      } 
+      else if (input.match(/delete|remove|radera|ta bort/i)) {
+        response = language === 'en'
+          ? "🗑️ **To delete a task:**\n\n1. Go to the **Tasks** tab\n2. Find the task you want to delete\n3. Click the 🗑️ button next to it\n4. Confirm deletion\n\n⚠️ **Warning:** This cannot be undone and will remove all applications!"
+          : "🗑️ **För att radera en uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Hitta uppgiften du vill radera\n3. Klicka på 🗑️ knappen bredvid\n4. Bekräfta radering\n\n⚠️ **Varning:** Detta går inte att ångra och kommer att ta bort alla ansökningar!";
+      }
+      else if (input.match(/edit|update|change|ändra|uppdatera/i)) {
+        response = language === 'en'
+          ? "✏️ **To edit a task:**\n\n1. Go to the **Tasks** tab\n2. Click the ✏️ button next to the task\n3. Update the information\n4. Click **Save**\n\n📌 Note: Employees will see the updated information immediately."
+          : "✏️ **För att redigera en uppgift:**\n\n1. Gå till fliken **Uppgifter**\n2. Klicka på ✏️ knappen bredvid uppgiften\n3. Uppdatera informationen\n4. Klicka på **Spara**\n\n📌 Notera: Anställda ser den uppdaterade informationen direkt.";
+      }
+      else {
+        response = language === 'en'
+          ? "📋 **Task Management:**\n\nYou can:\n• ✅ **Create** new tasks\n• ✏️ **Edit** existing tasks  \n• 🗑️ **Delete** tasks\n• 👀 **View** all upcoming tasks\n\nWhat would you like to do with tasks?"
+          : "📋 **Uppgiftshantering:**\n\nDu kan:\n• ✅ **Skapa** nya uppgifter\n• ✏️ **Redigera** befintliga uppgifter\n• 🗑️ **Radera** uppgifter\n• 👀 **Visa** alla kommande uppgifter\n\nVad vill du göra med uppgifter?";
+      }
       showQuestionsAgain = true;
     }
-    else if (input.includes('change plan') || input.includes('subscription plan') || input.includes('uppgradera')) {
-      response = language === 'en'
-        ? "💰 **To change subscription plan:**\n\n1. Click on the **Billing** tab\n2. View available plans (Basic to Corporate)\n3. Click **Upgrade to [Plan Name]**\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment\n\nWould you like help with anything else?"
-        : "💰 **För att ändra prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer (Basic till Corporate)\n3. Klicka på **Uppgradera till [Plan-namn]**\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning\n\nBehöver du hjälp med något annat?";
+    
+    // ============ EMPLOYEES / STAFF ============
+    else if (input.match(/employee|staff|anställd|personal|worker|arbetare/i)) {
+      if (input.match(/add|new|create|invite|bjuda in|skapa|ny/i)) {
+        response = language === 'en'
+          ? "👥 **To add a new employee:**\n\n1. Go to the **Staff** tab\n2. Click **Add Staff**\n3. Enter:\n   • Full name\n   • Email address\n   • Temporary password\n   • Job role (from existing roles)\n   • Branch\n4. Click **Create**\n\n📧 The employee will receive an email with their login details."
+          : "👥 **För att lägga till en ny anställd:**\n\n1. Gå till fliken **Personal**\n2. Klicka på **Lägg till personal**\n3. Ange:\n   • Fullständigt namn\n   • E-postadress\n   • Tillfälligt lösenord\n   • Jobbroll (från befintliga roller)\n   • Avdelning\n4. Klicka på **Skapa**\n\n📧 Den anställde kommer att få ett mail med sina inloggningsuppgifter.";
+      }
+      else if (input.match(/delete|remove|fire|terminate|radera|avskeda/i)) {
+        response = language === 'en'
+          ? "⚠️ **To remove an employee:**\n\n1. Go to the **Staff** tab\n2. Find the employee\n3. Click the 🗑️ button\n4. Confirm deletion\n\n⚠️ **Warning:** This removes all their data including task applications and cannot be undone!"
+          : "⚠️ **För att ta bort en anställd:**\n\n1. Gå till fliken **Personal**\n2. Hitta den anställde\n3. Klicka på 🗑️ knappen\n4. Bekräfta radering\n\n⚠️ **Varning:** Detta tar bort all deras data inklusive uppgiftsansökningar och kan inte ångras!";
+      }
+      else if (input.match(/reset password|password reset|återställ lösenord|lösenord|change password/i)) {
+        response = language === 'en'
+          ? "🔑 **To reset an employee's password:**\n\n1. Go to the **Staff** tab\n2. Find the employee\n3. Click the **🔑** button\n4. Enter new password\n5. Confirm\n6. Click **Reset Password**\n\nThe employee can then log in with the new password."
+          : "🔑 **För att återställa en anställds lösenord:**\n\n1. Gå till fliken **Personal**\n2. Hitta den anställde\n3. Klicka på **🔑** knappen\n4. Ange nytt lösenord\n5. Bekräfta\n6. Klicka på **Återställ lösenord**\n\nDen anställde kan sedan logga in med det nya lösenordet.";
+      }
+      else {
+        response = language === 'en'
+          ? "👥 **Employee Management:**\n\nYou can:\n• ➕ **Add** new employees\n• ✏️ **Edit** employee details\n• 🔑 **Reset** passwords\n• 🗑️ **Remove** employees\n• 👀 **View** all staff members\n\nWhat would you like to do?"
+          : "👥 **Personalhantering:**\n\nDu kan:\n• ➕ **Lägg till** nya anställda\n• ✏️ **Redigera** anställdas uppgifter\n• 🔑 **Återställ** lösenord\n• 🗑️ **Ta bort** anställda\n• 👀 **Visa** alla personal\n\nVad vill du göra?";
+      }
       showQuestionsAgain = true;
     }
-    else if (input.includes('cancel') || input.includes('avbryt')) {
-      response = language === 'en'
-        ? "❌ **To cancel subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n4. You'll keep access until the end of your billing period\n\nWould you like help with anything else?"
-        : "❌ **För att avbryta prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n4. Du behåller åtkomst till slutet av faktureringsperioden\n\nBehöver du hjälp med något annat?";
+    
+    // ============ BRANCHES ============
+    else if (input.match(/branch|avdelning|department|office|kontor/i)) {
+      if (input.match(/create|new|add|skapa|ny|lägg till/i)) {
+        response = language === 'en'
+          ? "🏢 **To create a branch:**\n\n1. Go to the **Branches** tab\n2. Click **Add Branch**\n3. Enter:\n   • Branch name\n   • City (required)\n   • Street, postal code, country (optional)\n4. Click **Create**\n\n📌 After creating, you can assign admins to manage this branch."
+          : "🏢 **För att skapa en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Klicka på **Lägg till avdelning**\n3. Ange:\n   • Avdelningsnamn\n   • Stad (obligatoriskt)\n   • Gata, postnummer, land (valfritt)\n4. Klicka på **Skapa**\n\n📌 Efter att ha skapat kan du tilldela administratörer att hantera denna avdelning.";
+      }
+      else if (input.match(/delete|remove|radera|ta bort/i)) {
+        response = language === 'en'
+          ? "⚠️ **To delete a branch:**\n\n1. Go to the **Branches** tab\n2. Find the branch\n3. Click the 🗑️ button\n4. Confirm deletion\n\n⚠️ **WARNING:** This will also delete ALL employees assigned to this branch! Consider moving employees first."
+          : "⚠️ **För att radera en avdelning:**\n\n1. Gå till fliken **Avdelningar**\n2. Hitta avdelningen\n3. Klicka på 🗑️ knappen\n4. Bekräfta radering\n\n⚠️ **VARNING:** Detta kommer också att radera ALLA anställda som är tilldelade denna avdelning! Överväg att flytta anställda först.";
+      }
+      else {
+        response = language === 'en'
+          ? "🏢 **Branch Management:**\n\nYou can:\n• ➕ **Create** new branches\n• ✏️ **Edit** branch details\n• 🗑️ **Delete** branches\n• 👥 **Assign** admins to branches\n\nEach branch can have its own staff, tasks, and administrators."
+          : "🏢 **Avdelningshantering:**\n\nDu kan:\n• ➕ **Skapa** nya avdelningar\n• ✏️ **Redigera** avdelningsdetaljer\n• 🗑️ **Radera** avdelningar\n• 👥 **Tilldela** administratörer till avdelningar\n\nVarje avdelning kan ha sin egen personal, uppgifter och administratörer.";
+      }
       showQuestionsAgain = true;
     }
-    else if (input.includes('yes') || input.includes('another') || input.includes('more help') || input.includes('ja') || input.includes('mer hjälp')) {
-      response = language === 'en'
-        ? "👍 **Great! Here are the quick questions again:**\n\nWhat would you like to learn about?"
-        : "👍 **Bra! Här är snabbfrågorna igen:**\n\nVad vill du lära dig om?";
+    
+    // ============ REPORTS ============
+    else if (input.match(/report|rapport|analytics|analys|statistics|statistik/i)) {
+      if (input.match(/generate|create|skapa|generera/i)) {
+        response = language === 'en'
+          ? "📊 **To generate a report:**\n\n1. Go to the **Reports** tab\n2. Select filters:\n   • Branch (specific or all)\n   • Job role\n   • Employee\n   • Date range (today, week, month, quarter, year, or custom)\n3. Click **Generate Report**\n4. Export as PDF or Excel\n\n📈 Reports show attendance, hours worked, and employee performance."
+          : "📊 **För att generera en rapport:**\n\n1. Gå till fliken **Rapporter**\n2. Välj filter:\n   • Avdelning (specifik eller alla)\n   • Jobbroll\n   • Anställd\n   • Datumintervall (idag, vecka, månad, kvartal, år eller anpassat)\n3. Klicka på **Generera rapport**\n4. Exportera som PDF eller Excel\n\n📈 Rapporter visar närvaro, arbetade timmar och anställdas prestation.";
+      }
+      else {
+        response = language === 'en'
+          ? "📈 **Reports Feature:**\n\nYou can generate reports for:\n• 📅 **Attendance tracking**\n• ⏰ **Hours worked**\n• 👥 **Employee performance**\n• 🏢 **Branch comparison**\n\nGo to the **Reports** tab to get started!"
+          : "📈 **Rapportfunktion:**\n\nDu kan generera rapporter för:\n• 📅 **Närvarospårning**\n• ⏰ **Arbetade timmar**\n• 👥 **Anställdas prestation**\n• 🏢 **Avdelningsjämförelse**\n\nGå till fliken **Rapporter** för att komma igång!";
+      }
       showQuestionsAgain = true;
     }
+    
+    // ============ SUBSCRIPTION & BILLING ============
+    else if (input.match(/subscription|prenumeration|plan|billing|fakturering|upgrade|uppgradera|price|pris|cost|kostnad/i)) {
+      if (input.match(/change|change plan|upgrade|downgrade|byta|ändra|uppgradera/i)) {
+        response = language === 'en'
+          ? "💰 **To change your subscription plan:**\n\n1. Click the **Billing** tab\n2. View available plans:\n   • **Basic** (399 SEK/mo) - 25 employees, 3 branches\n   • **Standard** (799 SEK/mo) - 50 employees, 5 branches\n   • **Pro** (1299 SEK/mo) - 100 employees, 8 branches\n   • **Business** (2499 SEK/mo) - 250 employees, 15 branches\n   • **Enterprise** (4999 SEK/mo) - 500 employees, 30 branches\n   • **Corporate** (9999 SEK/mo) - 1000 employees, 60 branches\n3. Click **Upgrade** on your chosen plan\n4. Select duration (1, 3, 6, or 12 months)\n5. Confirm payment\n\n💡 Save up to 15% with annual billing!"
+          : "💰 **För att ändra din prenumerationsplan:**\n\n1. Klicka på fliken **Fakturering**\n2. Visa tillgängliga planer:\n   • **Basic** (399 SEK/mån) - 25 anställda, 3 avdelningar\n   • **Standard** (799 SEK/mån) - 50 anställda, 5 avdelningar\n   • **Pro** (1299 SEK/mån) - 100 anställda, 8 avdelningar\n   • **Business** (2499 SEK/mån) - 250 anställda, 15 avdelningar\n   • **Enterprise** (4999 SEK/mån) - 500 anställda, 30 avdelningar\n   • **Corporate** (9999 SEK/mån) - 1000 anställda, 60 avdelningar\n3. Klicka på **Uppgradera** för din valda plan\n4. Välj varaktighet (1, 3, 6 eller 12 månader)\n5. Bekräfta betalning\n\n💡 Spara upp till 15% med årsfakturering!";
+      }
+      else if (input.match(/cancel|avbryt|stop|stoppa/i)) {
+        response = language === 'en'
+          ? "❌ **To cancel your subscription:**\n\n1. Go to the **Billing** tab\n2. Click **Cancel Subscription**\n3. Confirm cancellation\n\n📌 You'll keep access until the end of your billing period. After that, your account will be frozen and data retained for 30 days.\n\n💡 You can reactivate anytime by upgrading again."
+          : "❌ **För att avbryta din prenumeration:**\n\n1. Gå till fliken **Fakturering**\n2. Klicka på **Avbryt prenumeration**\n3. Bekräfta avbokning\n\n📌 Du behåller åtkomst till slutet av din faktureringsperiod. Efter det kommer ditt konto att frysas och data sparas i 30 dagar.\n\n💡 Du kan återaktivera när som helst genom att uppgradera igen.";
+      }
+      else if (input.match(/price|pris|cost|kostnad|how much|hur mycket/i)) {
+        response = language === 'en'
+          ? "💵 **TaskBridge Pricing:**\n\n• Basic: 399 SEK/month\n• Standard: 799 SEK/month  \n• Pro: 1,299 SEK/month\n• Business: 2,499 SEK/month\n• Enterprise: 4,999 SEK/month\n• Corporate: 9,999 SEK/month\n\n💡 Discounts available for 3+ months:\n• 3 months: 5% off\n• 6 months: 10% off  \n• 12 months: 15% off\n\nContact sales@taskbridge.com for custom enterprise pricing."
+          : "💵 **TaskBridge Prissättning:**\n\n• Basic: 399 SEK/månad\n• Standard: 799 SEK/månad\n• Pro: 1,299 SEK/månad\n• Business: 2,499 SEK/månad\n• Enterprise: 4,999 SEK/månad\n• Corporate: 9,999 SEK/månad\n\n💡 Rabatter för 3+ månader:\n• 3 månader: 5% rabatt\n• 6 månader: 10% rabatt\n• 12 månader: 15% rabatt\n\nKontakta sales@taskbridge.com för anpassad företagsprissättning.";
+      }
+      else {
+        response = language === 'en'
+          ? "💳 **Subscription & Billing:**\n\nYour current plan: **CORPORATE**\n\nYou can:\n• 💰 **Change/Upgrade** your plan\n• ❌ **Cancel** subscription\n• 📄 **View** invoice history\n• 📧 **Contact** sales for custom plans\n\nWould you like to know more about pricing or changing your plan?"
+          : "💳 **Prenumeration & Fakturering:**\n\nDin nuvarande plan: **CORPORATE**\n\nDu kan:\n• 💰 **Ändra/Uppgradera** din plan\n• ❌ **Avbryt** prenumeration\n• 📄 **Visa** fakturahistorik\n• 📧 **Kontakta** oss för anpassade planer\n\nVill du veta mer om priser eller att ändra din plan?";
+      }
+      showQuestionsAgain = true;
+    }
+    
+    // ============ ADMINS ============
+    else if (input.match(/admin|administrator|administratör/i)) {
+      if (input.match(/add|create|new|skapa|ny/i)) {
+        response = language === 'en'
+          ? "👔 **To add an admin:**\n\n1. Go to the **Admins** tab\n2. Click **Add Admin**\n3. Enter name, email, temporary password\n4. Optionally assign to a branch\n5. Click **Create**\n\n📌 Admins can manage staff, tasks, and reports for their assigned branches."
+          : "👔 **För att lägga till en administratör:**\n\n1. Gå till fliken **Administratörer**\n2. Klicka på **Lägg till administratör**\n3. Ange namn, e-post, tillfälligt lösenord\n4. Valfritt att tilldela till en avdelning\n5. Klicka på **Skapa**\n\n📌 Administratörer kan hantera personal, uppgifter och rapporter för sina tilldelade avdelningar.";
+      }
+      else {
+        response = language === 'en'
+          ? "👔 **Admin Management:**\n\nAdmins can:\n• 👥 Manage staff\n• 📋 Create and assign tasks\n• 📊 View reports\n• 🏢 Manage branches (if assigned)\n\nYou can add, edit, or remove admins from the **Admins** tab."
+          : "👔 **Administratörshantering:**\n\nAdministratörer kan:\n• 👥 Hantera personal\n• 📋 Skapa och tilldela uppgifter\n• 📊 Visa rapporter\n• 🏢 Hantera avdelningar (om tilldelade)\n\nDu kan lägga till, redigera eller ta bort administratörer från fliken **Administratörer**.";
+      }
+      showQuestionsAgain = true;
+    }
+    
+    // ============ ROOM MANAGEMENT (PREMIUM) ============
+    else if (input.match(/room|rum|space|space management|room assignment|rumsplacering/i)) {
+      response = language === 'en'
+        ? "🏠 **Room Management System** (Premium Feature)\n\n✨ Available on **Business, Enterprise, and Corporate** plans\n\n**Features:**\n• 📋 Create rooms with capacity & equipment\n• 👥 Assign workers with skills\n• 🎯 Smart matching algorithm\n• 🗺️ Visual room map\n• 📊 Printable reports\n• 🔄 Shift management\n\n**To access:**\n1. Click the **Premium** tab\n2. Click **Access Room Assignment**\n3. Start creating rooms and assigning workers!\n\n💡 The system automatically matches workers to suitable rooms based on skills, capacity, and availability.\n\nWould you like to upgrade to access this feature?"
+        : "🏠 **Rumsplaceringssystem** (Premiumfunktion)\n\n✨ Tillgängligt på **Business, Enterprise och Corporate**-planer\n\n**Funktioner:**\n• 📋 Skapa rum med kapacitet och utrustning\n• 👥 Tilldela arbetare med kompetens\n• 🎯 Smart matchning\n• 🗺️ Visuell rumskarta\n• 📊 Utskrivbara rapporter\n• 🔄 Skiftshantering\n\n**För att använda:**\n1. Klicka på fliken **Premium**\n2. Klicka på **Öppna Rumsplacering**\n3. Börja skapa rum och tilldela arbetare!\n\n💡 Systemet matchar automatiskt arbetare till lämpliga rum baserat på kompetens, kapacitet och tillgänglighet.\n\nVill du uppgradera för att använda denna funktion?";
+      showQuestionsAgain = true;
+    }
+    
+    // ============ HELP / SUPPORT ============
+    else if (input.match(/help|support|hjälp|support|assist|guide/i)) {
+      response = language === 'en'
+        ? "🆘 **How can I help you today?**\n\nI can assist with:\n📋 **Tasks** - Create, edit, delete, assign\n👥 **Employees** - Add, remove, reset passwords\n🏢 **Branches** - Create, edit, assign admins\n📊 **Reports** - Generate attendance and hours reports\n💰 **Billing** - Change plans, pricing, cancellation\n👔 **Admins** - Add, edit, remove admin users\n🏠 **Room Management** - Premium feature\n\nJust ask me about any of these topics!"
+        : "🆘 **Hur kan jag hjälpa dig idag?**\n\nJag kan hjälpa till med:\n📋 **Uppgifter** - Skapa, redigera, radera, tilldela\n👥 **Anställda** - Lägg till, ta bort, återställ lösenord\n🏢 **Avdelningar** - Skapa, redigera, tilldela administratörer\n📊 **Rapporter** - Generera närvaro och timrapporter\n💰 **Fakturering** - Ändra planer, priser, avbokning\n👔 **Administratörer** - Lägg till, redigera, ta bort\n🏠 **Rumsplacering** - Premiumfunktion\n\nFråga mig bara om något av dessa ämnen!";
+      showQuestionsAgain = true;
+    }
+    
+    // ============ COMPLIMENTS / FEEDBACK ============
+    else if (input.match(/good|great|awesome|nice|fantastic|bra|jättebra|toppen|amazing/i)) {
+      const compliments = {
+        en: [
+          "Thank you! 😊 I'm glad I could help. Is there anything else you'd like to know?",
+          "You're too kind! 🎉 Let me know if you need anything else.",
+          "Happy to hear that! What else can I assist you with?"
+        ],
+        sv: [
+          "Tack! 😊 Jag är glad att jag kunde hjälpa. Finns det något annat du vill veta?",
+          "Du är för snäll! 🎉 Låt mig veta om du behöver något annat.",
+          "Kul att höra! Vad mer kan jag hjälpa dig med?"
+        ]
+      };
+      response = compliments[language][Math.floor(Math.random() * compliments[language].length)];
+      showQuestionsAgain = true;
+    }
+    
+    // ============ COMPLAINTS / BAD ============
+    else if (input.match(/bad|terrible|useless|dålig|useless|not working|fungerar inte/i)) {
+      response = language === 'en'
+        ? "🙏 I'm sorry you're having a bad experience. Please email support@taskbridge.com and our team will help you immediately. Is there something specific I can help clarify?"
+        : "🙏 Jag är ledsen att du har en dålig upplevelse. Vänligen maila support@glorifytk.se så hjälper vårt team dig omedelbart. Finns det något specifikt jag kan hjälpa till att förtydliga?";
+      showQuestionsAgain = true;
+    }
+    
+    // ============ DEFAULT - Smart contextual response ============
     else {
+      // Try to understand what the user is asking about
+      let suggestedTopic = "";
+      
+      if (input.match(/user|account|profile|konto|profil/i)) suggestedTopic = "profile settings, changing email, or resetting passwords";
+      else if (input.match(/delete|remove|radera|ta bort/i)) suggestedTopic = "deleting tasks, employees, branches, or accounts";
+      else if (input.match(/edit|update|change|ändra|uppdatera/i)) suggestedTopic = "editing tasks, employee details, or branch information";
+      else if (input.match(/view|see|show|visa|titta/i)) suggestedTopic = "viewing tasks, employee lists, or reports";
+      else if (input.match(/notify|notification|email|mejl|meddelande/i)) suggestedTopic = "email notifications and employee communications";
+      else suggestedTopic = "tasks, employees, branches, reports, billing, or room management";
+      
       response = language === 'en'
-        ? "👋 **Hello! I'm your TaskBridge AI Assistant.**\n\nI can help you with:\n• Creating tasks\n• Adding employees\n• Managing branches\n• Generating reports\n• Resetting passwords\n• Changing subscription plans\n• Cancelling subscriptions\n• Room Management (Premium feature)\n\n**What would you like to learn about?**"
-        : "👋 **Hej! Jag är din TaskBridge AI-assistent.**\n\nJag kan hjälpa dig med:\n• Skapa uppgifter\n• Lägga till anställda\n• Hantera avdelningar\n• Generera rapporter\n• Återställa lösenord\n• Ändra prenumerationsplaner\n• Avbryta prenumerationer\n• Rumsplacering (Premium-funktion)\n\n**Vad vill du lära dig om?**";
+        ? `🤔 I'm not sure I fully understood your question.\n\nBased on what you asked, I think you might want to know about ${suggestedTopic}.\n\nCould you rephrase your question or try one of the quick questions below?\n\n💡 **Tip:** Be specific - for example, "How do I create a task?" or "How to add an employee?"`
+        : `🤔 Jag är inte säker på att jag fullt ut förstod din fråga.\n\nBaserat på vad du frågade, tror jag att du kanske vill veta om ${suggestedTopic === "profile settings, changing email, or resetting passwords" ? "profilinställningar, ändra e-post eller återställa lösenord" : 
+          suggestedTopic === "deleting tasks, employees, branches, or accounts" ? "att radera uppgifter, anställda, avdelningar eller konton" :
+          suggestedTopic === "editing tasks, employee details, or branch information" ? "att redigera uppgifter, anställdas uppgifter eller avdelningsinformation" :
+          suggestedTopic === "viewing tasks, employee lists, or reports" ? "att visa uppgifter, anställdas listor eller rapporter" :
+          suggestedTopic === "email notifications and employee communications" ? "e-postnotiser och anställdas kommunikation" :
+          "uppgifter, anställda, avdelningar, rapporter, fakturering eller rumsplacering"}.\n\nKan du omformulera din fråga eller prova någon av snabbfrågorna nedan?\n\n💡 **Tips:** Var specifik - till exempel "Hur skapar jag en uppgift?" eller "Hur lägger jag till en anställd?"`;
       showQuestionsAgain = true;
     }
     
     setChatMessages(prev => [...prev, { text: response, sender: 'ai', time: new Date().toLocaleTimeString() }]);
     
-    // Show quick questions again if the AI asked for more questions
     if (showQuestionsAgain) {
       setShowQuickQuestions(true);
     }
     
     setIsAiTyping(false);
-  }, 800);
+  }, delay);
 };
 
   const handleOverlayMouseDown = (e) => {
